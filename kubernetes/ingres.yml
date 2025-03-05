@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  namespace: fastapi-app
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web # websecure
+    #traefik.ingress.kubernetes.io/router.tls: "true"  # Enable TLS
+    #traefik.ingress.kubernetes.io/router.tls.certresolver: le  # Use Let's Encrypt
+spec:
+  rules:
+    - host: dashboard.yourdomain.com  # Replace with your actual domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service  # Must match your frontend service name
+                port:
+                  number: 80  #  HTTP
+  #tls:
+   # - hosts:
+     #   - dashboard.yourdomain.com
+     # secretName: tls-secret  # Your TLS certificate for HTTPS

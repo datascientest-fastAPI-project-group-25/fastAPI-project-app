@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: fastapi-app
+spec:
+  selector:
+    app: fastapi-app-pod # Select frontend pod
+  ports:
+    - protocol: TCP 
+      port: 80 # Service port
+      targetPort: 81 # Targetting Frontend container port 81
+  type: ClusterIP  # ClusterIP since frontend is the only exposed service through ingress

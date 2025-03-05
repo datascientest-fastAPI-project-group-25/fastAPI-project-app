@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-deployment
+  namespace: fastapi-app # Namespace for the deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fastapi-app-pod
+  template:
+    metadata:
+      labels:
+        app: fastapi-app-pod
+    spec:
+      containers:
+        # Frontend container
+        - name: frontend # Frontend container
+          image: tybaloo/frontend:latest  # Frontend image
+          #imagePullPolicy: never
+          ports:
+            - containerPort: 81 # Frontend port
+          envFrom:
+            - configMapRef:
+                name: fastapi-config # ConfigMap for frontend
+            
+        # Backend container
+        - name: backend # Backend container
+          image: tybaloo/backend:latest  #backend image
+          #imagePullPolicy: never
+          ports:
+            - containerPort: 8000 # Backend port
+          envFrom:
+            - configMapRef:
+                name: fastapi-config
+            - secretRef:
+                name: fastapi-secret                     
+            
+
+        # PostgreSQL container (DB)
+        - name: db # DB container
+          image: postgres:12  #  DB image
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: fastapi-secret
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-volume
+
+      volumes:
+        - name: postgres-volume
+          emptyDir: {}  # Persistent storage for DB (change this to a persistent volume)
+
+
+
+
