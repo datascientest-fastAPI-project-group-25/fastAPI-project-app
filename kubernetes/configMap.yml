@@ -4,29 +4,30 @@ metadata:
   name: fastapi-config
   namespace: fastapi-app
 data:
-    # Domain settings
-  DOMAIN: "localhost.tiangolo.com"  # Set this to actual domain in production
-  FRONTEND_HOST: "http://localhost"  # Frontend URL for local dev, change for production
-
-  # Environment
-  ENVIRONMENT: "dev" #"production"  # Set to 'staging' or 'local' for dev, or 'production'
-
+  # Environment settings
+  ENVIRONMENT: "production"
+  PROJECT_NAME: "FastAPI"
+  
+  # Domain settings
+  DOMAIN: "localhost.tiangolo.com"
+  FRONTEND_HOST: "http://localhost"
+  
   # CORS settings
   BACKEND_CORS_ORIGINS: '["http://localhost","http://localhost:5173","https://localhost","https://localhost:5173","http://localhost.tiangolo.com"]'
   
-  
   # Postgres settings
-  POSTGRES_USER: "postgres"  # base64 encoded 'postgres'
-  POSTGRES_SERVER: "db-service"  # Service name for Postgres in Kubernetes (could be 'db-service')
-  POSTGRES_PORT: "5432"  # Default Postgres port
-  POSTGRES_DB: "main_db"  # Postgres database
-  FIRST_SUPERUSER: "admin" # 
+  POSTGRES_USER: "postgres"
+  POSTGRES_SERVER: "localhost"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "main_db"
   
-    # Backend settings
-  VITE_API_URL: "http://localhost:8000"  # production API URL
-  #VITE_WS_URL: "ws://localhost:8000"  # production WS URL
-  #VITE_APP_URL: "http://localhost:3000"  # production APP URL
-
-  SMTP_USER: "smtp-user"  # Should be stored as plain text unless you need it encoded
-  #FIRST_SUPERUSER: "admin@example.com"  # First superuser's email
- 
+  # User settings
+  FIRST_SUPERUSER: "admin@example.com"
+  
+  # Backend settings
+  VITE_API_URL: "http://localhost:8000"
+  
+  # Email settings
+  SMTP_USER: "smtp-user"
+  SMTP_HOST: "smtp.gmail.com"
+  EMAILS_FROM_EMAIL: "info@example.com"

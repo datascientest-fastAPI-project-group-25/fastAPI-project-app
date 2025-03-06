@@ -4,7 +4,7 @@ metadata:
   name: fastapi-deployment
   namespace: fastapi-app # Namespace for the deployment
 spec:
-  replicas: 2
+  replicas: 1  # Changed to 1 for initial deployment
   selector:
     matchLabels:
       app: fastapi-app-pod
@@ -17,37 +17,59 @@ spec:
         # Frontend container
         - name: frontend # Frontend container
           image: tybaloo/frontend:latest  # Frontend image
-          #imagePullPolicy: never
           ports:
-            - containerPort: 81 # Frontend port
+            - containerPort: 80 # Frontend port
           envFrom:
             - configMapRef:
                 name: fastapi-config # ConfigMap for frontend
+            - secretRef:
+                name: fastapi-secret
             
         # Backend container
         - name: backend # Backend container
-          image: tybaloo/backend:latest  #backend image
-          #imagePullPolicy: never
+          image: tybaloo/backend:latest  # Backend image
           ports:
             - containerPort: 8000 # Backend port
           envFrom:
             - configMapRef:
                 name: fastapi-config
             - secretRef:
-                name: fastapi-secret                     
-            
+                name: fastapi-secret
+          livenessProbe:
+            httpGet:
+              path: /api/v1/utils/health-check/
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
 
         # PostgreSQL container (DB)
         - name: db # DB container
-          image: postgres:12  #  DB image
+          image: postgres:12  # DB image
           ports:
             - containerPort: 5432
           envFrom:
+            - configMapRef:
+                name: fastapi-config
             - secretRef:
                 name: fastapi-secret
           volumeMounts:
-            - mountPath: /var/lib/postgresql/data
+            - mountPath: /var/lib/postgresql/data/pgdata
               name: postgres-volume
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
 
       volumes:
         - name: postgres-volume
