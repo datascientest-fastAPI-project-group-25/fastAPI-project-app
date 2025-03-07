@@ -4,7 +4,7 @@ metadata:
   name: frontend-service
   namespace: fastapi-app
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: frontend
   ports:
@@ -29,10 +29,9 @@ kind: Service
 metadata:
   name: postgres
   namespace: fastapi-app
-spec:
-  type: ClusterIP
+spec:  
   selector:
     app: postgres
   ports:
   - port: 5432
-    targetPort: 5432
+    targetPort: 5432    

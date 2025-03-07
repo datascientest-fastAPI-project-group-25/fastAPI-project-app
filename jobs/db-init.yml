@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init
+  namespace: fastapi-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: db-init
+        image: tybaloo/backend:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          set -e  # Exit on error
+          
+          echo "Current working directory:"
+          pwd
+          
+          echo "\nChecking environment variables:"
+          env | grep -E "POSTGRES|DATABASE|SQLALCHEMY"
+          
+          echo "\nVerifying database connection:"
+          python3 -c "
+          from sqlalchemy import create_engine
+          import os
+          password = os.environ.get('POSTGRES_PASSWORD')
+          url = f'postgresql+psycopg://postgres:{password}@postgres:5432/main_db'
+          engine = create_engine(url)
+          engine.connect()
+          "
+          
+          echo "\nRunning database migrations:"
+          cd /app && alembic upgrade head
+          
+          echo "\nInitializing database data:"
+          PYTHONPATH=/app python3 -u app/initial_data.py
+        envFrom:
+        - configMapRef:
+            name: fastapi-config
+        - secretRef:
+            name: fastapi-secret
+      restartPolicy: Never
+  backoffLimit: 4
