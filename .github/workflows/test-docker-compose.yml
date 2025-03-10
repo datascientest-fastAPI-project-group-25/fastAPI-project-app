@@ -18,19 +18,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build containers
-        run: docker compose build
+      - name: Build test containers
+        run: docker compose -f docker-compose.test.yml build
 
       - name: Remove existing containers
-        run: docker compose down -v --remove-orphans
+        run: docker compose -f docker-compose.test.yml down -v --remove-orphans
 
-      - name: Start services
-        run: docker compose up -d --wait backend frontend adminer
+      - name: Start test services
+        run: docker compose -f docker-compose.test.yml up -d --wait test-db test-backend test-frontend
 
       - name: Test backend health
         run: |
           for i in {1..30}; do
-            if curl -f http://localhost:8000/api/v1/utils/health-check; then
+            if curl -f http://localhost:8001/api/v1/utils/health-check; then
               exit 0
             fi
             sleep 2
@@ -40,7 +40,7 @@ jobs:
       - name: Test frontend availability
         run: |
           for i in {1..30}; do
-            if curl -f http://localhost:5173; then
+            if curl -f http://localhost:5174; then
               exit 0
             fi
             sleep 2
@@ -49,4 +49,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: docker compose down -v --remove-orphans
+        run: docker compose -f docker-compose.test.yml down -v --remove-orphans
