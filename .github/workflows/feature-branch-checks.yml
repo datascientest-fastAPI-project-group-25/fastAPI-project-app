@@ -33,11 +33,15 @@ jobs:
         working-directory: backend
 
       - name: Run black
-        run: black --check .
+        run: |
+          source .venv/bin/activate
+          black --check .
         working-directory: backend
 
       - name: Run flake8
-        run: flake8 .
+        run: |
+          source .venv/bin/activate
+          flake8 .
         working-directory: backend
 
       - name: Set up Node.js
@@ -85,11 +89,15 @@ jobs:
         working-directory: backend
 
       - name: Run Bandit
-        run: bandit -r .
+        run: |
+          source .venv/bin/activate
+          bandit -r .
         working-directory: backend
 
       - name: Run pip-audit
-        run: pip-audit
+        run: |
+          source .venv/bin/activate
+          pip-audit
         working-directory: backend
 
       - name: Set up Node.js
