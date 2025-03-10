@@ -9,105 +9,41 @@ on:
     types: [ published ]
 
 jobs:
-  test:
-    name: Build and Test
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+  deploy-production:
+    name: Deploy to Production
+    if: github.event_name == 'release'
+    uses: ./.github/workflows/reusable-jobs.yml
+    with:
+      environment: prod
+      image-tag: ${{ github.ref_name }}
+      python-version: '3.11'
+      node-version: '18'
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
 
-    - name: Set up Python 
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+  deploy-staging:
+    name: Deploy to Staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/reusable-jobs.yml
+    with:
+      environment: staging
+      image-tag: ${{ github.sha }}
+      python-version: '3.11'
+      node-version: '18'
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
 
-    - name: Set up uv
-      uses: astral-sh/setup-uv@v5
-      with:
-        version: "0.4.15"
-        enable-cache: true
-
-    - name: Install dependencies
-      run: uv sync
-      working-directory: backend
-
-    - name: Run backend tests
-      run: |
-        source .venv/bin/activate
-        pytest
-      working-directory: backend
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: 'frontend/package-lock.json'
-
-    - name: Install frontend dependencies
-      run: npm ci
-      working-directory: frontend
-
-    - name: Run frontend tests
-      run: npm test
-      working-directory: frontend
-
-  build-and-push:
-    name: Build and Push Docker Images
-    needs: test
-    runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      github.event_name == 'release'
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        role-session-name: GitHubActionsSession
-        aws-region: ${{ secrets.AWS_REGION }}
-
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-
-    - name: Set environment suffix
-      id: set-env
-      run: |
-        if [[ ${{ github.event_name }} == 'release' ]]; then
-          echo "env_suffix=" >> $GITHUB_OUTPUT
-          echo "cluster_suffix=" >> $GITHUB_OUTPUT
-        else
-          echo "env_suffix=-staging" >> $GITHUB_OUTPUT
-          echo "cluster_suffix=-staging" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Build and push backend image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: devops-demo-backend${{ steps.set-env.outputs.env_suffix }}
-        IMAGE_TAG: ${{ github.event_name == 'release' && github.ref_name || github.sha }}
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./backend
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-    - name: Build and push frontend image  
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: devops-demo-frontend${{ steps.set-env.outputs.env_suffix }}
-        IMAGE_TAG: ${{ github.event_name == 'release' && github.ref_name || github.sha }}
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./frontend
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-    - name: Trigger ECS deployment
-      env:
-        CLUSTER: devops-demo${{ steps.set-env.outputs.cluster_suffix }}-cluster
-      run: |
-        aws ecs update-service --cluster $CLUSTER --service devops-demo-backend${{ steps.set-env.outputs.env_suffix }} --force-new-deployment
-        aws ecs update-service --cluster $CLUSTER --service devops-demo-frontend${{ steps.set-env.outputs.env_suffix }} --force-new-deployment
+  test-pr:
+    name: Test PR
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/reusable-jobs.yml
+    with:
+      environment: staging
+      image-tag: pr-${{ github.event.pull_request.number }}
+      python-version: '3.11'
+      node-version: '18'
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
