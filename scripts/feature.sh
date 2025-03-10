@@ -51,7 +51,7 @@ handle_unstaged_changes() {
 if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
     echo -e "${RED}Error: Not in a git repository${NC}"
     exit 1
-}
+fi
 
 # Handle any unstaged changes
 handle_unstaged_changes
@@ -85,8 +85,7 @@ if [[ $create_new =~ ^[Yy]$ ]]; then
     echo -e "${BLUE}Select branch type:${NC}"
     PS3="Enter number: "
     options=("feature" "fix" "quit")
-    select opt in "${options[@]}"
-    do
+    select opt in "${options[@]}"; do
         case $opt in
             "feature")
                 prefix="feat"
