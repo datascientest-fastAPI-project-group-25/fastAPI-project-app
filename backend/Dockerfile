@@ -54,7 +54,7 @@ COPY scripts/ ./scripts/
 # Install only production dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv && \
-    uv sync --prod
+    uv sync --production
 
 # Make scripts executable
 RUN chmod +x /app/scripts/*
