@@ -2,6 +2,32 @@
 
 ## Latest Changes
 
+### Features
+
+* ✨ Add development workflow automation. PR [#2](https://github.com/jaronschulz/fastAPI-project-app/pull/2).
+  * Add interactive CLI for feature branch creation (`scripts/feature.sh`)
+  * Implement automatic PR creation for feature branches
+  * Add commit history to auto-generated PRs
+
+* ✨ Add comprehensive development workflow strategy. PR [#1](https://github.com/jaronschulz/fastAPI-project-app/pull/1).
+  * Implement branch strategy (feat/*, dev, main)
+  * Add pre-commit hooks for code quality
+  * Set up automated testing and deployment pipelines
+  * Document development guidelines
+
+### Infrastructure
+
+* 🔧 Update pre-commit configuration with comprehensive checks:
+  * Style checks (black, flake8, eslint, prettier)
+  * Security checks (bandit, safety, npm audit)
+  * Linting & formatting for both backend and frontend
+
+### Documentation
+
+* 📝 Add detailed development workflow documentation
+* 📝 Add PR template for consistent reviews
+* 📝 Update README with comprehensive development guidelines
+
 ### Fixes
 
 * 🐛 Fix required password validation when editing user fields. PR [#1508](https://github.com/fastapi/full-stack-fastapi-template/pull/1508) by [@jpizquierdo](https://github.com/jpizquierdo).

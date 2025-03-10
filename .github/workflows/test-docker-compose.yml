@@ -3,7 +3,8 @@ name: Test Docker Compose
 on:
   push:
     branches:
-      - master
+      - main
+      - dev
   pull_request:
     types:
       - opened
@@ -16,11 +17,36 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - run: docker compose build
-      - run: docker compose down -v --remove-orphans
-      - run: docker compose up -d --wait backend frontend adminer
-      - name: Test backend is up
-        run: curl http://localhost:8000/api/v1/utils/health-check
-      - name: Test frontend is up
-        run: curl http://localhost:5173
-      - run: docker compose down -v --remove-orphans
+
+      - name: Build containers
+        run: docker compose build
+
+      - name: Remove existing containers
+        run: docker compose down -v --remove-orphans
+
+      - name: Start services
+        run: docker compose up -d --wait backend frontend adminer
+
+      - name: Test backend health
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/api/v1/utils/health-check; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Test frontend availability
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:5173; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v --remove-orphans

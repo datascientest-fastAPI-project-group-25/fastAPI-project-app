@@ -2,6 +2,7 @@
 <project version="4">
   <component name="CodebuddyPersistentProjectState">
     <option name="autoFileMode" value="CURRENT_OPEN" />
+    <option name="autoFileSelection" value="true" />
     <option name="promptHistory">
       <list>
         <option value="I cloned this repo from a starter project - now I am using this in a devops class as project to show our learned skills - in this repo we will have the app and build pipelines on github actions to stg and prod envs. For now I am only planning to clean this up to the point where all the signs of this being a starter are removed. I already removed copier and would now do the rest - e.g. change the readme to describe the app and setup, not the clonig. also whatever you find that can be removed or cleaned up. We are planning to push the images (stg and prod) to aws ecs and in a separate repo take those and with terraform etc. deploy to eks. so I think there is no need for traefik" />
@@ -10,6 +11,5 @@
       </list>
     </option>
     <option name="selectedModel" value="codebuddy:CLAUDE_3.7_SONNET_V7" />
-    <option name="ttsEnabled" value="false" />
   </component>
 </project>
