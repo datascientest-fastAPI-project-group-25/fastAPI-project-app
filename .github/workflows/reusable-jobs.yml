@@ -43,7 +43,10 @@ jobs:
         enable-cache: true
 
     - name: Install dependencies
-      run: uv sync
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv sync
       working-directory: backend
 
     - name: Run backend tests
