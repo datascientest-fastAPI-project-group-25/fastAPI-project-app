@@ -22,14 +22,14 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
         with:
-          version: "0.4.15"
+          version: "0.5.11"
           enable-cache: true
 
       - name: Install Python dependencies
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install black flake8 bandit pip-audit
+          uv pip install black ruff bandit pip-audit mypy
         working-directory: backend
 
       - name: Run black
@@ -38,10 +38,16 @@ jobs:
           black --check .
         working-directory: backend
 
-      - name: Run flake8
+      - name: Run ruff
         run: |
           source .venv/bin/activate
-          flake8 .
+          ruff check .
+        working-directory: backend
+
+      - name: Run mypy
+        run: |
+          source .venv/bin/activate
+          mypy .
         working-directory: backend
 
       - name: Set up Node.js
@@ -78,7 +84,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
         with:
-          version: "0.4.15"
+          version: "0.5.11"
           enable-cache: true
 
       - name: Install Python dependencies
