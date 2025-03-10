@@ -2,7 +2,8 @@
 .idea
 .codebuddy
 node_modules/
-/test-results/
+backend/test-results/
+frontend/test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
