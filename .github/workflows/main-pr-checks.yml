@@ -25,7 +25,10 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv sync
         working-directory: backend
 
       - name: Run integration tests
@@ -90,7 +93,10 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv sync
         working-directory: backend
 
       - name: Run API tests
@@ -152,6 +158,8 @@ jobs:
 
       - name: Check Python dependencies
         run: |
+          uv venv
+          source .venv/bin/activate
           uv pip install pip-audit safety
           safety check
           pip-audit
