@@ -27,6 +27,8 @@ jobs:
 
       - name: Install Python dependencies
         run: |
+          uv venv
+          source .venv/bin/activate
           uv pip install black flake8 bandit pip-audit
         working-directory: backend
 
@@ -77,6 +79,8 @@ jobs:
 
       - name: Install Python dependencies
         run: |
+          uv venv
+          source .venv/bin/activate
           uv pip install bandit pip-audit
         working-directory: backend
 
