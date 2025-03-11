@@ -118,28 +118,6 @@ services:
         - NODE_ENV=production
 
   app-status:
-    image: docker:cli
-    networks:
-      - default
-    volumes:
-      - ./scripts:/scripts
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./docker-compose.yml:/scripts/docker-compose.yml
-    depends_on:
-      db:
-        condition: service_healthy
-      backend:
-        condition: service_healthy
-      frontend:
-        condition: service_started
-      prestart:
-        condition: service_completed_successfully
-    command: sh /scripts/app-status.sh
-    labels:
-      - "com.datascientest.service.type=status"
-      - "com.datascientest.service.status=Done when exited"
-
-  app-info:
     image: alpine:latest
     networks:
       - default
@@ -160,10 +138,10 @@ services:
         condition: service_started
       adminer:
         condition: service_started
-    command: sh /scripts/show-app-info.sh
-    labels:
-      - "com.datascientest.service.type=info"
-      - "com.datascientest.service.status=Done when exited"
+    command: sh /scripts/app-status.sh
+    restart: "no"
+    tty: true
+    stdin_open: true
 
 volumes:
   app-db-data:

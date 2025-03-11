@@ -310,11 +310,15 @@ The application uses a subdomain-based routing approach for different services:
    - CORS is configured in Traefik to allow cross-subdomain communication
 
 3. **Startup Information**:
-   After all services are started successfully, you'll see:
+
+   When you run `docker compose up`, you'll see:
    - Application URLs for all services
    - Default login credentials
    - Database initialization status
    - Health status of all components
+
+   If you want to run the application in detached mode, use `docker compose up -d`.
+   - than you can see the startup information in the logs `docker compose logs app-status`
 
 4. **Adding a Host Entry (Local Development)**:
    ```bash
