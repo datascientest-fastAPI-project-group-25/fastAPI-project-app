@@ -1,0 +1,105 @@
+http:
+  middlewares:
+    # Middleware for adding security headers
+    secureHeaders:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+    
+    # Middleware for CORS
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Content-Type
+          - Authorization
+        accessControlAllowOriginList:
+          - "http://localhost"
+          - "http://localhost:3000"
+          - "http://localhost:5173"
+          - "http://dashboard.localhost"
+          - "http://api.localhost"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 100
+        addVaryHeader: true
+    
+    # Middleware for rate limiting
+    rateLimit:
+      rateLimit:
+        average: 100
+        burst: 50
+
+  # Define routers for local development
+  routers:
+    # Router for the backend API
+    backend:
+      rule: "Host(`api.localhost`)"
+      service: backend
+      entrypoints:
+        - web
+      middlewares:
+        - cors
+    
+    # Router for the frontend
+    frontend:
+      rule: "Host(`dashboard.localhost`)"
+      service: frontend
+      entrypoints:
+        - web
+      middlewares:
+        - cors
+    
+    # Router for adminer
+    adminer:
+      rule: "Host(`adminer.localhost`)"
+      service: adminer
+      entrypoints:
+        - web
+    
+    # Router for mailcatcher
+    mailcatcher:
+      rule: "Host(`mail.localhost`)"
+      service: mailcatcher
+      entrypoints:
+        - web
+    
+    # Router for Traefik dashboard
+    dashboard:
+      rule: "Host(`traefik.localhost`)"
+      service: api@internal
+      entrypoints:
+        - web
+      middlewares:
+        - secureHeaders
+
+  # Define services
+  services:
+    backend:
+      loadBalancer:
+        servers:
+          - url: "http://backend:8000"
+    
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:5173"
+    
+    adminer:
+      loadBalancer:
+        servers:
+          - url: "http://adminer:8080"
+    
+    mailcatcher:
+      loadBalancer:
+        servers:
+          - url: "http://mailcatcher:1080"
