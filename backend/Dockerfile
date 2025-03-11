@@ -32,7 +32,7 @@ COPY scripts/ ./scripts/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv && \
     uv pip install --system -e . && \
-    uv pip install sqlalchemy sqlmodel psycopg[binary] alembic tenacity fastapi pydantic pydantic-settings emails jinja2 httpx PyJWT passlib python-multipart bcrypt email-validator
+    uv pip install sqlalchemy sqlmodel psycopg[binary] alembic tenacity "fastapi[standard]" pydantic pydantic-settings emails jinja2 httpx PyJWT passlib python-multipart bcrypt email-validator
 
 # Make scripts executable
 RUN chmod +x /app/scripts/*
@@ -56,7 +56,7 @@ COPY scripts/ ./scripts/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv && \
     uv pip install --system -e . && \
-    uv pip install sqlalchemy sqlmodel psycopg[binary] alembic tenacity fastapi pydantic pydantic-settings emails jinja2 httpx PyJWT passlib python-multipart bcrypt email-validator
+    uv pip install sqlalchemy sqlmodel psycopg[binary] alembic tenacity "fastapi[standard]" pydantic pydantic-settings emails jinja2 httpx PyJWT passlib python-multipart bcrypt email-validator
 
 # Make scripts executable
 RUN chmod +x /app/scripts/*
