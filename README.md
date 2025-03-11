@@ -309,7 +309,14 @@ The application uses a subdomain-based routing approach for different services:
    - Local development uses Traefik with appropriate hosts file entries
    - CORS is configured in Traefik to allow cross-subdomain communication
 
-3. **Adding a Host Entry (Local Development)**:
+3. **Startup Information**:
+   After all services are started successfully, you'll see:
+   - Application URLs for all services
+   - Default login credentials
+   - Database initialization status
+   - Health status of all components
+
+4. **Adding a Host Entry (Local Development)**:
    ```bash
    # Add to /etc/hosts
    127.0.0.1 api.localhost dashboard.localhost db.localhost
