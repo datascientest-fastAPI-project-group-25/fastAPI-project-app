@@ -133,6 +133,51 @@ Our CI/CD pipeline uses GitHub Actions for automation and AWS for deployment:
    - AWS ECS deployment
    - Docker image management in ECR
 
+## Environment Setup and Configuration
+
+### Environment Variables
+
+The application uses environment variables for configuration. A sample `.env.example` file is provided as a template.
+
+1. **Creating Your Environment File**:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Important Environment Variables**:
+   - `DOMAIN`: Sets the base domain for the application
+   - `SECRET_KEY`: Used for JWT token generation and security
+   - `BACKEND_CORS_ORIGINS`: Configures CORS for the API
+   - `POSTGRES_*`: Database connection settings
+   - `FIRST_SUPERUSER_*`: Initial admin user credentials
+
+3. **Security Best Practices**:
+   - Never commit `.env` files to version control
+   - Use strong, unique passwords for all credentials
+   - Rotate secrets regularly in production environments
+   - Use different credentials for development, staging, and production
+
+### Subdomain-Based Routing
+
+The application uses a subdomain-based routing approach for different services:
+
+1. **Local Development**:
+   - API: http://api.localhost
+   - Frontend: http://dashboard.localhost
+   - API Docs: http://api.localhost/docs
+   - Adminer: http://db.localhost
+
+2. **Configuration**:
+   - The routing is handled by nginx in production
+   - Local development can use the same pattern with appropriate hosts file entries
+   - CORS is configured to allow cross-subdomain communication
+
+3. **Adding a Host Entry (Local Development)**:
+   ```bash
+   # Add to /etc/hosts
+   127.0.0.1 api.localhost dashboard.localhost db.localhost
+   ```
+
 ## Contributing
 
 1. Fork the repository

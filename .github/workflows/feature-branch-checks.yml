@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }} # Use GITHUB_TOKEN which is automatically provided by GitHub Actions
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -78,7 +78,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }} # Use GITHUB_TOKEN which is automatically provided by GitHub Actions
 
       - name: Set up Python
         uses: actions/setup-python@v5
