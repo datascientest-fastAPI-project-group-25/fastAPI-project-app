@@ -1,4 +1,3 @@
-#!/bin/bash
 # Script to test GitHub Actions workflows locally using act
 # Usage: ./scripts/test-workflow.sh <workflow-file> [event-type]
 
