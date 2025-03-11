@@ -37,7 +37,7 @@ jobs:
         with:
           name: coverage-html
           path: backend/htmlcov
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Upload coverage report

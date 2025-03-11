@@ -1,5 +1,5 @@
-# Stage 0, "build-stage", based on Node.js, to build and compile the frontend
-FROM node:20 AS build-stage
+# Stage 0: Base stage with Node.js
+FROM node:20 AS base
 
 WORKDIR /app
 
@@ -9,12 +9,21 @@ RUN npm install
 
 COPY ./ /app/
 
+# Stage 1: Development stage for testing
+FROM base AS development
+
+ENV NODE_ENV=development
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# Stage 2: Build stage for production
+FROM base AS build-stage
+
 ARG VITE_API_URL=${VITE_API_URL}
 
 RUN npm run build
 
-
-# Stage 1, based on Nginx, to have only the compiled app, ready for production with Nginx
+# Stage 3: Production stage with Nginx
 FROM nginx:1
 
 COPY --from=build-stage /app/dist/ /usr/share/nginx/html

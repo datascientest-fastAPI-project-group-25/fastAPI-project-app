@@ -14,11 +14,13 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
 
-  backend-test:
+  test-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: test
+    ports:
+      - "8001:8000"
     depends_on:
       test-db:
         condition: service_healthy
@@ -32,9 +34,36 @@ services:
       - FIRST_SUPERUSER=admin@example.com
       - FIRST_SUPERUSER_PASSWORD=admin
       - DOMAIN=localhost
-      - FRONTEND_HOST=http://localhost
+      - FRONTEND_HOST=http://localhost:5174
       - ENVIRONMENT=test
-      - BACKEND_CORS_ORIGINS=["http://localhost"]
+      - BACKEND_CORS_ORIGINS=["http://localhost:5174"]
       - PYTHONPATH=/app
     working_dir: /app
-    command: pytest -v --cov=app --cov-report=term-missing
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  test-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "5174:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8001/api/v1
+    depends_on:
+      - test-backend
+
+  test-playwright:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.playwright
+    depends_on:
+      - test-frontend
+      - test-backend
+    environment:
+      - BASE_URL=http://test-frontend:5173
+      - API_URL=http://test-backend:8000/api/v1
+    volumes:
+      - ./frontend/playwright-report:/app/playwright-report
+      - ./frontend/test-results:/app/test-results
+      - ./frontend/blob-report:/app/blob-report
