@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.4.15 /uv /uvx /bin/
 
 # Development stage with all dependencies
 FROM base as development
@@ -31,7 +31,8 @@ COPY scripts/ ./scripts/
 # Install all dependencies including dev dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv && \
-    uv pip install --system -e .
+    uv pip install --system -e . && \
+    uv pip install sqlalchemy
 
 # Make scripts executable
 RUN chmod +x /app/scripts/*
@@ -54,7 +55,8 @@ COPY scripts/ ./scripts/
 # Install only production dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv && \
-    uv pip install --system -e .
+    uv pip install --system -e . && \
+    uv pip install sqlalchemy
 
 # Make scripts executable
 RUN chmod +x /app/scripts/*
