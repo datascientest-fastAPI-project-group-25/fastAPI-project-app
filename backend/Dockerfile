@@ -31,7 +31,7 @@ COPY scripts/ ./scripts/
 # Install all dependencies including dev dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv && \
-    uv sync
+    uv pip install --system -e .
 
 # Make scripts executable
 RUN chmod +x /app/scripts/*
@@ -54,9 +54,7 @@ COPY scripts/ ./scripts/
 # Install only production dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv && \
-    uv pip compile pyproject.toml --output-file requirements.txt && \
-    uv pip install --system -r requirements.txt && \
-    rm requirements.txt
+    uv pip install --system -e .
 
 # Make scripts executable
 RUN chmod +x /app/scripts/*
