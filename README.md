@@ -305,9 +305,9 @@ The application uses a subdomain-based routing approach for different services:
    - Adminer: http://db.localhost
 
 2. **Configuration**:
-   - The routing is handled by nginx in production
-   - Local development can use the same pattern with appropriate hosts file entries
-   - CORS is configured to allow cross-subdomain communication
+   - The routing is handled by Traefik reverse proxy
+   - Local development uses Traefik with appropriate hosts file entries
+   - CORS is configured in Traefik to allow cross-subdomain communication
 
 3. **Adding a Host Entry (Local Development)**:
    ```bash
