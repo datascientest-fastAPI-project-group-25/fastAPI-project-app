@@ -40,7 +40,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: bash scripts/prestart.sh
+    command: bash /app/scripts/prestart.sh
+    labels:
+      - "com.datascientest.service.status=Done when exited"
     env_file:
       - .env
     environment:

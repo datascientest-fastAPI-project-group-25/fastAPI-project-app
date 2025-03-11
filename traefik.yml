@@ -1,0 +1,41 @@
+## Traefik Static Configuration
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+# Enable API and Dashboard
+api:
+  dashboard: true
+  insecure: true  # For development only, use secure: true with proper authentication in production
+
+# Configure entrypoints
+entryPoints:
+  web:
+    address: ":80"
+
+# Configure providers
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: fastapi-project-app_default
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
+
+# Configure certificate resolvers for Let's Encrypt
+# This is commented out for local development but will be useful for production
+# certificatesResolvers:
+#   letsencrypt:
+#     acme:
+#       email: "your-email@example.com"
+#       storage: "/etc/traefik/acme/acme.json"
+#       httpChallenge:
+#         entryPoint: web
+
+# Log configuration
+log:
+  level: "INFO"
+
+# Access logs
+accessLog: {}

@@ -1,14 +1,19 @@
 services:
   # Local development configuration
-  nginx:
-    image: nginx:latest
+  traefik:
+    image: traefik:v2.10
     ports:
       - "80:80"
+      - "8081:8080"  # Traefik dashboard
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
     depends_on:
       - backend
       - frontend
+    labels:
+      - "traefik.enable=true"
 
   db:
     restart: "no"
@@ -19,6 +24,11 @@ services:
     restart: "no"
     ports:
       - "8080:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adminer.rule=Host(`adminer.localhost`)"
+      - "traefik.http.routers.adminer.entrypoints=web"
+      - "traefik.http.services.adminer.loadbalancer.server.port=8080"
 
   backend:
     restart: "no"
@@ -36,27 +46,56 @@ services:
     # TODO: remove once coverage is done locally
     volumes:
       - ./backend/htmlcov:/app/htmlcov
+      # Mount specific directories instead of the entire app directory
+      - ./backend/app:/app/app
     environment:
       SMTP_HOST: "mailcatcher"
       SMTP_PORT: "1025"
       SMTP_TLS: "false"
       EMAILS_FROM_EMAIL: "noreply@example.com"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "api.localhost:host-gateway"
+      - "dashboard.localhost:host-gateway"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.localhost`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
 
   mailcatcher:
     image: schickling/mailcatcher
     ports:
       - "1080:1080"
       - "1025:1025"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailcatcher.rule=Host(`mail.localhost`)"
+      - "traefik.http.routers.mailcatcher.entrypoints=web"
+      - "traefik.http.services.mailcatcher.loadbalancer.server.port=1080"
 
   frontend:
     restart: "no"
     ports:
-      - "5173:80"
+      - "5173:5173"
     build:
       context: ./frontend
-      args:
-        - VITE_API_URL=http://localhost:8000
-        - NODE_ENV=development
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://api.localhost
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "api.localhost:host-gateway"
+      - "dashboard.localhost:host-gateway"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`dashboard.localhost`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=5173"
 
   playwright:
     build:
@@ -72,8 +111,8 @@ services:
     env_file:
       - .env
     environment:
-      - VITE_API_URL=http://backend:8000
-      - MAILCATCHER_HOST=http://mailcatcher:1080
+      - VITE_API_URL=http://api.localhost
+      - MAILCATCHER_HOST=http://mail.localhost
       # For the reports when run locally
       - PLAYWRIGHT_HTML_HOST=0.0.0.0
       - CI=${CI}

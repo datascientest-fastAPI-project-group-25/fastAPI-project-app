@@ -334,6 +334,8 @@ export const request = <T>(
   options: ApiRequestOptions<T>,
   axiosClient: AxiosInstance = axios,
 ): CancelablePromise<T> => {
+  // Debug API requests
+  console.log(`API Request: ${options.method} ${options.url}`, options);
   return new CancelablePromise(async (resolve, reject, onCancel) => {
     try {
       const url = getUrl(config, options)
