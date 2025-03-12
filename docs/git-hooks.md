@@ -1,14 +1,14 @@
-# Git Hooks with Lefthook
+# Git Hooks with pre-commit
 
-This project uses [Lefthook](https://github.com/evilmartians/lefthook) to manage Git hooks for code quality enforcement.
+This project uses [pre-commit](https://pre-commit.com/) to manage Git hooks for code quality enforcement.
 
-## What is Lefthook?
+## What is pre-commit?
 
-Lefthook is a fast and powerful Git hooks manager that helps maintain code quality by running checks before commits and pushes. It's faster and more flexible than alternatives like pre-commit.
+pre-commit is a framework for managing and maintaining multi-language pre-commit hooks. It helps maintain code quality by running checks before commits and pushes, ensuring consistent code quality across the project.
 
 ## Features
 
-Our Lefthook configuration provides:
+Our pre-commit configuration provides:
 
 - **Pre-commit hooks**:
   - Code formatting with Black
@@ -26,14 +26,18 @@ Our Lefthook configuration provides:
 
 ## Setup
 
-To set up Lefthook in your development environment:
+To set up pre-commit in your development environment:
 
 ```bash
 # Make the setup script executable
-chmod +x scripts/setup-lefthook.sh
+chmod +x scripts/setup-precommit.sh
 
 # Run the setup script
-./scripts/setup-lefthook.sh
+./scripts/setup-precommit.sh
+
+# Or install directly
+pip install pre-commit
+pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 ```
 
 ## Manual Usage
@@ -42,18 +46,18 @@ You can manually run the hooks:
 
 ```bash
 # Run all pre-commit hooks
-lefthook run pre-commit
+pre-commit run --all-files
 
 # Run all pre-push hooks
-lefthook run pre-push
+pre-commit run --hook-stage pre-push --all-files
 
 # Run a specific hook
-lefthook run pre-commit --only black
+pre-commit run black --all-files
 ```
 
 ## Configuration
 
-The Lefthook configuration is stored in `lefthook.yml` at the root of the project. You can modify this file to add, remove, or customize hooks.
+The pre-commit configuration is stored in `.pre-commit-config.yaml` at the root of the project. You can modify this file to add, remove, or customize hooks.
 
 ## Skipping Hooks
 
@@ -64,7 +68,7 @@ In rare cases when you need to bypass the hooks:
 git commit --no-verify -m "Your message"
 
 # Skip specific hooks
-LEFTHOOK=0 git commit -m "Your message"
+SKIP=black,ruff git commit -m "Your message"
 ```
 
 **Note**: Skipping hooks should be done only in exceptional circumstances, as it bypasses important code quality checks.
