@@ -82,7 +82,7 @@ The tool will:
 
 ### Git Hooks
 
-We use Lefthook to manage Git hooks:
+We use pre-commit to manage Git hooks:
 
 1. **Post-Checkout Hook**:
    - Triggers when checking out the main branch
@@ -113,7 +113,7 @@ To set up the branching strategy tools:
 npm install
 
 # Install Git hooks
-lefthook install
+pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 ```
 
 ## Best Practices
