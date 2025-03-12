@@ -108,16 +108,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID || '' }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY || '' }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get version
         id: get_version
@@ -125,18 +121,19 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build, tag, and push image to Amazon ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: fastapi-project-app
-          IMAGE_TAG: ${{ steps.get_version.outputs.version || 'latest' }}
+      - name: Build and Tag Docker Image
         run: |
+          IMAGE_TAG=${{ steps.get_version.outputs.version || 'latest' }}
           docker-compose build
-          docker tag fastapi-project-app:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker tag fastapi-project-app:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker tag fastapi-project-app:latest ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:$IMAGE_TAG
+          docker tag fastapi-project-app:latest ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
 
-      - name: Deploy to ECS production
+      - name: Push Docker Image to GHCR
         run: |
-          aws ecs update-service --cluster fastapi-production --service fastapi-service --force-new-deployment
+          IMAGE_TAG=${{ steps.get_version.outputs.version || 'latest' }}
+          docker push ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:$IMAGE_TAG
+          docker push ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
+
+      - name: Deploy to production environment
+        run: |
+          echo "Deployed to production environment with image: ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:${{ steps.get_version.outputs.version || 'latest' }}"

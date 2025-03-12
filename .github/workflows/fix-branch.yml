@@ -26,15 +26,16 @@ jobs:
 
       - name: Install uv
         run: |
+          pip install --upgrade pip
           pip install 'uv==0.4.15'
 
       - name: Install backend dependencies
         run: |
           cd backend
           if [ -f "requirements.txt" ]; then
-            uv pip install -r requirements.txt
+            python -m uv pip install --system -r requirements.txt
           else
-            uv pip install .
+            python -m uv pip install --system .
           fi
 
       - name: Install frontend dependencies
