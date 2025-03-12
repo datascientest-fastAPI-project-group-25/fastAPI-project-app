@@ -125,7 +125,7 @@ jobs:
 
             ### Changes included:
             ${{ github.event.head_commit.message }}
-          branch: create-pull-request/patch
+          branch: ${{ github.ref_name }}
           base: main
           labels: feature
           delete-branch: false
