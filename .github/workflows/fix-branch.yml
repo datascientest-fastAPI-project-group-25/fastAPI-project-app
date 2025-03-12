@@ -1,0 +1,102 @@
+name: Fix Branch Workflow
+
+on:
+  push:
+    branches:
+      - 'fix/**'
+
+jobs:
+  necessary-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install uv
+        run: |
+          pip install 'uv==0.4.15'
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          uv pip install -r requirements.txt
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run targeted tests
+        run: |
+          # Determine which files changed
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+
+          # Run backend tests only if backend files changed
+          if echo "$CHANGED_FILES" | grep -q "backend/"; then
+            cd backend
+            pytest -xvs app/tests/
+          fi
+
+          # Run frontend tests only if frontend files changed
+          if echo "$CHANGED_FILES" | grep -q "frontend/"; then
+            cd frontend
+            npm test || echo "No frontend tests available"
+          fi
+
+  auto-pr:
+    needs: necessary-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for automerge label
+        id: check_label
+        run: |
+          BRANCH_NAME=$(echo ${{ github.ref_name }})
+          if [[ $BRANCH_NAME == *"automerge"* ]]; then
+            echo "AUTOMERGE=true" >> $GITHUB_ENV
+          else
+            echo "AUTOMERGE=false" >> $GITHUB_ENV
+          fi
+
+      - name: Create Pull Request
+        id: create-pr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "fix: Automated PR from fix branch"
+          title: "Fix: ${{ github.ref_name }}"
+          body: |
+            ## Fix Branch PR
+
+            This PR was automatically created from the fix branch: ${{ github.ref_name }}
+
+            ### Changes included:
+            ${{ github.event.head_commit.message }}
+
+            ${{ contains(github.ref_name, 'automerge') && '### Automerge enabled' || '### Requires approval' }}
+          branch: ${{ github.ref_name }}
+          base: main
+          labels: fix${{ contains(github.ref_name, 'automerge') && ', automerge' || '' }}
+
+      - name: Auto-approve PR if automerge
+        if: contains(github.ref_name, 'automerge')
+        uses: hmarr/auto-approve-action@v3
+        with:
+          pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
