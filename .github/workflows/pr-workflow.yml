@@ -77,7 +77,7 @@ jobs:
 
   test:
     name: Run Tests
-    uses: ./.github/workflows/reusable-jobs.yml
+    uses: ./.github/workflows/_shared/jobs.yml
     with:
       environment: staging
       image-tag: pr-${{ github.event.pull_request.number }}

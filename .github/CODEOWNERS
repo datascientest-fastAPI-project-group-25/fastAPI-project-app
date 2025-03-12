@@ -1,0 +1,17 @@
+# This file defines code ownership for the repository
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything
+* @dataScientest-team
+
+# Workflow files
+/.github/workflows/ @dataScientest-devops
+
+# Backend code
+/backend/ @dataScientest-backend
+
+# Frontend code
+/frontend/ @dataScientest-frontend
+
+# Documentation
+/docs/ @dataScientest-docs

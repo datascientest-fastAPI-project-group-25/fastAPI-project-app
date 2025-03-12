@@ -12,7 +12,7 @@ jobs:
   deploy-production:
     name: Deploy to Production
     if: github.event_name == 'release'
-    uses: ./.github/workflows/reusable-jobs.yml
+    uses: ./.github/workflows/_shared/jobs.yml
     with:
       environment: prod
       image-tag: ${{ github.ref_name }}
@@ -25,7 +25,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/reusable-jobs.yml
+    uses: ./.github/workflows/_shared/jobs.yml
     with:
       environment: staging
       image-tag: ${{ github.sha }}
@@ -38,7 +38,7 @@ jobs:
   test-pr:
     name: Test PR
     if: github.event_name == 'pull_request'
-    uses: ./.github/workflows/reusable-jobs.yml
+    uses: ./.github/workflows/_shared/jobs.yml
     with:
       environment: staging
       image-tag: pr-${{ github.event.pull_request.number }}

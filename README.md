@@ -12,6 +12,7 @@ This repository contains a modern full-stack application with a FastAPI backend 
 - [Local Development](#-local-development)
 - [Development Workflow](#-development-workflow)
 - [CI/CD Pipeline](#-cicd-pipeline)
+- [Documentation](#-documentation)
 - [Environment Configuration](#-environment-configuration)
 - [Testing](#-testing)
 - [Troubleshooting](#-troubleshooting)
@@ -58,12 +59,14 @@ cp .env.example .env
 # Edit .env with your preferred settings
 ```
 
-3. **Install pre-commit hooks**
+3. **Install git hooks with Lefthook**
 
 ```bash
-pip install pre-commit
-pre-commit install
+chmod +x scripts/setup-lefthook.sh
+./scripts/setup-lefthook.sh
 ```
+
+This will set up git hooks to automatically format code, run linting checks, and ensure code quality on commit.
 
 ## 🐳 Docker-based Development
 
@@ -199,6 +202,23 @@ graph LR
     D -->|Pass| E[Merge to dev]
     E --> F[Deploy to Staging]
     F --> G[PR to main]
+```
+
+## 📚 Documentation
+
+All project documentation is organized in the `docs/` directory for better maintainability:
+
+- **[Development Guide](./docs/development/guide.md)** - Setting up and running the application locally
+- **[Deployment Guide](./docs/deployment/guide.md)** - Deploying to AWS ECS using GitHub Actions
+- **[GitHub Actions Workflows](./docs/workflows/github-actions.md)** - Overview and best practices for CI/CD workflows
+- **[Git Hooks](./docs/git-hooks.md)** - Documentation for the Lefthook git hooks setup
+- **[Release Notes](./docs/release-notes.md)** - Comprehensive changelog of all project changes
+
+Component-specific documentation can be found in the respective directories:
+- **[Backend Documentation](./backend/README.md)**
+- **[Frontend Documentation](./frontend/README.md)**
+
+For a complete overview of all documentation, see the [Documentation Index](./docs/README.md).
     G --> H{Main PR Checks}
     H -->|Pass| I[Merge to main]
     I --> J[Create Release]

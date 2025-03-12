@@ -147,7 +147,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    uses: ./.github/workflows/reusable-jobs.yml
+    uses: ./.github/workflows/_shared/jobs.yml
     with:
       environment: test
       image-tag: ${{ github.sha }}
