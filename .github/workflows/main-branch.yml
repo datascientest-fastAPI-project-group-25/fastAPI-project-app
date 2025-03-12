@@ -81,7 +81,7 @@ jobs:
   semantic-release:
     needs: full-test-suite
     if: |
-      github.event_name == 'push' || 
+      github.event_name == 'push' ||
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     steps:
@@ -106,7 +106,7 @@ jobs:
   deploy-production:
     needs: semantic-release
     if: |
-      github.event_name == 'push' || 
+      github.event_name == 'push' ||
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     steps:
