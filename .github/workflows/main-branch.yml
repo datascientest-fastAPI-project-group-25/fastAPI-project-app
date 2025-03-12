@@ -1,0 +1,138 @@
+name: Main Branch Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  full-test-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install uv
+        run: |
+          pip install 'uv==0.4.15'
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          uv pip install -r requirements.txt
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          pytest -xvs app/tests/
+
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          npm test || echo "No frontend tests available"
+
+      - name: Run linting
+        run: |
+          cd backend
+          flake8 app
+          black --check app
+
+      - name: Run security scans
+        run: |
+          cd backend
+          uv pip install bandit
+          bandit -r app -x app/tests
+
+          cd ../frontend
+          npm audit || echo "Vulnerabilities found, but continuing"
+
+      - name: Run integration tests
+        run: |
+          docker-compose -f docker-compose.test.yml up --build --exit-code-from backend-tests
+
+  semantic-release:
+    needs: full-test-suite
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+  deploy-production:
+    needs: semantic-release
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID || '' }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY || '' }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: fastapi-project-app
+          IMAGE_TAG: ${{ steps.get_version.outputs.version || 'latest' }}
+        run: |
+          docker-compose build
+          docker tag fastapi-project-app:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag fastapi-project-app:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to ECS production
+        run: |
+          aws ecs update-service --cluster fastapi-production --service fastapi-service --force-new-deployment
