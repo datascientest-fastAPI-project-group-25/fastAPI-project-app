@@ -88,7 +88,7 @@ jobs:
         id: create-pr
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
           commit-message: "fix: Automated PR from fix branch"
           title: "Fix: ${{ github.ref_name }}"
           body: |

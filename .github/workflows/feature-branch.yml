@@ -99,13 +99,15 @@ jobs:
   auto-pr:
     needs: deploy-staging
     runs-on: ubuntu-latest
+    # Add permissions needed for PR creation
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Ensure we have the token for PR creation
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Pull Request
 
@@ -113,7 +115,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
 
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
           commit-message: "feat: Automated PR from feature branch"
           title: "Feature: ${{ github.ref_name }}"
           body: |
