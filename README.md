@@ -23,8 +23,8 @@ This repository contains a modern full-stack application with a FastAPI backend 
 graph TD
     A[Frontend - React/TypeScript] --> B[Backend - FastAPI]
     B --> C[(PostgreSQL Database)]
-    D[CI/CD - GitHub Actions] --> E[AWS ECR]
-    E --> F[AWS ECS]
+    D[CI/CD - GitHub Actions] --> E[GitHub Container Registry]
+    E --> F[Deployment Environment]
 ```
 
 - **Frontend**: React, TypeScript, TanStack Query, Chakra UI
@@ -59,11 +59,11 @@ cp .env.example .env
 # Edit .env with your preferred settings
 ```
 
-3. **Install git hooks with Lefthook**
+3. **Install git hooks with pre-commit**
 
 ```bash
-chmod +x scripts/setup-lefthook.sh
-./scripts/setup-lefthook.sh
+pip install pre-commit
+pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 ```
 
 This will set up git hooks to automatically format code, run linting checks, and ensure code quality on commit.
@@ -192,7 +192,7 @@ You can test GitHub Actions workflows locally using the provided script:
 
 ## 🔄 CI/CD Pipeline
 
-Our CI/CD pipeline uses GitHub Actions for automation and AWS for deployment:
+Our CI/CD pipeline uses GitHub Actions for automation and GitHub Container Registry for image management:
 
 ```mermaid
 graph LR
@@ -209,9 +209,9 @@ graph LR
 All project documentation is organized in the `docs/` directory for better maintainability:
 
 - **[Development Guide](./docs/development/guide.md)** - Setting up and running the application locally
-- **[Deployment Guide](./docs/deployment/guide.md)** - Deploying to AWS ECS using GitHub Actions
+- **[Deployment Guide](./docs/deployment/guide.md)** - Deploying using GitHub Actions and GitHub Container Registry
 - **[GitHub Actions Workflows](./docs/workflows/github-actions.md)** - Overview and best practices for CI/CD workflows
-- **[Git Hooks](./docs/git-hooks.md)** - Documentation for the Lefthook git hooks setup
+- **[Git Hooks](./docs/git-hooks.md)** - Documentation for the pre-commit git hooks setup
 - **[Release Notes](./docs/release-notes.md)** - Comprehensive changelog of all project changes
 
 Component-specific documentation can be found in the respective directories:
@@ -234,8 +234,8 @@ For a complete overview of all documentation, see the [Documentation Index](./do
 2. **Continuous Deployment**
    - Staging environment (dev branch)
    - Production environment (main branch releases)
-   - AWS ECS deployment
-   - Docker image management in ECR
+   - Deployment to target environments
+   - Docker image management in GitHub Container Registry (GHCR)
 
 ## 🔐 Environment Configuration
 
