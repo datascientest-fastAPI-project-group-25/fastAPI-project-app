@@ -96,7 +96,7 @@ jobs:
 
       - name: Auto-approve PR if automerge
         if: contains(github.ref_name, 'automerge')
-        uses: hmarr/auto-approve-action@v3
+        uses: hmarr/auto-approve-action@v4
         with:
           pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
