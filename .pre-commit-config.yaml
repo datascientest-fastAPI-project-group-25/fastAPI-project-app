@@ -33,15 +33,7 @@ repos:
     hooks:
     -   id: block-main-push
         name: Block direct pushes to main
-        entry: |
-            #!/bin/bash
-            branch=$(git symbolic-ref --short HEAD)
-            if [ "$branch" = "main" ]; then
-              echo "❌ ERROR: Direct pushes to main branch are not allowed."
-              echo "Please create a feature (feat/*) or fix branch and submit a pull request instead."
-              echo "Run: ./scripts/create-branch.sh to create a proper branch."
-              exit 1
-            fi
+        entry: scripts/block-main-push.py
         language: script
         pass_filenames: false
         stages: [pre-push]
