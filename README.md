@@ -1,6 +1,6 @@
 # 🚀 DevOps Demo Application
 
-![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![GitHub Packages](https://img.shields.io/badge/GitHub_Packages-181717?style=for-the-badge&logo=github&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
 This repository contains a modern full-stack application with a FastAPI backend and React frontend, featuring a comprehensive CI/CD pipeline for AWS deployment.
 
@@ -30,7 +30,7 @@ graph TD
 - **Frontend**: React, TypeScript, TanStack Query, Chakra UI
 - **Backend**: FastAPI, SQLModel, Pydantic
 - **Database**: PostgreSQL
-- **Infrastructure**: Docker, AWS ECS, ECR
+- **Infrastructure**: Docker, GitHub Container Registry (GHCR)
 - **CI/CD**: GitHub Actions
 
 ## 🛠️ Development Environment Setup
@@ -199,9 +199,32 @@ graph LR
     A[Push to feat/*] --> B{Feature Branch Checks}
     B -->|Pass| C[PR to dev]
     C --> D{Dev Checks}
-    D -->|Pass| E[Merge to dev]
+    D -->|Pass| E[Push to GHCR]
     E --> F[Deploy to Staging]
     F --> G[PR to main]
+```
+
+### GitHub Container Registry (GHCR) Configuration
+
+We use GitHub Container Registry to store and manage our Docker images:
+
+- **Image Repository**: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app`
+- **Tagging Strategy**:
+  - Feature branches: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:feat-branch-name`
+  - Fix branches: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:fix-branch-name`
+  - Main branch: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest`
+  - Versioned releases: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:v1.2.3`
+
+#### Authentication
+
+The GitHub Actions workflows automatically authenticate with GHCR using the built-in `GITHUB_TOKEN` secret. For local development, you can authenticate using:
+
+```bash
+# Login to GHCR
+echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+
+# Pull an image
+docker pull ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
 ```
 
 ## 📚 Documentation
