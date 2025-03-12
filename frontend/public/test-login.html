@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>FastAPI Login Test</h1>
+    <div>
+        <button id="testLogin">Test Login</button>
+        <button id="testDirectFetch">Test Direct Fetch</button>
+    </div>
+    <h3>Response:</h3>
+    <pre id="response">Click a button to test login...</pre>
+
+    <script>
+        document.getElementById('testLogin').addEventListener('click', async () => {
+            const responseElement = document.getElementById('response');
+            responseElement.textContent = 'Testing login...';
+            
+            try {
+                // Create form data
+                const formData = new URLSearchParams();
+                formData.append('username', 'admin@example.com');
+                formData.append('password', 'FastAPI_Secure_2025!');
+                formData.append('grant_type', 'password');
+                
+                // Log what we're sending
+                console.log('Form data:', formData.toString());
+                
+                // Make the request
+                const response = await fetch('http://api.localhost/api/v1/login/access-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData,
+                });
+                
+                // Get the response details
+                const status = response.status;
+                const statusText = response.statusText;
+                const headers = {};
+                for (const [key, value] of response.headers.entries()) {
+                    headers[key] = value;
+                }
+                
+                // Try to parse the response as JSON
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = await response.text();
+                }
+                
+                // Display the response
+                responseElement.textContent = JSON.stringify({
+                    status,
+                    statusText,
+                    headers,
+                    data
+                }, null, 2);
+                
+            } catch (error) {
+                responseElement.textContent = 'Error: ' + error.message;
+                console.error('Login error:', error);
+            }
+        });
+
+        document.getElementById('testDirectFetch').addEventListener('click', async () => {
+            const responseElement = document.getElementById('response');
+            responseElement.textContent = 'Testing direct fetch...';
+            
+            try {
+                // Make a direct fetch request to test connectivity
+                const response = await fetch('http://api.localhost/api/v1/utils/health-check/');
+                const data = await response.json();
+                
+                responseElement.textContent = JSON.stringify({
+                    status: response.status,
+                    statusText: response.statusText,
+                    data
+                }, null, 2);
+                
+            } catch (error) {
+                responseElement.textContent = 'Error: ' + error.message;
+                console.error('Fetch error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

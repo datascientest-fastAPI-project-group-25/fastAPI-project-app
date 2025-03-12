@@ -1,12 +1,26 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
+import logging
 
 import jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Try to create a CryptContext with bcrypt, but fall back to a simpler scheme if there's an issue
+try:
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    # Test that it works
+    test_hash = pwd_context.hash("test")
+    logger.info("Successfully initialized bcrypt password hashing")
+except Exception as e:
+    logger.warning(f"Error initializing bcrypt: {e}. Falling back to sha256_crypt")
+    # Fall back to sha256_crypt which has fewer dependencies
+    pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 
 ALGORITHM = "HS256"

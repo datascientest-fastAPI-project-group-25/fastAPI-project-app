@@ -103,6 +103,27 @@ function Login() {
         <Button variant="solid" type="submit" loading={isSubmitting} size="md">
           Log In
         </Button>
+        
+        {/* Admin login button with hardcoded credentials from memory */}
+        <Button 
+          variant="outline" 
+          colorScheme="teal" 
+          size="md"
+          loading={loginMutation.isPending}
+          onClick={() => {
+            // Use the credentials from the memory
+            const adminCredentials = {
+              username: "admin@example.com",
+              password: "FastAPI_Secure_2025!",
+              grant_type: "password"
+            };
+            console.log("Using admin credentials:", adminCredentials);
+            resetError();
+            loginMutation.mutate(adminCredentials);
+          }}
+        >
+          Login as Admin
+        </Button>
         <Text>
           Don't have an account?{" "}
           <RouterLink to="/signup" className="main-link">

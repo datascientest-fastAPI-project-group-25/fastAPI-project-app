@@ -1,0 +1,11 @@
+{
+  "ref": "refs/heads/feat/proper-gh-action-workflows",
+  "repository": {
+    "name": "fastAPI-project-app",
+    "full_name": "datascientest-fastAPI-project-group-25/fastAPI-project-app",
+    "private": true
+  },
+  "pusher": {
+    "name": "jaronschulz"
+  }
+}

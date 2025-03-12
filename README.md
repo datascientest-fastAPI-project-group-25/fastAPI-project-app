@@ -1,239 +1,355 @@
-# Full Stack FastAPI Template
+# 🚀 DevOps Demo Application
 
-<a href="https://github.com/fastapi/full-stack-fastapi-template/actions?query=workflow%3ATest" target="_blank"><img src="https://github.com/fastapi/full-stack-fastapi-template/workflows/Test/badge.svg" alt="Test"></a>
-<a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/fastapi/full-stack-fastapi-template" target="_blank"><img src="https://coverage-badge.samuelcolvin.workers.dev/fastapi/full-stack-fastapi-template.svg" alt="Coverage"></a>
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
-## Technology Stack and Features
+This repository contains a modern full-stack application with a FastAPI backend and React frontend, featuring a comprehensive CI/CD pipeline for AWS deployment.
 
-- ⚡ [**FastAPI**](https://fastapi.tiangolo.com) for the Python backend API.
-    - 🧰 [SQLModel](https://sqlmodel.tiangolo.com) for the Python SQL database interactions (ORM).
-    - 🔍 [Pydantic](https://docs.pydantic.dev), used by FastAPI, for the data validation and settings management.
-    - 💾 [PostgreSQL](https://www.postgresql.org) as the SQL database.
-- 🚀 [React](https://react.dev) for the frontend.
-    - 💃 Using TypeScript, hooks, Vite, and other parts of a modern frontend stack.
-    - 🎨 [Chakra UI](https://chakra-ui.com) for the frontend components.
-    - 🤖 An automatically generated frontend client.
-    - 🧪 [Playwright](https://playwright.dev) for End-to-End testing.
-    - 🦇 Dark mode support.
-- 🐋 [Docker Compose](https://www.docker.com) for development and production.
-- 🔒 Secure password hashing by default.
-- 🔑 JWT (JSON Web Token) authentication.
-- 📫 Email based password recovery.
-- ✅ Tests with [Pytest](https://pytest.org).
-- 📞 [Traefik](https://traefik.io) as a reverse proxy / load balancer.
-- 🚢 Deployment instructions using Docker Compose, including how to set up a frontend Traefik proxy to handle automatic HTTPS certificates.
-- 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions.
+## 📋 Table of Contents
 
-### Dashboard Login
+- [Architecture Overview](#-architecture-overview)
+- [Development Environment Setup](#-development-environment-setup)
+- [Docker-based Development](#-docker-based-development)
+- [Local Development](#-local-development)
+- [Development Workflow](#-development-workflow)
+- [CI/CD Pipeline](#-cicd-pipeline)
+- [Documentation](#-documentation)
+- [Environment Configuration](#-environment-configuration)
+- [Testing](#-testing)
+- [Troubleshooting](#-troubleshooting)
 
-[![API docs](img/login.png)](https://github.com/fastapi/full-stack-fastapi-template)
+## 🏗️ Architecture Overview
 
-### Dashboard - Admin
-
-[![API docs](img/dashboard.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Dashboard - Create User
-
-[![API docs](img/dashboard-create.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Dashboard - Items
-
-[![API docs](img/dashboard-items.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Dashboard - User Settings
-
-[![API docs](img/dashboard-user-settings.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Dashboard - Dark Mode
-
-[![API docs](img/dashboard-dark.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Interactive API Documentation
-
-[![API docs](img/docs.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-## How To Use It
-
-You can **just fork or clone** this repository and use it as is.
-
-✨ It just works. ✨
-
-### How to Use a Private Repository
-
-If you want to have a private repository, GitHub won't allow you to simply fork it as it doesn't allow changing the visibility of forks.
-
-But you can do the following:
-
-- Create a new GitHub repo, for example `my-full-stack`.
-- Clone this repository manually, set the name with the name of the project you want to use, for example `my-full-stack`:
-
-```bash
-git clone git@github.com:fastapi/full-stack-fastapi-template.git my-full-stack
+```mermaid
+graph TD
+    A[Frontend - React/TypeScript] --> B[Backend - FastAPI]
+    B --> C[(PostgreSQL Database)]
+    D[CI/CD - GitHub Actions] --> E[AWS ECR]
+    E --> F[AWS ECS]
 ```
 
-- Enter into the new directory:
+- **Frontend**: React, TypeScript, TanStack Query, Chakra UI
+- **Backend**: FastAPI, SQLModel, Pydantic
+- **Database**: PostgreSQL
+- **Infrastructure**: Docker, AWS ECS, ECR
+- **CI/CD**: GitHub Actions
+
+## 🛠️ Development Environment Setup
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/) and Docker Compose
+- [Node.js](https://nodejs.org/) (v18+)
+- [Python](https://www.python.org/) (3.11+)
+- [uv](https://github.com/astral-sh/uv/) for Python package management
+- [Git](https://git-scm.com/)
+
+### Initial Setup
+
+1. **Clone the repository**
 
 ```bash
-cd my-full-stack
+git clone https://github.com/yourusername/fastAPI-project-app.git
+cd fastAPI-project-app
 ```
 
-- Set the new origin to your new repository, copy it from the GitHub interface, for example:
+2. **Set up environment variables**
 
 ```bash
-git remote set-url origin git@github.com:octocat/my-full-stack.git
+cp .env.example .env
+# Edit .env with your preferred settings
 ```
 
-- Add this repo as another "remote" to allow you to get updates later:
+3. **Install git hooks with Lefthook**
 
 ```bash
-git remote add upstream git@github.com:fastapi/full-stack-fastapi-template.git
+chmod +x scripts/setup-lefthook.sh
+./scripts/setup-lefthook.sh
 ```
 
-- Push the code to your new repository:
+This will set up git hooks to automatically format code, run linting checks, and ensure code quality on commit.
+
+## 🐳 Docker-based Development
+
+The easiest way to get started is using Docker Compose, which sets up all services including the frontend, backend, and database.
+
+### Starting the Environment
 
 ```bash
-git push -u origin master
+docker compose up -d
 ```
 
-### Update From the Original Template
+### Accessing Services
 
-After cloning the repository, and after doing changes, you might want to get the latest changes from this original template.
+- **Frontend**: http://dashboard.localhost
+- **Backend API**: http://api.localhost
+- **API Documentation**: http://api.localhost/docs
+- **Database Admin**: http://adminer.localhost (System: PostgreSQL, Server: db, User: postgres)
 
-- Make sure you added the original repository as a remote, you can check it with:
+### Viewing Logs
 
 ```bash
-git remote -v
+# All services
+docker compose logs -f
 
-origin    git@github.com:octocat/my-full-stack.git (fetch)
-origin    git@github.com:octocat/my-full-stack.git (push)
-upstream    git@github.com:fastapi/full-stack-fastapi-template.git (fetch)
-upstream    git@github.com:fastapi/full-stack-fastapi-template.git (push)
+# Specific service
+docker compose logs -f backend
 ```
 
-- Pull the latest changes without merging:
+### Rebuilding Services
 
 ```bash
-git pull --no-commit upstream master
+# After code changes
+docker compose up -d --build backend
 ```
 
-This will download the latest changes from this template without committing them, that way you can check everything is right before committing.
+## 💻 Local Development
 
-- If there are conflicts, solve them in your editor.
+For a more responsive development experience, you can run services locally.
 
-- Once you are done, commit the changes:
+### Backend Setup
 
 ```bash
-git merge --continue
+# Navigate to backend directory
+cd backend
+
+# Create and activate virtual environment
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+uv pip install -e .
+
+# Run development server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Configure
-
-You can then update configs in the `.env` files to customize your configurations.
-
-Before deploying it, make sure you change at least the values for:
-
-- `SECRET_KEY`
-- `FIRST_SUPERUSER_PASSWORD`
-- `POSTGRES_PASSWORD`
-
-You can (and should) pass these as environment variables from secrets.
-
-Read the [deployment.md](./deployment.md) docs for more details.
-
-### Generate Secret Keys
-
-Some environment variables in the `.env` file have a default value of `changethis`.
-
-You have to change them with a secret key, to generate secret keys you can run the following command:
+### Frontend Setup
 
 ```bash
-python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
 ```
 
-Copy the content and use that as password / secret key. And run that again to generate another secure key.
+## 🔄 Development Workflow
 
-## How To Use It - Alternative With Copier
+### Branch Strategy
 
-This repository also supports generating a new project using [Copier](https://copier.readthedocs.io).
+1. **🌱 Feature Branches (`feat/* || fix/*`)**
+   - Create for new features or bug fixes
+   - Must pass pre-commit hooks before pushing
+   - On push triggers:
+     * Style checks (black, flake8, eslint, prettier)
+     * Security checks (bandit, npm audit, pip-audit)
+     * Linting & formatting
+     * Unit tests
+   - Requires PR review to merge to `dev`
 
-It will copy all the files, ask you configuration questions, and update the `.env` files with your answers.
+2. **🔨 Development Branch (`dev`)**
+   - Integration branch for feature development
+   - On push triggers:
+     * Minimal test suite (unit, linting, security)
+     * Automatic staging deployment
+   - PR to `main` triggers:
+     * Full test suite (integration, e2e, API)
+     * Security scans
+     * Performance tests
+     * Documentation updates
+     * Changelog generation
 
-### Install Copier
+3. **🚀 Main Branch (`main`)**
+   - Production-ready code
+   - Protected branch requiring PR approval
+   - On push/PR merge:
+     * Complete test suite
+     * Security scans
+     * Dependency checks
+   - Release tags trigger production deployment
 
-You can install Copier with:
+### Creating a Feature
 
 ```bash
-pip install copier
+git checkout dev
+git pull
+git checkout -b feat/your-feature-name
+# Make changes
+git commit -m "feat: your feature description"
+# Create PR to dev branch
 ```
 
-Or better, if you have [`pipx`](https://pipx.pypa.io/), you can run it with:
+### Testing Workflows Locally
+
+You can test GitHub Actions workflows locally using the provided script:
 
 ```bash
-pipx install copier
+./scripts/test-workflow.sh feature-branch-checks.yml push
 ```
 
-**Note**: If you have `pipx`, installing copier is optional, you could run it directly.
+## 🔄 CI/CD Pipeline
 
-### Generate a Project With Copier
+Our CI/CD pipeline uses GitHub Actions for automation and AWS for deployment:
 
-Decide a name for your new project's directory, you will use it below. For example, `my-awesome-project`.
+```mermaid
+graph LR
+    A[Push to feat/*] --> B{Feature Branch Checks}
+    B -->|Pass| C[PR to dev]
+    C --> D{Dev Checks}
+    D -->|Pass| E[Merge to dev]
+    E --> F[Deploy to Staging]
+    F --> G[PR to main]
+```
 
-Go to the directory that will be the parent of your project, and run the command with your project's name:
+## 📚 Documentation
+
+All project documentation is organized in the `docs/` directory for better maintainability:
+
+- **[Development Guide](./docs/development/guide.md)** - Setting up and running the application locally
+- **[Deployment Guide](./docs/deployment/guide.md)** - Deploying to AWS ECS using GitHub Actions
+- **[GitHub Actions Workflows](./docs/workflows/github-actions.md)** - Overview and best practices for CI/CD workflows
+- **[Git Hooks](./docs/git-hooks.md)** - Documentation for the Lefthook git hooks setup
+- **[Release Notes](./docs/release-notes.md)** - Comprehensive changelog of all project changes
+
+Component-specific documentation can be found in the respective directories:
+- **[Backend Documentation](./backend/README.md)**
+- **[Frontend Documentation](./frontend/README.md)**
+
+For a complete overview of all documentation, see the [Documentation Index](./docs/README.md).
+    G --> H{Main PR Checks}
+    H -->|Pass| I[Merge to main]
+    I --> J[Create Release]
+    J --> K[Deploy to Production]
+```
+
+1. **Continuous Integration**
+   - Automated testing
+   - Code quality checks
+   - Security scanning
+   - Performance testing
+
+2. **Continuous Deployment**
+   - Staging environment (dev branch)
+   - Production environment (main branch releases)
+   - AWS ECS deployment
+   - Docker image management in ECR
+
+## 🔐 Environment Configuration
+
+The application uses environment variables for configuration. A sample `.env.example` file is provided as a template.
+
+### Important Environment Variables
+
+| Variable | Purpose | Example |
+|----------|---------|--------|
+| `DOMAIN` | Base domain for the application | `localhost` |
+| `SECRET_KEY` | Used for JWT token generation | `your-secret-key` |
+| `BACKEND_CORS_ORIGINS` | Configures CORS for the API | `["http://localhost"]` |
+| `POSTGRES_USER` | Database username | `postgres` |
+| `POSTGRES_PASSWORD` | Database password | `postgres` |
+| `POSTGRES_DB` | Database name | `app` |
+
+### Subdomain-based Routing
+
+For local development, the application uses subdomain-based routing:
+
+- `api.localhost` - Backend API
+- `dashboard.localhost` - Frontend dashboard
+- `adminer.localhost` - Database administration
+
+To enable this on your local machine, add these entries to your hosts file:
+
+```
+127.0.0.1 api.localhost
+127.0.0.1 dashboard.localhost
+127.0.0.1 adminer.localhost
+```
+
+## 🧪 Testing
+
+### Backend Tests
 
 ```bash
-copier copy https://github.com/fastapi/full-stack-fastapi-template my-awesome-project --trust
+cd backend
+source .venv/bin/activate
+pytest
 ```
 
-If you have `pipx` and you didn't install `copier`, you can run it directly:
+### Frontend Tests
 
 ```bash
-pipx run copier copy https://github.com/fastapi/full-stack-fastapi-template my-awesome-project --trust
+cd frontend
+npm test
 ```
 
-**Note** the `--trust` option is necessary to be able to execute a [post-creation script](https://github.com/fastapi/full-stack-fastapi-template/blob/master/.copier/update_dotenv.py) that updates your `.env` files.
+### End-to-End Tests
 
-### Input Variables
+```bash
+cd frontend
+npm run test:e2e
+```
 
-Copier will ask you for some data, you might want to have at hand before generating the project.
+## 🔍 Troubleshooting
 
-But don't worry, you can just update any of that in the `.env` files afterwards.
+### Common Issues
 
-The input variables, with their default values (some auto generated) are:
+1. **Docker Compose Network Issues**
+   - Restart Docker: `docker compose down && docker compose up -d`
 
-- `project_name`: (default: `"FastAPI Project"`) The name of the project, shown to API users (in .env).
-- `stack_name`: (default: `"fastapi-project"`) The name of the stack used for Docker Compose labels and project name (no spaces, no periods) (in .env).
-- `secret_key`: (default: `"changethis"`) The secret key for the project, used for security, stored in .env, you can generate one with the method above.
-- `first_superuser`: (default: `"admin@example.com"`) The email of the first superuser (in .env).
-- `first_superuser_password`: (default: `"changethis"`) The password of the first superuser (in .env).
-- `smtp_host`: (default: "") The SMTP server host to send emails, you can set it later in .env.
-- `smtp_user`: (default: "") The SMTP server user to send emails, you can set it later in .env.
-- `smtp_password`: (default: "") The SMTP server password to send emails, you can set it later in .env.
-- `emails_from_email`: (default: `"info@example.com"`) The email account to send emails from, you can set it later in .env.
-- `postgres_password`: (default: `"changethis"`) The password for the PostgreSQL database, stored in .env, you can generate one with the method above.
-- `sentry_dsn`: (default: "") The DSN for Sentry, if you are using it, you can set it later in .env.
+2. **Database Connection Failures**
+   - Check database credentials in `.env`
+   - Ensure PostgreSQL service is running: `docker compose ps`
 
-## Backend Development
+3. **Frontend API Connection Issues**
+   - Verify CORS settings in `.env`
+   - Check API URL configuration in frontend
+   - `FIRST_SUPERUSER_*`: Initial admin user credentials
 
-Backend docs: [backend/README.md](./backend/README.md).
+3. **Security Best Practices**:
+   - Never commit `.env` files to version control
+   - Use strong, unique passwords for all credentials
+   - Rotate secrets regularly in production environments
+   - Use different credentials for development, staging, and production
 
-## Frontend Development
+### Subdomain-Based Routing
 
-Frontend docs: [frontend/README.md](./frontend/README.md).
+The application uses a subdomain-based routing approach for different services:
 
-## Deployment
+1. **Local Development**:
+   - API: http://api.localhost
+   - Frontend: http://dashboard.localhost
+   - API Docs: http://api.localhost/docs
+   - Adminer: http://db.localhost
 
-Deployment docs: [deployment.md](./deployment.md).
+2. **Configuration**:
+   - The routing is handled by Traefik reverse proxy
+   - Local development uses Traefik with appropriate hosts file entries
+   - CORS is configured in Traefik to allow cross-subdomain communication
 
-## Development
+3. **Startup Information**:
 
-General development docs: [development.md](./development.md).
+   When you run `docker compose up`, you'll see:
+   - Application URLs for all services
+   - Default login credentials
+   - Database initialization status
+   - Health status of all components
 
-This includes using Docker Compose, custom local domains, `.env` configurations, etc.
+   If you want to run the application in detached mode, use `docker compose up -d`.
+   - than you can see the startup information in the logs `docker compose logs app-status`
 
-## Release Notes
+4. **Adding a Host Entry (Local Development)**:
+   ```bash
+   # Add to /etc/hosts
+   127.0.0.1 api.localhost dashboard.localhost db.localhost
+   ```
 
-Check the file [release-notes.md](./release-notes.md).
+## Contributing
 
-## License
-
-The Full Stack FastAPI Template is licensed under the terms of the MIT license.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feat/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feat/amazing-feature`)
+5. Open a Pull Request to the `dev` branch

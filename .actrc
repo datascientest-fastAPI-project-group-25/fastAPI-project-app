@@ -1,0 +1,10 @@
+--container-architecture linux/amd64
+--env-file .env
+--env CI=true
+-P ubuntu-latest=node:18-bullseye
+-P ubuntu-22.04=node:18-bullseye
+-P ubuntu-20.04=node:16-bullseye
+--secret GITHUB_TOKEN=
+--secret AWS_ACCESS_KEY_ID=
+--secret AWS_SECRET_ACCESS_KEY=
+--secret AWS_REGION=

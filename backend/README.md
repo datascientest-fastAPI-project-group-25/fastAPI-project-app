@@ -1,172 +1,165 @@
-# FastAPI Project - Backend
+# 🔥 DevOps Demo Application - Backend
 
-## Requirements
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 
-* [Docker](https://www.docker.com/).
-* [uv](https://docs.astral.sh/uv/) for Python package and environment management.
+The backend of our DevOps demo application is built with FastAPI, providing a high-performance, easy-to-use API with automatic interactive documentation.
 
-## Docker Compose
+## 💻 Table of Contents
 
-Start the local development environment with Docker Compose following the guide in [../development.md](../development.md).
+- [Features](#-features)
+- [Requirements](#-requirements)
+- [Development Setup](#-development-setup)
+  - [Docker-based Development](#docker-based-development)
+  - [Local Development](#local-development)
+- [API Documentation](#-api-documentation)
+- [Project Structure](#-project-structure)
+- [Database](#-database)
+- [Testing](#-testing)
+- [Deployment](#-deployment)
 
-## General Workflow
+## ✨ Features
 
-By default, the dependencies are managed with [uv](https://docs.astral.sh/uv/), go there and install it.
+- **FastAPI Framework**: High-performance, easy to learn, fast to code, ready for production
+- **SQLModel ORM**: SQL databases in Python, designed for simplicity, compatibility, and robustness
+- **JWT Authentication**: Secure authentication with JWT tokens
+- **Automatic API Documentation**: Interactive API documentation with Swagger UI and ReDoc
+- **Dependency Injection**: Clean and testable code with FastAPI's dependency injection system
+- **Async Support**: Fully asynchronous API endpoints for high performance
+- **Comprehensive Testing**: Pytest-based test suite with high coverage
 
-From `./backend/` you can install all the dependencies with:
+## 📍 Requirements
 
-```console
-$ uv sync
-```
+* [Docker](https://www.docker.com/) and Docker Compose
+* [Python](https://www.python.org/) 3.11+
+* [uv](https://github.com/astral-sh/uv/) for Python package and environment management
+* [PostgreSQL](https://www.postgresql.org/) (when running locally without Docker)
 
-Then you can activate the virtual environment with:
+## 🔧 Development Setup
 
-```console
-$ source .venv/bin/activate
-```
+### Docker-based Development
 
-Make sure your editor is using the correct Python virtual environment, with the interpreter at `backend/.venv/bin/python`.
-
-Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
-
-## VS Code
-
-There are already configurations in place to run the backend through the VS Code debugger, so that you can use breakpoints, pause and explore variables, etc.
-
-The setup is also already configured so you can run the tests through the VS Code Python tests tab.
-
-## Docker Compose Override
-
-During development, you can change Docker Compose settings that will only affect the local development environment in the file `docker-compose.override.yml`.
-
-The changes to that file only affect the local development environment, not the production environment. So, you can add "temporary" changes that help the development workflow.
-
-For example, the directory with the backend code is synchronized in the Docker container, copying the code you change live to the directory inside the container. That allows you to test your changes right away, without having to build the Docker image again. It should only be done during development, for production, you should build the Docker image with a recent version of the backend code. But during development, it allows you to iterate very fast.
-
-There is also a command override that runs `fastapi run --reload` instead of the default `fastapi run`. It starts a single server process (instead of multiple, as would be for production) and reloads the process whenever the code changes. Have in mind that if you have a syntax error and save the Python file, it will break and exit, and the container will stop. After that, you can restart the container by fixing the error and running again:
-
-```console
-$ docker compose watch
-```
-
-There is also a commented out `command` override, you can uncomment it and comment the default one. It makes the backend container run a process that does "nothing", but keeps the container alive. That allows you to get inside your running container and execute commands inside, for example a Python interpreter to test installed dependencies, or start the development server that reloads when it detects changes.
-
-To get inside the container with a `bash` session you can start the stack with:
-
-```console
-$ docker compose watch
-```
-
-and then in another terminal, `exec` inside the running container:
-
-```console
-$ docker compose exec backend bash
-```
-
-You should see an output like:
-
-```console
-root@7f2607af31c3:/app#
-```
-
-that means that you are in a `bash` session inside your container, as a `root` user, under the `/app` directory, this directory has another directory called "app" inside, that's where your code lives inside the container: `/app/app`.
-
-There you can use the `fastapi run --reload` command to run the debug live reloading server.
-
-```console
-$ fastapi run --reload app/main.py
-```
-
-...it will look like:
-
-```console
-root@7f2607af31c3:/app# fastapi run --reload app/main.py
-```
-
-and then hit enter. That runs the live reloading server that auto reloads when it detects code changes.
-
-Nevertheless, if it doesn't detect a change but a syntax error, it will just stop with an error. But as the container is still alive and you are in a Bash session, you can quickly restart it after fixing the error, running the same command ("up arrow" and "Enter").
-
-...this previous detail is what makes it useful to have the container alive doing nothing and then, in a Bash session, make it run the live reload server.
-
-## Backend tests
-
-To test the backend run:
-
-```console
-$ bash ./scripts/test.sh
-```
-
-The tests run with Pytest, modify and add tests to `./backend/app/tests/`.
-
-If you use GitHub Actions the tests will run automatically.
-
-### Test running stack
-
-If your stack is already up and you just want to run the tests, you can use:
+The easiest way to get started is using Docker Compose, which sets up all required services including the database.
 
 ```bash
-docker compose exec backend bash scripts/tests-start.sh
+# From the project root directory
+docker compose up -d
 ```
 
-That `/app/scripts/tests-start.sh` script just calls `pytest` after making sure that the rest of the stack is running. If you need to pass extra arguments to `pytest`, you can pass them to that command and they will be forwarded.
+This will start:
+- Backend API at http://api.localhost
+- PostgreSQL database
+- Adminer (database management) at http://adminer.localhost
 
-For example, to stop on first error:
+### Local Development
+
+For a more responsive development experience, you can run the backend locally.
+
+1. **Set up environment variables**
 
 ```bash
-docker compose exec backend bash scripts/tests-start.sh -x
+# From the project root directory
+cp .env.example .env
+# Edit .env with your preferred settings
 ```
 
-### Test Coverage
+2. **Install dependencies**
 
-When the tests are run, a file `htmlcov/index.html` is generated, you can open it in your browser to see the coverage of the tests.
+```bash
+# Navigate to backend directory
+cd backend
 
-## Migrations
+# Create a virtual environment
+uv venv
 
-As during local development your app directory is mounted as a volume inside the container, you can also run the migrations with `alembic` commands inside the container and the migration code will be in your app directory (instead of being only inside the container). So you can add it to your git repository.
+# Activate the virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-Make sure you create a "revision" of your models and that you "upgrade" your database with that revision every time you change them. As this is what will update the tables in your database. Otherwise, your application will have errors.
-
-* Start an interactive session in the backend container:
-
-```console
-$ docker compose exec backend bash
+# Install dependencies
+uv pip install -e .
 ```
 
-* Alembic is already configured to import your SQLModel models from `./backend/app/models.py`.
+3. **Start the development server**
 
-* After changing a model (for example, adding a column), inside the container, create a revision, e.g.:
-
-```console
-$ alembic revision --autogenerate -m "Add column last_name to User model"
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-* Commit to the git repository the files generated in the alembic directory.
+## 📖 API Documentation
 
-* After creating the revision, run the migration in the database (this is what will actually change the database):
+FastAPI automatically generates interactive API documentation:
 
-```console
-$ alembic upgrade head
+- **Swagger UI**: http://localhost:8000/docs
+  - Interactive documentation with request/response examples
+  - Try out API endpoints directly from the browser
+
+- **ReDoc**: http://localhost:8000/redoc
+  - Alternative documentation interface
+  - More readable for complex APIs
+
+## 📂 Project Structure
+
+```
+backend/
+├── app/
+│   ├── api/
+│   │   ├── deps.py         # Dependency injection
+│   │   └── routes/         # API endpoints
+│   ├── core/               # Core functionality
+│   │   ├── config.py       # Configuration
+│   │   └── security.py     # Security utilities
+│   ├── crud/               # CRUD operations
+│   ├── db/                 # Database setup
+│   ├── models/             # SQLModel models
+│   ├── schemas/            # Pydantic schemas
+│   ├── tests/              # Tests
+│   └── main.py             # Application entry point
+└── pyproject.toml          # Project dependencies
 ```
 
-If you don't want to use migrations at all, uncomment the lines in the file at `./backend/app/core/db.py` that end in:
+## 💾 Database
+
+### Migrations
+
+The application uses Alembic for database migrations:
+
+```bash
+# Generate a new migration
+alembic revision --autogenerate -m "description"
+
+# Apply migrations
+alembic upgrade head
+```
+
+### Database Models
+
+Models are defined using SQLModel, which combines SQLAlchemy and Pydantic:
 
 ```python
-SQLModel.metadata.create_all(engine)
+from sqlmodel import Field, SQLModel
+
+class User(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    email: str = Field(unique=True, index=True)
+    # ...
 ```
 
-and comment the line in the file `scripts/prestart.sh` that contains:
+## 🧪 Testing
 
-```console
-$ alembic upgrade head
+The backend includes a comprehensive test suite using pytest:
+
+```bash
+# Run all tests
+pytest
+
+# Run tests with coverage report
+pytest --cov=app
+
+# Run specific test file
+pytest app/tests/api/routes/test_users.py
 ```
 
-If you don't want to start with the default models and want to remove them / modify them, from the beginning, without having any previous revision, you can remove the revision files (`.py` Python files) under `./backend/app/alembic/versions/`. And then create a first migration as described above.
+## 🚀 Deployment
 
-## Email Templates
+The backend is designed to be deployed as a Docker container to AWS ECS. The deployment is handled automatically by GitHub Actions when changes are pushed to the appropriate branches.
 
-The email templates are in `./backend/app/email-templates/`. Here, there are two directories: `build` and `src`. The `src` directory contains the source files that are used to build the final email templates. The `build` directory contains the final email templates that are used by the application.
-
-Before continuing, ensure you have the [MJML extension](https://marketplace.visualstudio.com/items?itemName=attilabuti.vscode-mjml) installed in your VS Code.
-
-Once you have the MJML extension installed, you can create a new email template in the `src` directory. After creating the new email template and with the `.mjml` file open in your editor, open the command palette with `Ctrl+Shift+P` and search for `MJML: Export to HTML`. This will convert the `.mjml` file to a `.html` file and now you can save it in the build directory.
+For more information on the deployment process, see the CI/CD Pipeline section in the main README.

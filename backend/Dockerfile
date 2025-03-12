@@ -1,43 +1,65 @@
-FROM python:3.10
+# Base stage for shared configuration
+FROM python:3.11-slim as base
 
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
+    PATH="/app/.venv/bin:$PATH" \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
 WORKDIR /app/
 
-# Install uv
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv
-COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
+# Install system dependencies and uv
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gcc \
+    python3-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Place executables in the environment at the front of the path
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#using-the-environment
-ENV PATH="/app/.venv/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:0.4.15 /uv /uvx /bin/
 
-# Compile bytecode
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#compiling-bytecode
-ENV UV_COMPILE_BYTECODE=1
+# Development stage with all dependencies
+FROM base as development
 
-# uv Cache
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#caching
-ENV UV_LINK_MODE=copy
+# Copy dependency files and project structure
+COPY pyproject.toml uv.lock alembic.ini ./
+COPY app/ ./app/
+COPY scripts/ ./scripts/
 
-# Install dependencies
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers
+# Install all dependencies including dev dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project
+    uv venv && \
+    uv pip install --system -e . && \
+    uv pip install sqlalchemy sqlmodel psycopg[binary] alembic tenacity "fastapi[standard]" pydantic pydantic-settings emails jinja2 httpx PyJWT passlib python-multipart bcrypt email-validator sentry-sdk
 
-ENV PYTHONPATH=/app
+# Make scripts executable
+RUN chmod +x /app/scripts/*
 
-COPY ./scripts /app/scripts
+# Test stage inherits from development
+FROM development as test
 
-COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
-
-COPY ./app /app/app
-
-# Sync the project
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers
+# Install additional test dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync
+    uv pip install pytest-cov pytest-asyncio httpx
 
-CMD ["fastapi", "run", "--workers", "4", "app/main.py"]
+# Production stage with minimal dependencies
+FROM base as production
+
+# Copy dependency files and project structure
+COPY pyproject.toml uv.lock alembic.ini ./
+COPY app/ ./app/
+COPY scripts/ ./scripts/
+
+# Install only production dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv venv && \
+    uv pip install --system -e . && \
+    uv pip install sqlalchemy sqlmodel psycopg[binary] alembic tenacity "fastapi[standard]" pydantic pydantic-settings emails jinja2 httpx PyJWT passlib python-multipart bcrypt email-validator sentry-sdk
+
+# Make scripts executable
+RUN chmod +x /app/scripts/*
+
+# Default command
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

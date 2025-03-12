@@ -1,0 +1,57 @@
+name: Auto Create PR
+on:
+  push:
+    branches:
+      - 'feat/*'
+      - 'fix/*'
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get branch name
+        id: branch-name
+        run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+
+      - name: Get commit messages
+        id: get-commits
+        run: |
+          # Get all commits since branching from dev
+          COMMITS=$(git log --format="%B" origin/dev..${{ steps.branch-name.outputs.branch }} | sed 's/"/\\"/g')
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          base: dev
+          title: '🔄 ${{ steps.branch-name.outputs.branch }}'
+          body: |
+            ## Automated PR from ${{ steps.branch-name.outputs.branch }}
+            
+            ### Commit History
+            ```
+            ${{ steps.get-commits.outputs.commits }}
+            ```
+            
+            ### Checklist
+            - [ ] Code follows project style guidelines
+            - [ ] Tests added/updated and passing
+            - [ ] Documentation updated
+            - [ ] Security implications considered
+            
+            Please review the changes and update the checklist accordingly.
+          labels: |
+            automated-pr
+            needs-review
+          draft: false
+          delete-branch: false
