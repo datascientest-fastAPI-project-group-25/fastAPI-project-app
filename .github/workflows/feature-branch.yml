@@ -108,8 +108,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Pull Request
+
         id: create-pr
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
+
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "feat: Automated PR from feature branch"
