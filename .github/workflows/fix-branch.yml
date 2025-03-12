@@ -50,8 +50,17 @@ jobs:
 
       - name: Run targeted tests
         run: |
-          # Determine which files changed
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          # Determine which files changed - safely handle new branches
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            # If we have a previous commit, compare with it
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          else
+            # For new branches with single commit, check all files in the commit
+            CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
 
           # Run backend tests only if backend files changed
           if echo "$CHANGED_FILES" | grep -q "backend/"; then
