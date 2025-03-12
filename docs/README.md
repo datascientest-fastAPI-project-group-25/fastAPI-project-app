@@ -14,7 +14,7 @@ Welcome to the documentation for the DevOps Demo Application. This directory con
 - **[Workflows](./workflows/)**
   - *This directory will contain documentation for GitHub Actions workflows*
 
-- **[Git Hooks](./git-hooks.md)** - Documentation for the Lefthook git hooks setup
+- **[Git Hooks](./git-hooks.md)** - Documentation for the pre-commit git hooks setup
 
 - **[Release Notes](./release-notes.md)** - Comprehensive changelog of all project changes
 
