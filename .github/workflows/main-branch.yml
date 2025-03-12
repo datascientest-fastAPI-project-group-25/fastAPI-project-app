@@ -75,11 +75,14 @@ jobs:
 
       - name: Run integration tests
         run: |
-          docker-compose -f docker-compose.test.yml up --build --exit-code-from backend-tests
+          docker-compose -f docker-compose.test.yml up \
+            --build --exit-code-from backend-tests
 
   semantic-release:
     needs: full-test-suite
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    if: |
+      github.event_name == 'push' || 
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -102,7 +105,9 @@ jobs:
 
   deploy-production:
     needs: semantic-release
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    if: |
+      github.event_name == 'push' || 
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -125,15 +130,20 @@ jobs:
         run: |
           IMAGE_TAG=${{ steps.get_version.outputs.version || 'latest' }}
           docker-compose build
-          docker tag fastapi-project-app:latest ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:$IMAGE_TAG
-          docker tag fastapi-project-app:latest ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
+          docker tag fastapi-project-app:latest \
+            ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:$IMAGE_TAG
+          docker tag fastapi-project-app:latest \
+            ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
 
       - name: Push Docker Image to GHCR
         run: |
           IMAGE_TAG=${{ steps.get_version.outputs.version || 'latest' }}
-          docker push ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:$IMAGE_TAG
-          docker push ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
+          docker push \
+            ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:$IMAGE_TAG
+          docker push \
+            ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
 
       - name: Deploy to production environment
         run: |
-          echo "Deployed to production environment with image: ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:${{ steps.get_version.outputs.version || 'latest' }}"
+          echo "Deployed to production environment with image: \
+            ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:${{ steps.get_version.outputs.version || 'latest' }}"

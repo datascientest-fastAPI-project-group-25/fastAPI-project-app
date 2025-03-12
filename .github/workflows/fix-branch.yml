@@ -94,14 +94,19 @@ jobs:
             ### Changes included:
             ${{ github.event.head_commit.message }}
 
-            ${{ contains(github.ref_name, 'automerge') && '### Automerge enabled' || '### Requires approval' }}
+            ${{ contains(github.ref_name, 'automerge') && 
+              '### Automerge enabled' || 
+              '### Requires approval' }}
           branch: ${{ github.ref_name }}
           base: main
-          labels: fix${{ contains(github.ref_name, 'automerge') && ', automerge' || '' }}
+          labels: |
+            fix${{ contains(github.ref_name, 'automerge') && 
+            ', automerge' || '' }}
 
       - name: Auto-approve PR if automerge
         if: contains(github.ref_name, 'automerge')
         uses: hmarr/auto-approve-action@v3
         with:
-          pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
+          pull-request-number: |
+            ${{ steps.create-pr.outputs.pull-request-number }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
