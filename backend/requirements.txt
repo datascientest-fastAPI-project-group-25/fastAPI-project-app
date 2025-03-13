@@ -1,5 +1,5 @@
 fastapi[standard]<1.0.0,>=0.114.2
-uvicorn[standard]<0.30.0
+uvicorn[standard]<0.35.0
 python-multipart<1.0.0,>=0.0.7
 email-validator<3.0.0.0,>=2.1.0.post1
 passlib[bcrypt]<2.0.0,>=1.7.4
