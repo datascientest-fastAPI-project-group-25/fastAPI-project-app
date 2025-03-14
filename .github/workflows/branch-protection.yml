@@ -22,9 +22,17 @@ jobs:
         id: check_author
         env:
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+          PR_MERGE: ${{ contains(github.event.head_commit.message, 'Merge pull request') }}
         run: |
           # Extract the commits JSON to a file for processing
           echo "$COMMITS_JSON" > commits.json
+          
+          # Check if this is a PR merge commit
+          if [ "$PR_MERGE" == "true" ]; then
+            echo "This is a PR merge commit, allowing it"
+            echo "is_blocked=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           
           # Check if commits array exists and is not empty
           if [ "$COMMITS_JSON" != "null" ] && [ "$COMMITS_JSON" != "[]" ]; then
