@@ -1,15 +1,29 @@
 name: Main Branch Workflow
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
     types: [closed]
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
+  check-conditions:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
+    steps:
+      - name: Check if PR was merged to main
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            echo "PR was merged to main, proceeding with deployment"
+          else
+            echo "Not a merged PR to main, skipping deployment"
+          fi
+  
   full-test-suite:
     runs-on: ubuntu-latest
     steps:
@@ -38,9 +52,9 @@ jobs:
         run: |
           cd backend
           if [ -f "requirements.txt" ]; then
-            uv pip install -r requirements.txt
+            uv pip install --system -r requirements.txt
           else
-            uv pip install .
+            uv pip install --system .
           fi
 
       - name: Install frontend dependencies
@@ -67,7 +81,7 @@ jobs:
       - name: Run security scans
         run: |
           cd backend
-          uv pip install bandit
+          uv pip install --system bandit
           bandit -r app -x app/tests
 
           cd ../frontend
@@ -79,10 +93,8 @@ jobs:
             --build --exit-code-from backend-tests
 
   semantic-release:
-    needs: full-test-suite
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    needs: [full-test-suite, check-conditions]
+    if: needs.check-conditions.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -103,11 +115,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
-  deploy-production:
-    needs: semantic-release
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+  publish-images:
+    needs: [semantic-release, check-conditions]
+    if: needs.check-conditions.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -126,24 +136,41 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build and Tag Docker Image
+      - name: Build and Tag Docker Images
         run: |
           IMAGE_TAG=${{ steps.get_version.outputs.version || 'latest' }}
-          docker-compose build
-          docker tag fastapi-project-app:latest \
-            ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:$IMAGE_TAG
-          docker tag fastapi-project-app:latest \
-            ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
+          
+          # Build backend image
+          docker build -t backend:$IMAGE_TAG -t backend:latest ./backend
+          docker tag backend:$IMAGE_TAG \
+            ghcr.io/datascientest-fastapi-project-group-25/backend:$IMAGE_TAG
+          docker tag backend:latest \
+            ghcr.io/datascientest-fastapi-project-group-25/backend:latest
+          
+          # Build frontend image
+          docker build -t frontend:$IMAGE_TAG -t frontend:latest ./frontend \
+            --build-arg VITE_API_URL=http://localhost:8000 \
+            --build-arg NODE_ENV=production
+          docker tag frontend:$IMAGE_TAG \
+            ghcr.io/datascientest-fastapi-project-group-25/frontend:$IMAGE_TAG
+          docker tag frontend:latest \
+            ghcr.io/datascientest-fastapi-project-group-25/frontend:latest
 
-      - name: Push Docker Image to GHCR
+      - name: Push Docker Images to GHCR
         run: |
           IMAGE_TAG=${{ steps.get_version.outputs.version || 'latest' }}
-          docker push \
-            ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:$IMAGE_TAG
-          docker push \
-            ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
+          
+          # Push backend images
+          docker push ghcr.io/datascientest-fastapi-project-group-25/backend:$IMAGE_TAG
+          docker push ghcr.io/datascientest-fastapi-project-group-25/backend:latest
+          
+          # Push frontend images
+          docker push ghcr.io/datascientest-fastapi-project-group-25/frontend:$IMAGE_TAG
+          docker push ghcr.io/datascientest-fastapi-project-group-25/frontend:latest
 
-      - name: Deploy to production environment
+      - name: Notify image publication
         run: |
-          echo "Deployed to production environment with image: \
-            ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:${{ steps.get_version.outputs.version || 'latest' }}"
+          echo "Published Docker images to GHCR: \
+            ghcr.io/datascientest-fastapi-project-group-25/backend:${{ steps.get_version.outputs.version || 'latest' }} \
+            ghcr.io/datascientest-fastapi-project-group-25/frontend:${{ steps.get_version.outputs.version || 'latest' }}"
+          echo "These images are now available for deployment by the infrastructure repository."
