@@ -31,14 +31,15 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: app
+          # Use secrets with fallbacks for database credentials
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'postgres' }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'app' }}
         ports:
           - 5432:5432
-        # Set health checks to wait until postgres has started
+        # Enhanced health checks to verify database is fully functional
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres && psql -U postgres -d app -c 'SELECT 1'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
