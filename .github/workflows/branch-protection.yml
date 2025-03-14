@@ -3,6 +3,10 @@ name: Branch Protection
 # This workflow protects the main branch from direct pushes
 # It will intentionally fail if someone tries to push directly to main
 # This is expected behavior and part of our branching strategy
+#
+# Note: PR merge commits are allowed as they represent approved changes
+# The workflow detects PR merges by checking both the commit message pattern
+# and the commit structure (merge commits have multiple parents)
 
 on:
   push:
@@ -22,9 +26,44 @@ jobs:
         id: check_author
         env:
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+          # Check if commit message contains PR merge pattern
+          PR_MERGE_MESSAGE: ${{ contains(github.event.head_commit.message || '', 'Merge pull request') }}
+          # Pass the full head_commit object as JSON to analyze in the script
+          HEAD_COMMIT_JSON: ${{ toJSON(github.event.head_commit || '{}') }}
         run: |
           # Extract the commits JSON to a file for processing
           echo "$COMMITS_JSON" > commits.json
+          
+          # More robust detection of PR merge commits:
+          # 1. Check if commit message contains 'Merge pull request'
+          # 2. Check if it's a merge commit (has multiple parents)
+          
+          # Check if this is a merge commit by examining the head_commit structure
+          IS_MERGE_COMMIT="false"
+          if [ "$HEAD_COMMIT_JSON" != "null" ] && [ "$HEAD_COMMIT_JSON" != "{}" ]; then
+            if command -v jq >/dev/null 2>&1; then
+              # Use jq to check if it's a merge commit (has multiple parents)
+              # A merge commit will have a 'parents' array with more than one entry
+              PARENTS_COUNT=$(echo "$HEAD_COMMIT_JSON" | jq '.parents | length // 0')
+              if [ "$PARENTS_COUNT" -gt 1 ]; then
+                IS_MERGE_COMMIT="true"
+              fi
+            else
+              # Fallback: check if commit message starts with 'Merge'
+              COMMIT_MSG=$(echo "$HEAD_COMMIT_JSON" | grep -o '"message":"[^"]*"' | head -1 | cut -d':' -f2 | tr -d '"')
+              if [[ "$COMMIT_MSG" == Merge* ]]; then
+                IS_MERGE_COMMIT="true"
+              fi
+            fi
+          fi
+          
+          echo "PR merge message: $PR_MERGE_MESSAGE, Is merge commit: $IS_MERGE_COMMIT"
+          
+          if [ "$PR_MERGE_MESSAGE" == "true" ] || [ "$IS_MERGE_COMMIT" == "true" ]; then
+            echo "Detected PR merge commit (message pattern or merge structure), allowing it"
+            echo "is_blocked=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           
           # Check if commits array exists and is not empty
           if [ "$COMMITS_JSON" != "null" ] && [ "$COMMITS_JSON" != "[]" ]; then
