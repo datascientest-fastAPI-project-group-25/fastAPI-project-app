@@ -63,6 +63,15 @@ jobs:
           npm ci
 
       - name: Run backend tests
+        env:
+          PROJECT_NAME: "FastAPI Project"
+          POSTGRES_SERVER: "localhost"
+          POSTGRES_USER: "postgres"
+          POSTGRES_PASSWORD: "postgres"
+          POSTGRES_DB: "app"
+          FIRST_SUPERUSER: "admin@example.com"
+          FIRST_SUPERUSER_PASSWORD: "admin"
+          SECRET_KEY: "testing_secret_key_for_ci"
         run: |
           cd backend
           pytest -xvs app/tests/
