@@ -80,7 +80,8 @@ jobs:
           npm ci
 
       - name: Initialize database schema
-        # These environment variables are used for database initialization
+        # This step initializes the database schema before running tests.
+# It ensures that all required database tables exist before the tests start, preventing errors.
         env:
           # Application configuration
           PROJECT_NAME: "FastAPI Project"
