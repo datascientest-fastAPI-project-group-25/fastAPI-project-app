@@ -63,6 +63,27 @@ jobs:
           npm ci
 
       - name: Run backend tests
+        # These environment variables are only used for CI testing
+        # In production or staging environments, sensitive values should use GitHub secrets
+        env:
+          # Application configuration
+          PROJECT_NAME: "FastAPI Project"
+          
+          # Database configuration - test values for CI only
+          POSTGRES_SERVER: "localhost"
+          POSTGRES_USER: "postgres"
+          # Consider using secrets for sensitive information in production
+          POSTGRES_PASSWORD: ${{ secrets.TEST_DB_PASSWORD || 'postgres' }}
+          POSTGRES_DB: "app"
+          
+          # User configuration - test values for CI only
+          FIRST_SUPERUSER: "admin@example.com"
+          # Consider using secrets for sensitive information in production
+          FIRST_SUPERUSER_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD || 'admin' }}
+          
+          # Security - test values for CI only
+          # Consider using secrets for sensitive information in production
+          SECRET_KEY: ${{ secrets.TEST_SECRET_KEY || 'testing_secret_key_for_ci' }}
         run: |
           cd backend
           pytest -xvs app/tests/
