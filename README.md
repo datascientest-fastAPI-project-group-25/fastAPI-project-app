@@ -192,16 +192,20 @@ You can test GitHub Actions workflows locally using the provided script:
 
 ## 🔄 CI/CD Pipeline
 
-Our CI/CD pipeline uses GitHub Actions for automation and GitHub Container Registry for image management:
+Our CI/CD pipeline uses GitHub Actions for automation and GitHub Container Registry for image management. The actual deployment is handled by a separate infrastructure repository:
 
 ```mermaid
 graph LR
-    A[Push to feat/*] --> B{Feature Branch Checks}
-    B -->|Pass| C[PR to dev]
-    C --> D{Dev Checks}
-    D -->|Pass| E[Push to GHCR]
-    E --> F[Deploy to Staging]
-    F --> G[PR to main]
+    A[Push to feat/* or fix/*] --> B{Branch Checks}
+    B -->|Pass| C{fix/*-automerge?}
+    C -->|No| D[Auto-Create PR]
+    C -->|Yes| E[Auto-Merge to main]
+    D --> F{PR Checks}
+    F -->|Pass| E
+    E --> G{Main Branch Checks}
+    G -->|Pass| H[Create Release]
+    H --> I[Push to GHCR]
+    style I fill:#2496ED,stroke:#fff,stroke-width:2px
 ```
 
 ### GitHub Container Registry (GHCR) Configuration
@@ -242,11 +246,6 @@ Component-specific documentation can be found in the respective directories:
 - **[Frontend Documentation](./frontend/README.md)**
 
 For a complete overview of all documentation, see the [Documentation Index](./docs/README.md).
-    G --> H{Main PR Checks}
-    H -->|Pass| I[Merge to main]
-    I --> J[Create Release]
-    J --> K[Deploy to Production]
-```
 
 1. **Continuous Integration**
    - Automated testing
