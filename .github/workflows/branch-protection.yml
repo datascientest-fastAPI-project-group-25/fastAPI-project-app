@@ -48,7 +48,7 @@ jobs:
       - name: Block direct pushes to main
         if: steps.check_author.outputs.is_blocked == 'true'
         run: |
-          echo "::warning::This check is SUPPOSED TO FAIL for direct pushes to main - this is not an error in the workflow"
+          echo "::warning::This check is SUPPOSED TO FAIL for direct pushes to main - this is not an error in the workflow. See docs/BRANCHING_STRATEGY.md for more information."
           echo "::error::Direct pushes to main branch are not allowed. Please create a pull request from a feature or fix branch."
           exit 1
           
