@@ -73,3 +73,11 @@ build/
 tmp/
 temp/
 .tmp/
+
+
+# ----------------------------------------
+# AI Assistant
+# ----------------------------------------
+.github/copiilot-configuration.md
+.windsurfrules
+.windsurfconfig
