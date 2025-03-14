@@ -56,23 +56,65 @@ jobs:
               pull_number: context.issue.number
             });
             
-            const reviewers = new Set();
+            // Define potential reviewers with fallbacks
+            const reviewerMap = {
+              'backend': ['backend-reviewer', 'tech-lead'],
+              'frontend': ['frontend-reviewer', 'tech-lead']
+            };
             
-            files.data.forEach(file => {
-              if (file.filename.startsWith('backend/')) {
-                reviewers.add('backend-reviewer');
-              } else if (file.filename.startsWith('frontend/')) {
-                reviewers.add('frontend-reviewer');
-              }
-            });
+            const reviewersToAssign = new Set();
             
-            if (reviewers.size > 0) {
-              await github.rest.pulls.requestReviewers({
+            try {
+              // Get repository collaborators to check if reviewers exist
+              const collaborators = await github.rest.repos.listCollaborators({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                pull_number: context.issue.number,
-                reviewers: Array.from(reviewers)
+                per_page: 100
               });
+              
+              const collaboratorLogins = collaborators.data.map(user => user.login);
+              console.log('Available collaborators:', collaboratorLogins);
+              
+              // Determine which files were changed
+              const fileTypes = new Set();
+              files.data.forEach(file => {
+                if (file.filename.startsWith('backend/')) {
+                  fileTypes.add('backend');
+                } else if (file.filename.startsWith('frontend/')) {
+                  fileTypes.add('frontend');
+                }
+              });
+              
+              // Try to find valid reviewers from our map
+              fileTypes.forEach(type => {
+                const potentialReviewers = reviewerMap[type] || [];
+                for (const reviewer of potentialReviewers) {
+                  if (collaboratorLogins.includes(reviewer)) {
+                    reviewersToAssign.add(reviewer);
+                    break; // Only add one reviewer per file type
+                  }
+                }
+              });
+              
+              // If no valid reviewers found, try to assign the PR author's team lead
+              if (reviewersToAssign.size === 0 && collaboratorLogins.includes('tech-lead')) {
+                reviewersToAssign.add('tech-lead');
+              }
+              
+              // Request reviews if we found valid reviewers
+              if (reviewersToAssign.size > 0) {
+                console.log('Assigning reviewers:', Array.from(reviewersToAssign));
+                await github.rest.pulls.requestReviewers({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.issue.number,
+                  reviewers: Array.from(reviewersToAssign)
+                });
+              } else {
+                console.log('No valid reviewers found among repository collaborators');
+              }
+            } catch (error) {
+              console.log('Error assigning reviewers:', error.message);
             }
 
   test:
