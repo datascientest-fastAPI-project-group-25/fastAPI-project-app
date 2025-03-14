@@ -27,20 +27,40 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker
-        id: meta
+      # Backend image
+      - name: Extract metadata for Backend Docker
+        id: meta-backend
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app
+          images: ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app-backend
           tags: |
             type=ref,event=branch
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push Docker image
+      - name: Build and push Backend Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./backend
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+
+      # Frontend image
+      - name: Extract metadata for Frontend Docker
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app-frontend
+          tags: |
+            type=ref,event=branch
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
