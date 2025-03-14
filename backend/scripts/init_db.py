@@ -42,6 +42,9 @@ except ImportError as e:
 def initialize_database():
     """Create all database tables and initialize with test data."""
     try:
+        logger.info("Starting database table creation process...")
+        # Log the engine connection information (without sensitive details)
+        logger.info(f"Using database engine: {engine.name}")
         logger.info("Creating database tables...")
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
