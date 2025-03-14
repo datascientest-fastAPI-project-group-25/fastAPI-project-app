@@ -79,28 +79,47 @@ jobs:
           cd frontend
           npm ci
 
-      - name: Run backend tests
-        # These environment variables are only used for CI testing
-        # In production or staging environments, sensitive values should use GitHub secrets
+      - name: Initialize database schema
+        # These environment variables are used for database initialization
         env:
           # Application configuration
           PROJECT_NAME: "FastAPI Project"
           
-          # Database configuration - test values for CI only
+          # Database configuration
           POSTGRES_SERVER: "localhost"
-          POSTGRES_USER: "postgres"
-          # Consider using secrets for sensitive information in production
-          POSTGRES_PASSWORD: ${{ secrets.TEST_DB_PASSWORD || 'postgres' }}
-          POSTGRES_DB: "app"
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'postgres' }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'app' }}
           
-          # User configuration - test values for CI only
+          # User configuration
           FIRST_SUPERUSER: "admin@example.com"
-          # Consider using secrets for sensitive information in production
-          FIRST_SUPERUSER_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD || 'admin' }}
+          FIRST_SUPERUSER_PASSWORD: "admin"
           
-          # Security - test values for CI only
-          # Consider using secrets for sensitive information in production
-          SECRET_KEY: ${{ secrets.TEST_SECRET_KEY || 'testing_secret_key_for_ci' }}
+          # Security
+          SECRET_KEY: "testing_secret_key_for_ci"
+        run: |
+          cd backend
+          # Create database tables and initialize with test data
+          python -c "from app.db.init_db import init_db; from app.db.session import Session, engine; from app.db.base import Base; Base.metadata.create_all(bind=engine); session = Session(); init_db(session); session.close()"
+          
+      - name: Run backend tests
+        # These environment variables are only used for CI testing
+        env:
+          # Application configuration
+          PROJECT_NAME: "FastAPI Project"
+          
+          # Database configuration
+          POSTGRES_SERVER: "localhost"
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'postgres' }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'app' }}
+          
+          # User configuration
+          FIRST_SUPERUSER: "admin@example.com"
+          FIRST_SUPERUSER_PASSWORD: "admin"
+          
+          # Security
+          SECRET_KEY: "testing_secret_key_for_ci"
         run: |
           cd backend
           pytest -xvs app/tests/

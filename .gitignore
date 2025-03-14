@@ -81,3 +81,6 @@ temp/
 .github/copiilot-configuration.md
 .windsurfrules
 .windsurfconfig
+
+# Ignore GitHub Copilot instructions symlink
+.github/copilot-instructions.md
