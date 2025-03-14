@@ -156,6 +156,8 @@ jobs:
       - name: Run linting
         run: |
           cd backend
+          # Install linting tools first
+          uv pip install --system flake8 black
           flake8 app
           black --check app
 
