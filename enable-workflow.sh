@@ -24,7 +24,6 @@ if [[ -f "${WORKFLOW_PATH%.disabled}" ]]; then
   echo "Error: Target file already exists: ${WORKFLOW_PATH%.disabled}"
   exit 1
 fi
-fi
 
 # Remove .disabled extension
 NEW_PATH="${WORKFLOW_PATH%.disabled}"
