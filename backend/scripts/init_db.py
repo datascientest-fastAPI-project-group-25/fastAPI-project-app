@@ -29,8 +29,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 try:
     logger.info("Importing required modules...")
     from app.core.db import init_db, engine
-    from sqlmodel import Session
-    from app.models import Base  # This imports the SQLAlchemy models
+    from sqlmodel import Session, SQLModel
+    # SQLModel is used instead of Base for table creation
     logger.info("Successfully imported all required modules")
 except ImportError as e:
     logger.error(f"Error importing required modules: {e}")
@@ -46,7 +46,7 @@ def initialize_database():
         # Log the engine connection information (without sensitive details)
         logger.info(f"Using database engine: {engine.name}")
         logger.info("Creating database tables...")
-        Base.metadata.create_all(bind=engine)
+        SQLModel.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
     except Exception as e:
         logger.error(f"Failed to create database tables: {e}")
