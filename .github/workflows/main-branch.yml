@@ -100,8 +100,9 @@ jobs:
           SECRET_KEY: "testing_secret_key_for_ci"
         run: |
           cd backend
-          # Create database tables and initialize with test data
-          python -c "from app.db.init_db import init_db; from app.db.session import Session, engine; from app.db.base import Base; Base.metadata.create_all(bind=engine); session = Session(); init_db(session); session.close()"
+          # Make the script executable and run it
+          chmod +x scripts/init_db.py
+          python scripts/init_db.py
           
       - name: Run backend tests
         # These environment variables are only used for CI testing
