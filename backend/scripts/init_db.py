@@ -55,10 +55,14 @@ def initialize_database():
         logger.info("Initializing database with test data...")
         session = Session()
         init_db(session)
+        session.commit()  # Commit the changes
         logger.info("Database initialization completed successfully")
     except Exception as e:
         logger.error(f"Failed to initialize database with test data: {e}")
         logger.error(traceback.format_exc())
+        if session:
+            logger.warning("Rolling back database changes due to error")
+            session.rollback()  # Rollback in case of error
         sys.exit(1)
     finally:
         if session:

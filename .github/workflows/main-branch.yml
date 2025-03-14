@@ -100,9 +100,15 @@ jobs:
           SECRET_KEY: "testing_secret_key_for_ci"
         run: |
           cd backend
-          # Make the script executable and run it
-          chmod +x scripts/init_db.py
-          python scripts/init_db.py
+          # Check if the script exists before attempting to execute it
+          if [ -f scripts/init_db.py ]; then
+            # Make the script executable and run it
+            chmod +x scripts/init_db.py
+            python scripts/init_db.py
+          else
+            echo "Error: scripts/init_db.py not found"
+            exit 1
+          fi
           
       - name: Run backend tests
         # These environment variables are only used for CI testing
