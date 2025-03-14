@@ -96,6 +96,14 @@ jobs:
           FIRST_SUPERUSER: "admin@example.com"
           FIRST_SUPERUSER_PASSWORD: "adminpass123"
           
+          # Email configuration for testing
+          EMAILS_ENABLED: "True"
+          SMTP_HOST: "localhost"
+          SMTP_PORT: "25"
+          SMTP_USER: "test@example.com"
+          SMTP_PASSWORD: "testpassword"
+          EMAILS_FROM_EMAIL: "test@example.com"
+          
           # Security
           SECRET_KEY: "testing_secret_key_for_ci"
         run: |
@@ -125,6 +133,14 @@ jobs:
           # User configuration
           FIRST_SUPERUSER: "admin@example.com"
           FIRST_SUPERUSER_PASSWORD: "adminpass123"
+          
+          # Email configuration for testing
+          EMAILS_ENABLED: "True"
+          SMTP_HOST: "localhost"
+          SMTP_PORT: "25"
+          SMTP_USER: "test@example.com"
+          SMTP_PASSWORD: "testpassword"
+          EMAILS_FROM_EMAIL: "test@example.com"
           
           # Security
           SECRET_KEY: "testing_secret_key_for_ci"
