@@ -12,6 +12,7 @@ import os
 import sys
 import logging
 import traceback
+from typing import Optional
 
 # Configure logging
 logging.basicConfig(
@@ -56,8 +57,11 @@ def initialize_database():
     session = None
     try:
         logger.info("Initializing database with test data...")
+        # Get connection timeout from environment variable or use default
+        connection_timeout = int(os.getenv("DB_CONNECTION_TIMEOUT", "10"))
+        logger.info(f"Using database connection timeout: {connection_timeout} seconds")
         # Create session with connection timeout for more robust database connections
-        session = Session(bind=engine.execution_options(connect_args={"connect_timeout": 10}))
+        session = Session(bind=engine.execution_options(connect_args={"connect_timeout": connection_timeout}))
         init_db(session)
         session.commit()  # Commit the changes
         logger.info("Database initialization completed successfully")
