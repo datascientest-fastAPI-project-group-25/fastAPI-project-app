@@ -13,8 +13,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check commit author
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: check_author
+        env:
+          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+        run: |
+          # Extract the commits JSON to a file for processing
+          echo "$COMMITS_JSON" > commits.json
+          
+          # Check if commits array exists and is not empty
+          if [ "$COMMITS_JSON" != "null" ] && [ "$COMMITS_JSON" != "[]" ]; then
+            # Use jq to safely extract the author name if it exists
+            if command -v jq >/dev/null 2>&1; then
+              AUTHOR_NAME=$(jq -r '.[0].author.name // "unknown"' commits.json)
+            else
+              # Fallback if jq is not available
+              AUTHOR_NAME=$(grep -o '"name":"[^"]*"' commits.json | head -1 | cut -d':' -f2 | tr -d '"')
+            fi
+            
+            if [ "$AUTHOR_NAME" != "semantic-release-bot" ] && [ "$AUTHOR_NAME" != "null" ] && [ "$AUTHOR_NAME" != "unknown" ]; then
+              echo "is_blocked=true" >> $GITHUB_OUTPUT
+            else
+              echo "is_blocked=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "is_blocked=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Block direct pushes to main
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.commits && github.event.commits[0] && github.event.commits[0].author && github.event.commits[0].author.name != 'semantic-release-bot'
+        if: steps.check_author.outputs.is_blocked == 'true'
         run: |
           echo "::error::Direct pushes to main branch are not allowed. Please create a pull request from a feature or fix branch."
           exit 1
