@@ -56,7 +56,8 @@ def initialize_database():
     session = None
     try:
         logger.info("Initializing database with test data...")
-        session = Session()
+        # Create session with connection timeout for more robust database connections
+        session = Session(bind=engine.execution_options(connect_args={"connect_timeout": 10}))
         init_db(session)
         session.commit()  # Commit the changes
         logger.info("Database initialization completed successfully")
