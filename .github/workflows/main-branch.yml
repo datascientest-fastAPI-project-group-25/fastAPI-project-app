@@ -26,6 +26,23 @@ jobs:
   
   full-test-suite:
     runs-on: ubuntu-latest
+    services:
+      # Set up PostgreSQL service for testing
+      postgres:
+        image: postgres:15
+        env:
+          # Use secrets with fallbacks for database credentials
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'postgres' }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'app' }}
+        ports:
+          - 5432:5432
+        # Enhanced health checks to verify database is fully functional
+        options: >-
+          --health-cmd "pg_isready -U postgres && psql -U postgres -d app -c 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
