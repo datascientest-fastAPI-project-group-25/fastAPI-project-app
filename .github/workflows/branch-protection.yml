@@ -1,5 +1,9 @@
 name: Branch Protection
 
+# This workflow protects the main branch from direct pushes
+# It will intentionally fail if someone tries to push directly to main
+# This is expected behavior and part of our branching strategy
+
 on:
   push:
     branches: [ main ]
@@ -44,5 +48,11 @@ jobs:
       - name: Block direct pushes to main
         if: steps.check_author.outputs.is_blocked == 'true'
         run: |
+          echo "::warning::This check is SUPPOSED TO FAIL for direct pushes to main - this is not an error in the workflow. See docs/BRANCHING_STRATEGY.md for more information."
           echo "::error::Direct pushes to main branch are not allowed. Please create a pull request from a feature or fix branch."
           exit 1
+          
+      - name: Verification passed
+        if: steps.check_author.outputs.is_blocked != 'true'
+        run: |
+          echo "Branch protection check passed. This commit is either from semantic-release-bot or via an approved PR."
