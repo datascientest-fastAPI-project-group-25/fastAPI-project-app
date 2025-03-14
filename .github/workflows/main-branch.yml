@@ -23,26 +23,97 @@ jobs:
           else
             echo "Not a merged PR to main, skipping deployment"
           fi
-  
-  full-test-suite:
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: "**/package-lock.json"
+
+      - name: Install Python linting tools
+        run: |
+          pip install flake8 black ruff bandit
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run backend linting
+        run: |
+          cd backend
+          flake8 app
+          black --check app
+          ruff check app
+          bandit -r app -x app/tests
+
+      - name: Run frontend linting
+        run: |
+          cd frontend
+          npm run lint
+          npm run format:check
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Run backend security scan
+        run: |
+          pip install bandit safety
+          cd backend
+          bandit -r app -x app/tests
+          safety check
+
+      - name: Run frontend security scan
+        run: |
+          cd frontend
+          npm audit
+
+  test:
+    needs: [lint]
     runs-on: ubuntu-latest
     services:
-      # Set up PostgreSQL service for testing
       postgres:
         image: postgres:15
         env:
-          # Use secrets with fallbacks for database credentials
           POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'postgres' }}
           POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'app' }}
         ports:
           - 5432:5432
-        # Enhanced health checks to verify database is fully functional
         options: >-
           --health-cmd "pg_isready -U postgres && psql -U postgres -d app -c 'SELECT 1'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,27 +123,20 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+          cache: "pip"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
-
-      - name: Install uv
-        run: |
-          pip install 'uv==0.4.15'
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: "**/package-lock.json"
 
       - name: Install backend dependencies
         run: |
           cd backend
-          if [ -f "requirements.txt" ]; then
-            uv pip install --system -r requirements.txt
-          else
-            uv pip install --system .
-          fi
+          pip install -r requirements.txt
 
       - name: Install frontend dependencies
         run: |
@@ -80,69 +144,40 @@ jobs:
           npm ci
 
       - name: Initialize database schema
-        # This step initializes the database schema before running tests.
-# It ensures that all required database tables exist before the tests start, preventing errors.
         env:
-          # Application configuration
           PROJECT_NAME: "FastAPI Project"
-          
-          # Database configuration
           POSTGRES_SERVER: "localhost"
           POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'postgres' }}
           POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'app' }}
-          
-          # User configuration
           FIRST_SUPERUSER: "admin@example.com"
           FIRST_SUPERUSER_PASSWORD: "adminpass123"
-          
-          # Email configuration for testing
           EMAILS_ENABLED: "True"
           SMTP_HOST: "localhost"
           SMTP_PORT: "25"
           SMTP_USER: "test@example.com"
           SMTP_PASSWORD: "testpassword"
           EMAILS_FROM_EMAIL: "test@example.com"
-          
-          # Security
           SECRET_KEY: "testing_secret_key_for_ci"
         run: |
           cd backend
-          # Check if the script exists before attempting to execute it
-          if [ -f scripts/init_db.py ]; then
-            # Make the script executable and run it
-            chmod +x scripts/init_db.py
-            python scripts/init_db.py
-          else
-            echo "Error: scripts/init_db.py not found"
-            exit 1
-          fi
-          
+          python scripts/init_db.py
+
       - name: Run backend tests
-        # These environment variables are only used for CI testing
         env:
-          # Application configuration
           PROJECT_NAME: "FastAPI Project"
-          
-          # Database configuration
           POSTGRES_SERVER: "localhost"
           POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'postgres' }}
           POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'app' }}
-          
-          # User configuration
           FIRST_SUPERUSER: "admin@example.com"
           FIRST_SUPERUSER_PASSWORD: "adminpass123"
-          
-          # Email configuration for testing
           EMAILS_ENABLED: "True"
           SMTP_HOST: "localhost"
           SMTP_PORT: "25"
           SMTP_USER: "test@example.com"
           SMTP_PASSWORD: "testpassword"
           EMAILS_FROM_EMAIL: "test@example.com"
-          
-          # Security
           SECRET_KEY: "testing_secret_key_for_ci"
         run: |
           cd backend
@@ -151,24 +186,7 @@ jobs:
       - name: Run frontend tests
         run: |
           cd frontend
-          npm test || echo "No frontend tests available"
-
-      - name: Run linting
-        run: |
-          cd backend
-          # Install linting tools first
-          uv pip install --system flake8 black
-          flake8 app
-          black --check app
-
-      - name: Run security scans
-        run: |
-          cd backend
-          uv pip install --system bandit
-          bandit -r app -x app/tests
-
-          cd ../frontend
-          npm audit || echo "Vulnerabilities found, but continuing"
+          npm test
 
       - name: Run integration tests
         run: |
@@ -176,7 +194,7 @@ jobs:
             --build --exit-code-from backend-tests
 
   semantic-release:
-    needs: [full-test-suite, check-conditions]
+    needs: [test, security-scan, check-conditions]
     if: needs.check-conditions.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -188,7 +206,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install dependencies
         run: npm ci
@@ -221,8 +239,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-      
-      # Backend image build and push
+
       - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:
@@ -233,8 +250,7 @@ jobs:
             ghcr.io/datascientest-fastapi-project-group-25/backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      
-      # Frontend image build and push
+
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
