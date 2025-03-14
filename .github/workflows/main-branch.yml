@@ -94,7 +94,7 @@ jobs:
           
           # User configuration
           FIRST_SUPERUSER: "admin@example.com"
-          FIRST_SUPERUSER_PASSWORD: "admin"
+          FIRST_SUPERUSER_PASSWORD: "adminpass123"
           
           # Security
           SECRET_KEY: "testing_secret_key_for_ci"
@@ -124,7 +124,7 @@ jobs:
           
           # User configuration
           FIRST_SUPERUSER: "admin@example.com"
-          FIRST_SUPERUSER_PASSWORD: "admin"
+          FIRST_SUPERUSER_PASSWORD: "adminpass123"
           
           # Security
           SECRET_KEY: "testing_secret_key_for_ci"
