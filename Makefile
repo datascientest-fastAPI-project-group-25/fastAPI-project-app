@@ -1,7 +1,7 @@
 # DevOps Demo Application Makefile
 # This Makefile simplifies common development tasks
 
-.PHONY: help setup env docker-up docker-down docker-restart init-db test test-backend test-frontend create-feature-branch create-fix-branch create-fix-branch-automerge clean
+.PHONY: help setup env docker-up docker-down docker-restart init-db test test-backend test-frontend create-feature-branch create-fix-branch create-fix-branch-automerge clean turbo-build turbo-test turbo-lint turbo-clean
 
 # Default target
 help:
@@ -21,6 +21,12 @@ help:
 	@echo "  make test               Run all tests"
 	@echo "  make test-backend       Run backend tests"
 	@echo "  make test-frontend      Run frontend tests"
+	@echo ""
+	@echo "TurboRepo (Monorepo Management):"
+	@echo "  make turbo-build        Build all workspaces using TurboRepo"
+	@echo "  make turbo-test         Run tests across all workspaces"
+	@echo "  make turbo-lint         Run linting across all workspaces"
+	@echo "  make turbo-clean        Clean TurboRepo cache"
 	@echo ""
 	@echo "Git Workflow:"
 	@echo "  make feat name=branch-name    Create a new feature branch"
@@ -93,7 +99,7 @@ test-backend:
 # Run frontend tests
 test-frontend:
 	@echo "Running frontend tests..."
-	docker compose run --rm frontend npm test
+	docker compose run --rm frontend bun --bun turbo run test
 
 # Create a new feature branch
 create-feat:
@@ -135,4 +141,32 @@ clean:
 	@find . -name "dist" -delete
 	@find . -name "build" -delete
 	@find . -name "node_modules" -delete
+	@find . -name ".turbo" -delete
 	@echo "Cleanup complete!"
+
+# TurboRepo commands using Docker and Bun
+# ----------------------------------------
+
+# Build all workspaces using TurboRepo
+turbo-build:
+	@echo "Building all workspaces using TurboRepo..."
+	docker compose exec frontend bun --bun turbo run build
+	@echo "Build complete."
+
+# Run tests across all workspaces using TurboRepo
+turbo-test:
+	@echo "Running tests across all workspaces using TurboRepo..."
+	docker compose exec frontend bun --bun turbo run test
+	@echo "Tests complete."
+
+# Run linting across all workspaces using TurboRepo
+turbo-lint:
+	@echo "Running linting across all workspaces using TurboRepo..."
+	docker compose exec frontend bun --bun turbo run lint
+	@echo "Linting complete."
+
+# Clean TurboRepo cache
+turbo-clean:
+	@echo "Cleaning TurboRepo cache..."
+	docker compose exec frontend bun --bun turbo run clean
+	@echo "TurboRepo cache cleaned."

@@ -2,7 +2,7 @@
   "name": "fastapi-project-app",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "npm@10.2.4",
+  "packageManager": "bun@1.0.25",
   "workspaces": [
     "frontend"
   ],

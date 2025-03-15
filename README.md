@@ -195,6 +195,27 @@ make docker-restart
 
 All development is done using Docker and the provided Makefile commands for consistency across environments.
 
+### Using TurboRepo for Faster Builds
+
+This project uses TurboRepo for monorepo management and build caching, significantly improving build times. All operations are performed using Docker and Bun for maximum performance:
+
+```bash
+# Using Makefile (recommended)
+make docker-up-bun  # Starts all services with Bun for faster builds
+
+# Run TurboRepo commands through Docker
+docker compose exec frontend bun --bun turbo run build  # Builds all workspaces with caching
+docker compose exec frontend bun --bun turbo run test   # Runs tests across all workspaces
+docker compose exec frontend bun --bun turbo run lint   # Runs linting across all workspaces
+
+# Run backend-specific tasks through Docker
+docker compose exec backend pip install -r requirements.txt  # Install backend dependencies
+docker compose exec backend pytest                          # Run backend tests
+docker compose exec backend ruff check .                    # Lint backend code
+```
+
+TurboRepo caches build outputs between runs, making incremental builds much faster. The cache is persisted in Docker volumes for consistent performance across restarts.
+
 ## 🔄 Development Workflow
 
 ### Branch Strategy
