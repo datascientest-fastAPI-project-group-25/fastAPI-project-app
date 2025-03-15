@@ -1,150 +1,85 @@
 services:
+  # Traefik reverse proxy
+  traefik:
+    image: traefik:v2.10
+    restart: always
+    ports:
+      - "80:80" # Web
+      - "8080:8080" # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - default
 
+  # Frontend with Bun for faster builds and development
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    restart: "no"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend-bun-cache:/app/node_modules
+    environment:
+      - VITE_API_URL=http://api.localhost
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`dashboard.localhost`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=5173"
+
+  # Backend with improved caching
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    restart: "no"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - backend-cache:/root/.cache/uv
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_SERVER=db
+      - SMTP_HOST=mailcatcher
+      - SMTP_PORT=1025
+      - SMTP_TLS=false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - db
+    command: sh -c "bash /app/scripts/prestart.sh && fastapi run --reload app/main.py"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.localhost`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+
+  # Database
   db:
     image: postgres:12
     restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      retries: 5
-      start_period: 30s
-      timeout: 10s
-    volumes:
-      - app-db-data:/var/lib/postgresql/data/pgdata
     env_file:
       - .env
     environment:
       - PGDATA=/var/lib/postgresql/data/pgdata
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
-      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
-      - POSTGRES_DB=${POSTGRES_DB?Variable not set}
-
-  adminer:
-    image: adminer
-    restart: always
-    networks:
-      - default
-    depends_on:
-      - db
-    environment:
-      - ADMINER_DESIGN=pepa-linha-dark
     ports:
-      - "8080:8080"
-
-  prestart:
-    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
-    build:
-      context: ./backend
-    networks:
-      - default
-    depends_on:
-      db:
-        condition: service_healthy
-    command: bash /app/scripts/prestart.sh
-    labels:
-      - "com.datascientest.service.status=Done when exited"
-    env_file:
-      - .env
-    environment:
-      - DOMAIN=${DOMAIN}
-      - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
-      - ENVIRONMENT=${ENVIRONMENT}
-      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
-      - SECRET_KEY=${SECRET_KEY?Variable not set}
-      - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
-      - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
-      - POSTGRES_SERVER=db
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
-      - SENTRY_DSN=${SENTRY_DSN}
-
-  backend:
-    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
-    restart: always
-    networks:
-      - default
-    depends_on:
-      db:
-        condition: service_healthy
-      prestart:
-        condition: service_completed_successfully
-    env_file:
-      - .env
-    environment:
-      - DOMAIN=${DOMAIN}
-      - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
-      - ENVIRONMENT=${ENVIRONMENT}
-      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
-      - SECRET_KEY=${SECRET_KEY?Variable not set}
-      - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
-      - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
-      - POSTGRES_SERVER=db
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
-      - SENTRY_DSN=${SENTRY_DSN}
-    ports:
-      - "8000:8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    build:
-      context: ./backend
-
-  frontend:
-    image: '${DOCKER_IMAGE_FRONTEND?Variable not set}:${TAG-latest}'
-    restart: always
-    networks:
-      - default
-    ports:
-      - "3000:80"
-    build:
-      context: ./frontend
-      args:
-        - VITE_API_URL=${API_URL:-http://localhost:8000}
-        - NODE_ENV=production
-
-  app-status:
-    image: alpine:latest
-    networks:
-      - default
+      - "5432:5432"
     volumes:
-      - ./scripts:/scripts
-    depends_on:
-      db:
-        condition: service_healthy
-      backend:
-        condition: service_healthy
-      frontend:
-        condition: service_started
-      prestart:
-        condition: service_completed_successfully
-      traefik:
-        condition: service_started
-      mailcatcher:
-        condition: service_started
-      adminer:
-        condition: service_started
-    command: sh /scripts/app-status.sh
-    restart: "no"
-    tty: true
-    stdin_open: true
-
-volumes:
-  app-db-data:
+      - app-db-data:/var/lib/postgresql/data
 
 networks:
   default:
+    name: fastapi-project-app_default
+
+volumes:
+  frontend-bun-cache:
+  app-db-data:
+  backend-cache:
