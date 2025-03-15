@@ -1,47 +1,88 @@
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
-    -   id: check-yaml
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
         args: [--allow-multiple-documents]
-    -   id: check-added-large-files
-    -   id: check-merge-conflict
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-toml
+      - id: detect-private-key
 
--   repo: https://github.com/psf/black
+  - repo: https://github.com/psf/black
     rev: 24.2.0
     hooks:
-    -   id: black
+      - id: black
+        language_version: python3.11
 
--   repo: https://github.com/charliermarsh/ruff-pre-commit
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.3.0
     hooks:
-    -   id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-    -   id: ruff-format
-        args: [--check]
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
 
--   repo: https://github.com/PyCQA/bandit
+  - repo: https://github.com/PyCQA/bandit
     rev: 1.7.8
     hooks:
-    -   id: bandit
-        args: ['-ll']
+      - id: bandit
+        args: ["-ll"]
         exclude: ^tests/
 
-# Custom hook to prevent pushing directly to main
--   repo: local
+  # Frontend checks
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
     hooks:
-    -   id: block-main-push
+      - id: prettier
+        types_or: [javascript, jsx, ts, tsx, json, css, scss, yaml]
+        additional_dependencies:
+          - prettier@3.2.5
+
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.0.0-alpha.2
+    hooks:
+      - id: eslint
+        files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
+        types: [file]
+        additional_dependencies:
+          - eslint@8.57.0
+          - eslint-plugin-react@7.33.2
+          - eslint-config-prettier@9.1.0
+          - "@typescript-eslint/eslint-plugin@7.1.0"
+          - "@typescript-eslint/parser@7.1.0"
+
+  # Python dependency checks
+  - repo: https://github.com/python-poetry/poetry
+    rev: "1.7.1"
+    hooks:
+      - id: poetry-check
+        name: Check Poetry configuration
+        files: ^pyproject\.toml$
+
+  # Custom hooks
+  - repo: local
+    hooks:
+      - id: block-main-push
         name: Block direct pushes to main
         entry: scripts/block-main-push.py
         language: script
         pass_filenames: false
         stages: [pre-push]
 
-    # Simple commit message validation
-    -   id: check-commit-message-length
+      - id: check-commit-message-length
         name: Check commit message length
         entry: python -c 'import sys; msg = open(sys.argv[1]).read(); sys.exit(1 if len(msg.strip()) < 10 else 0)'
         language: python
         stages: [commit-msg]
+
+      - id: pytest-check
+        name: Run Python tests
+        entry: pytest -v
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+        files: ^backend/.*\.py$
