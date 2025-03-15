@@ -27,6 +27,8 @@ help:
 	@echo "  make turbo-test         Run tests across all workspaces"
 	@echo "  make turbo-lint         Run linting across all workspaces"
 	@echo "  make turbo-clean        Clean TurboRepo cache"
+	@echo "  make turbo-backend-test Run backend tests using TurboRepo"
+	@echo "  make turbo-backend-lint Run backend linting using TurboRepo"
 	@echo ""
 	@echo "Git Workflow:"
 	@echo "  make feat name=branch-name    Create a new feature branch"
@@ -150,23 +152,40 @@ clean:
 # Build all workspaces using TurboRepo
 turbo-build:
 	@echo "Building all workspaces using TurboRepo..."
-	docker compose exec frontend bun --bun turbo run build
+	@docker compose up -d frontend backend
+	@docker compose exec frontend bun run build
 	@echo "Build complete."
 
 # Run tests across all workspaces using TurboRepo
 turbo-test:
 	@echo "Running tests across all workspaces using TurboRepo..."
-	docker compose exec frontend bun --bun turbo run test
+	@docker compose up -d frontend backend
+	@docker compose exec frontend bun run test
 	@echo "Tests complete."
 
 # Run linting across all workspaces using TurboRepo
 turbo-lint:
 	@echo "Running linting across all workspaces using TurboRepo..."
-	docker compose exec frontend bun --bun turbo run lint
+	@docker compose up -d frontend backend
+	@docker compose exec frontend bun run lint
 	@echo "Linting complete."
 
 # Clean TurboRepo cache
 turbo-clean:
 	@echo "Cleaning TurboRepo cache..."
-	docker compose exec frontend bun --bun turbo run clean
+	@docker compose up -d frontend
+	@docker compose exec frontend bun run clean
 	@echo "TurboRepo cache cleaned."
+
+# Run backend-specific tasks using TurboRepo
+turbo-backend-test:
+	@echo "Running backend tests using TurboRepo..."
+	@docker compose up -d backend
+	@docker compose exec backend pytest
+	@echo "Backend tests complete."
+
+turbo-backend-lint:
+	@echo "Running backend linting using TurboRepo..."
+	@docker compose up -d backend
+	@docker compose exec backend ruff check app tests
+	@echo "Backend linting complete."

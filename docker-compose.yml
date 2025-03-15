@@ -83,5 +83,6 @@ networks:
 
 volumes:
   frontend-bun-cache:
-  app-db-data:
   backend-cache:
+  app-db-data:
+  turbo-cache:

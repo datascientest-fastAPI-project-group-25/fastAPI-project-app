@@ -1,0 +1,22 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["../turbo.json"],
+  "tasks": {
+    "build": {
+      "outputs": ["dist/**"]
+    },
+    "test": {
+      "outputs": ["playwright-report/**"]
+    },
+    "lint": {
+      "outputs": []
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

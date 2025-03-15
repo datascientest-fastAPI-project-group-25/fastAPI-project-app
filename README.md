@@ -201,17 +201,17 @@ This project uses TurboRepo for monorepo management and build caching, significa
 
 ```bash
 # Using Makefile (recommended)
-make docker-up-bun  # Starts all services with Bun for faster builds
+make docker-up  # Starts all services with Bun for faster builds
 
-# Run TurboRepo commands through Docker
-docker compose exec frontend bun --bun turbo run build  # Builds all workspaces with caching
-docker compose exec frontend bun --bun turbo run test   # Runs tests across all workspaces
-docker compose exec frontend bun --bun turbo run lint   # Runs linting across all workspaces
+# Run TurboRepo commands through Makefile
+make turbo-build  # Builds all workspaces with caching (ensures containers are running)
+make turbo-test   # Runs tests across all workspaces
+make turbo-lint   # Runs linting across all workspaces
+make turbo-clean  # Cleans TurboRepo cache
 
-# Run backend-specific tasks through Docker
-docker compose exec backend pip install -r requirements.txt  # Install backend dependencies
-docker compose exec backend pytest                          # Run backend tests
-docker compose exec backend ruff check .                    # Lint backend code
+# Run backend-specific tasks through Makefile
+make turbo-backend-test  # Run backend tests
+make turbo-backend-lint  # Run backend linting
 ```
 
 TurboRepo caches build outputs between runs, making incremental builds much faster. The cache is persisted in Docker volumes for consistent performance across restarts.
