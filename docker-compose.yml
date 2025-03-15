@@ -23,6 +23,8 @@ services:
       - "5173:5173"
     volumes:
       - ./frontend:/app
+      - ./package.json:/app/package.json
+      - ./turbo.json:/app/turbo.json
       - frontend-bun-cache:/app/node_modules
     environment:
       - VITE_API_URL=http://api.localhost
