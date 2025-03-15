@@ -9,8 +9,8 @@
     "lint": "biome check --apply-unsafe --no-errors-on-unmatched --files-ignore-unknown=true ./",
     "preview": "vite preview",
     "generate-client": "openapi-ts",
-    "test": "echo \"No tests specified yet\" && exit 0",
-    "test:e2e": "echo \"No E2E tests specified yet\" && exit 0"
+    "test": "playwright test",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.8.0",

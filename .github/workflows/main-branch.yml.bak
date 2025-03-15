@@ -30,14 +30,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Keep Python and Node.js setup steps separate for optimal caching
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
 
-      # Separate Node.js setup allows for parallel caching and better error isolation
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -74,7 +72,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Keep Python and Node.js setup steps separate for optimal caching
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -102,22 +99,6 @@ jobs:
   test:
     needs: [lint]
     runs-on: ubuntu-latest
-    # Add job-level environment variables to avoid redundancy
-    env:
-      PROJECT_NAME: "FastAPI Project"
-      POSTGRES_SERVER: "localhost"
-      POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'postgres' }}
-      POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'app' }}
-      FIRST_SUPERUSER: "admin@example.com"
-      FIRST_SUPERUSER_PASSWORD: "adminpass123"
-      EMAILS_ENABLED: "True"
-      SMTP_HOST: "localhost"
-      SMTP_PORT: "25"
-      SMTP_USER: "test@example.com"
-      SMTP_PASSWORD: "testpassword"
-      EMAILS_FROM_EMAIL: "test@example.com"
-      SECRET_KEY: "testing_secret_key_for_ci"
     services:
       postgres:
         image: postgres:15
@@ -139,14 +120,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Keep Python and Node.js setup steps separate for optimal caching
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
 
-      # Separate Node.js setup allows for parallel caching and better error isolation
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -165,11 +144,41 @@ jobs:
           npm ci
 
       - name: Initialize database schema
+        env:
+          PROJECT_NAME: "FastAPI Project"
+          POSTGRES_SERVER: "localhost"
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'postgres' }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'app' }}
+          FIRST_SUPERUSER: "admin@example.com"
+          FIRST_SUPERUSER_PASSWORD: "adminpass123"
+          EMAILS_ENABLED: "True"
+          SMTP_HOST: "localhost"
+          SMTP_PORT: "25"
+          SMTP_USER: "test@example.com"
+          SMTP_PASSWORD: "testpassword"
+          EMAILS_FROM_EMAIL: "test@example.com"
+          SECRET_KEY: "testing_secret_key_for_ci"
         run: |
           cd backend
           python scripts/init_db.py
 
       - name: Run backend tests
+        env:
+          PROJECT_NAME: "FastAPI Project"
+          POSTGRES_SERVER: "localhost"
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'postgres' }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'app' }}
+          FIRST_SUPERUSER: "admin@example.com"
+          FIRST_SUPERUSER_PASSWORD: "adminpass123"
+          EMAILS_ENABLED: "True"
+          SMTP_HOST: "localhost"
+          SMTP_PORT: "25"
+          SMTP_USER: "test@example.com"
+          SMTP_PASSWORD: "testpassword"
+          EMAILS_FROM_EMAIL: "test@example.com"
+          SECRET_KEY: "testing_secret_key_for_ci"
         run: |
           cd backend
           pytest -xvs app/tests/
