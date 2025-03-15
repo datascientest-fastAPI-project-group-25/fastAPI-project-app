@@ -1,0 +1,17 @@
+http:
+  middlewares:
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$ruca84Hq$mbjdMZBAG.KWn7vfN/SNK/" # Password: changeme
+
+  routers:
+    dashboard:
+      rule: "Host(`traefik.${DOMAIN}`)"
+      service: api@internal
+      entryPoints:
+        - websecure
+      middlewares:
+        - dashboard-auth
+      tls:
+        certResolver: letsencrypt
