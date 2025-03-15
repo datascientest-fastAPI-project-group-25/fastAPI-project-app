@@ -9,12 +9,7 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["playwright-report/**"],
-      "inputs": [
-        "src/**/*.tsx",
-        "src/**/*.ts",
-        "test/**/*.ts",
-        "test/**/*.tsx"
-      ]
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
     },
     "lint": {
       "outputs": []
