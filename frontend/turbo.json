@@ -1,12 +1,20 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "extends": ["../turbo.json"],
+  "globalDependencies": ["**/.env"],
   "tasks": {
     "build": {
+      "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
     "test": {
-      "outputs": ["playwright-report/**"]
+      "dependsOn": ["^build"],
+      "outputs": ["playwright-report/**"],
+      "inputs": [
+        "src/**/*.tsx",
+        "src/**/*.ts",
+        "test/**/*.ts",
+        "test/**/*.tsx"
+      ]
     },
     "lint": {
       "outputs": []

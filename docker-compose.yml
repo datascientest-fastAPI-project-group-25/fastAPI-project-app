@@ -22,10 +22,11 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app
+      - ./frontend:/app/frontend
       - ./package.json:/app/package.json
       - ./turbo.json:/app/turbo.json
       - frontend-bun-cache:/app/node_modules
+      - turbo-cache:/app/.turbo
     environment:
       - VITE_API_URL=http://api.localhost
     extra_hosts:
