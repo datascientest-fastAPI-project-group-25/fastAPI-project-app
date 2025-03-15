@@ -14,7 +14,7 @@ FROM base AS development
 
 ENV NODE_ENV=development
 
-CMD ["bun", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["bun", "run", "dev", "--host", "0.0.0.0"]
 
 # Stage 2: Build stage for production
 FROM base AS build-stage
