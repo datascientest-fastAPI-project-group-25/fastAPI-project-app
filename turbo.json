@@ -9,7 +9,14 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"],
-      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
+      "inputs": [
+        "src/**/*.tsx",
+        "src/**/*.ts",
+        "test/**/*.ts",
+        "test/**/*.tsx",
+        "backend/app/**/*.py",
+        "backend/tests/**/*.py"
+      ]
     },
     "lint": {
       "outputs": []
@@ -20,6 +27,23 @@
     },
     "clean": {
       "cache": false
+    },
+    "backend:install": {
+      "cache": false
+    },
+    "backend:dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "backend:test": {
+      "inputs": ["backend/app/**/*.py", "backend/tests/**/*.py"],
+      "outputs": ["backend/.pytest_cache/**"]
+    },
+    "backend:lint": {
+      "inputs": ["backend/app/**/*.py", "backend/tests/**/*.py"]
+    },
+    "backend:format": {
+      "inputs": ["backend/app/**/*.py", "backend/tests/**/*.py"]
     }
   }
 }
