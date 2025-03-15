@@ -4,13 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -p tsconfig.build.json && vite build",
-    "lint": "biome check --apply-unsafe --no-errors-on-unmatched --files-ignore-unknown=true ./",
-    "preview": "vite preview",
-    "generate-client": "openapi-ts",
-    "test": "playwright test",
-    "test:e2e": "playwright test"
+    "dev": "bun --bun vite",
+    "build": "bun --bun tsc -p tsconfig.build.json && bun --bun vite build",
+    "build:turbo": "bun --bun turbo run build",
+    "lint": "bun --bun biome check --apply-unsafe --no-errors-on-unmatched --files-ignore-unknown=true ./",
+    "lint:turbo": "bun --bun turbo run lint",
+    "preview": "bun --bun vite preview",
+    "generate-client": "bun --bun openapi-ts",
+    "test": "bun --bun playwright test",
+    "test:e2e": "bun --bun playwright test",
+    "test:turbo": "bun --bun turbo run test",
+    "clean": "rm -rf node_modules/.cache dist"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.8.0",
@@ -37,7 +41,9 @@
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@vitejs/plugin-react-swc": "^3.5.0",
+    "bun-types": "latest",
     "dotenv": "^16.4.5",
+    "turbo": "^2.0.0",
     "typescript": "^5.2.2",
     "vite": "^6.2.1"
   }
