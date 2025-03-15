@@ -118,18 +118,23 @@ frontend/
 
 ## 🧪 Testing
 
-The frontend includes a test suite using Vitest and React Testing Library:
+The frontend includes end-to-end tests using Playwright:
 
 ```bash
-# Run tests
+# Run all tests
 npm test
 
-# Run tests with coverage
-npm test -- --coverage
+# Run end-to-end tests
+npm run test:e2e
 
-# Run tests in watch mode
-npm test -- --watch
+# Install Playwright browsers if needed
+npx playwright install
 ```
+
+Playwright tests are located in the `tests` directory and include:
+- Login form validation tests
+- UI component tests
+- End-to-end user flow tests
 
 ## 💾 Building for Production
 
