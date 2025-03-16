@@ -44,8 +44,11 @@ jobs:
           node-version: "18"
           cache: "pnpm"
 
-      - name: Install pnpm
-        run: npm install -g pnpm@latest
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
 
       - name: Install Python linting tools
         run: |
@@ -89,6 +92,12 @@ jobs:
           node-version: "18"
           cache: "pnpm"
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
       - name: Run backend security scan
         run: |
           pip install bandit safety
@@ -96,8 +105,10 @@ jobs:
           bandit -r app -x app/tests
           safety check
 
-      - name: Install pnpm
-        run: npm install -g pnpm@latest
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
 
       - name: Run frontend security scan
         run: |
@@ -158,6 +169,12 @@ jobs:
           node-version: "18"
           cache: "pnpm"
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
       - name: Install backend dependencies
         run: |
           cd backend
@@ -202,9 +219,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "18"
+          cache: "pnpm"
 
-      - name: Install pnpm
-        run: npm install -g pnpm@latest
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
