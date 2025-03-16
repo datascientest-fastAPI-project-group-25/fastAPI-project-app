@@ -30,11 +30,13 @@ const useAuth = () => {
   // Custom error handler for authentication issues
   const handleAuthError = (err: ApiError) => {
     console.error("Authentication error:", err);
-    const errDetail = (err.body as any)?.detail;
-    let errorMessage =
-      errDetail || "Authentication failed. Please check your credentials.";
+    const errDetail = (err.body as { detail?: string | Array<{ msg: string }> })
+      ?.detail;
+    let errorMessage = "Authentication failed. Please check your credentials.";
 
-    if (Array.isArray(errDetail) && errDetail.length > 0) {
+    if (typeof errDetail === "string") {
+      errorMessage = errDetail;
+    } else if (Array.isArray(errDetail) && errDetail.length > 0) {
       errorMessage = errDetail[0].msg;
     }
 
@@ -101,7 +103,9 @@ const useAuth = () => {
           errorText,
         });
         throw new Error(
-          `Login failed: ${res.status} ${res.statusText} - ${errorText || "No error details"}`,
+          `Login failed: ${res.status} ${res.statusText} - ${
+            errorText || "No error details"
+          }`,
         );
       }
 

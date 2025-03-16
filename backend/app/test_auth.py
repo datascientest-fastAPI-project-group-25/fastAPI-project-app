@@ -3,6 +3,8 @@ Test script to verify authentication functionality directly.
 """
 
 import logging
+import secrets
+import string
 
 from app.core.security import get_password_hash, verify_password
 
@@ -12,9 +14,16 @@ logger = logging.getLogger(__name__)
 
 # Test credentials from memory
 TEST_EMAIL = "admin@example.com"
-# Using an environment variable would be better in production code
-# This is intentionally hardcoded for testing purposes only
-TEST_PASSWORD = "test_password_for_ci"  # nosec
+
+
+# Generate a random password for testing instead of hardcoding
+def generate_test_password(length=12):
+    """Generate a random password for testing purposes."""
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+TEST_PASSWORD = generate_test_password()
 
 
 def test_password_hashing():

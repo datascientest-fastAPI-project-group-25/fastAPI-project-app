@@ -49,7 +49,11 @@ export function findLastEmail({
   );
 
   const checkEmails = async () => {
-    while (true) {
+    // Set a maximum number of attempts to avoid infinite loops
+    const maxAttempts = 100;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
       const emailData = await findEmail({ request, filter });
 
       if (emailData) {
@@ -57,7 +61,10 @@ export function findLastEmail({
       }
       // Wait for 100ms before checking again
       await new Promise((resolve) => setTimeout(resolve, 100));
+      attempts++;
     }
+
+    throw new Error("Email not found after maximum attempts");
   };
 
   return Promise.race([timeoutPromise, checkEmails()]);
