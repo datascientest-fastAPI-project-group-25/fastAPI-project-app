@@ -276,7 +276,7 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(pnpm exec node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build and push backend image
