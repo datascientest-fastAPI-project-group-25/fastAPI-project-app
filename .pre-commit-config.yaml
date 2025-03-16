@@ -80,7 +80,7 @@ repos:
 
       - id: pytest-check
         name: Run Python tests
-        entry: pytest -v
+        entry: scripts/run-tests.sh -v
         language: system
         pass_filenames: false
         always_run: true

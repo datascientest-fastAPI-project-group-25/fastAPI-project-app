@@ -10,7 +10,6 @@
   "scripts": {
     "commit": "git-cz",
     "release": "semantic-release",
-    "prepare": "husky install",
     "create-branch": "node scripts/create-branch.js",
     "backend:install": "pip install -r backend/requirements.txt"
   },
@@ -24,7 +23,6 @@
     "chalk": "^4.1.2",
     "commitizen": "^4.3.0",
     "cz-conventional-changelog": "^3.3.0",
-    "husky": "^8.0.3",
     "inquirer": "^8.2.6",
     "semantic-release": "^24.2.3"
   },

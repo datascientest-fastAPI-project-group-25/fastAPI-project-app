@@ -1,9 +1,9 @@
 import axios from "axios";
 import type {
   AxiosError,
-  AxiosInstance,
   AxiosRequestConfig,
   AxiosResponse,
+  AxiosInstance,
 } from "axios";
 
 import { ApiError } from "./ApiError";
@@ -21,7 +21,7 @@ export const isStringWithValue = (value: unknown): value is string => {
   return isString(value) && value !== "";
 };
 
-export const isBlob = (value: any): value is Blob => {
+export const isBlob = (value: unknown): value is Blob => {
   return value instanceof Blob;
 };
 
@@ -37,8 +37,11 @@ export const base64 = (str: string): string => {
   try {
     return btoa(str);
   } catch (err) {
-    // @ts-ignore
-    return Buffer.from(str).toString("base64");
+    // In Node.js environment, use Buffer
+    if (typeof Buffer !== "undefined") {
+      return Buffer.from(str).toString("base64");
+    }
+    throw err;
   }
 };
 
@@ -76,7 +79,10 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
   const path = options.url
     .replace("{api-version}", config.VERSION)
     .replace(/{(.*?)}/g, (substring: string, group: string) => {
-      if (options.path?.hasOwnProperty(group)) {
+      if (
+        options.path &&
+        Object.prototype.hasOwnProperty.call(options.path, group)
+      ) {
         return encoder(String(options.path[group]));
       }
       return substring;
@@ -132,13 +138,13 @@ export const getHeaders = async <T>(
   options: ApiRequestOptions<T>,
 ): Promise<Record<string, string>> => {
   const [token, username, password, additionalHeaders] = await Promise.all([
-    // @ts-ignore
+    // @ts-expect-error - Resolver function may return undefined which is handled later
     resolve(options, config.TOKEN),
-    // @ts-ignore
+    // @ts-expect-error - Resolver function may return undefined which is handled later
     resolve(options, config.USERNAME),
-    // @ts-ignore
+    // @ts-expect-error - Resolver function may return undefined which is handled later
     resolve(options, config.PASSWORD),
-    // @ts-ignore
+    // @ts-expect-error - Resolver function may return undefined which is handled later
     resolve(options, config.HEADERS),
   ]);
 
@@ -157,12 +163,12 @@ export const getHeaders = async <T>(
     );
 
   if (isStringWithValue(token)) {
-    headers.Authorization = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   if (isStringWithValue(username) && isStringWithValue(password)) {
     const credentials = base64(`${username}:${password}`);
-    headers.Authorization = `Basic ${credentials}`;
+    headers["Authorization"] = `Basic ${credentials}`;
   }
 
   if (options.body !== undefined) {
@@ -334,8 +340,6 @@ export const request = <T>(
   options: ApiRequestOptions<T>,
   axiosClient: AxiosInstance = axios,
 ): CancelablePromise<T> => {
-  // Debug API requests
-  console.log(`API Request: ${options.method} ${options.url}`, options);
   return new CancelablePromise(async (resolve, reject, onCancel) => {
     try {
       const url = getUrl(config, options);
@@ -370,12 +374,15 @@ export const request = <T>(
           transformedBody = await options.responseTransformer(responseBody);
         }
 
-        const result: ApiResult = {
+        // We need to ensure the response body is properly typed
+        const responseData = responseHeader ?? transformedBody;
+
+        const result: ApiResult<T> = {
           url,
           ok: isSuccess(response.status),
           status: response.status,
           statusText: response.statusText,
-          body: responseHeader ?? transformedBody,
+          body: responseData as T, // Type assertion needed here due to the complex transformations
         };
 
         catchErrorCodes(options, result);

@@ -5,7 +5,16 @@ OpenAPI.BASE = `${process.env.VITE_API_URL || "http://api.localhost"}`;
 
 // Create a mock PrivateService for testing
 const PrivateService = {
-  createUser: async ({ requestBody }: { requestBody: any }) => {
+  createUser: async ({
+    requestBody,
+  }: {
+    requestBody: {
+      email: string;
+      is_verified?: boolean;
+      full_name?: string;
+      password: string;
+    };
+  }) => {
     // For tests, we'll just return a mock response
     // In a real scenario, we would make an actual API call
     console.log("Mock createUser called with:", requestBody);

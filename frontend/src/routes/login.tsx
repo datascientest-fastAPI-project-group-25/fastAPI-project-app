@@ -125,7 +125,7 @@ function Login() {
           Login as Admin
         </Button>
         <Text>
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <RouterLink to="/signup" className="main-link">
             Sign Up
           </RouterLink>
