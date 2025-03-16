@@ -98,9 +98,14 @@ jobs:
           version: 8
           run_install: false
 
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install bandit safety
+
       - name: Run backend security scan
         run: |
-          pip install bandit safety
           cd backend
           bandit -r app -x app/tests
           safety check
