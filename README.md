@@ -91,17 +91,17 @@ make help
 # Setup the project (create .env, install dependencies)
 make setup
 
-# Start Docker containers with pnpm and UV
-make docker-up
+# Start Docker containers with pnpm
+make up
 
 # Initialize the database (create tables and first superuser)
 make init-db
 
 # Stop Docker containers
-make docker-down
+make down
 
 # Restart Docker containers
-make docker-restart
+make restart
 
 # Run all tests
 make test
@@ -151,7 +151,7 @@ The easiest way to get started is using our optimized Docker Compose setup, whic
 
 ```bash
 # Using Makefile (recommended)
-make docker-up
+make up
 
 # Or directly with Docker Compose
 docker compose up -d
@@ -417,7 +417,7 @@ npm run test:e2e
      - Email: admin@example.com
      - Password: Check your `.env` file for FIRST_SUPERUSER_PASSWORD
    - If login still fails, check the backend logs: `docker compose logs backend`
-   - For a complete database reset: `docker compose down -v && make docker-up && make init-db`
+   - For a complete database reset: `docker compose down -v && make up && make init-db`
 
 3. **Security Best Practices**:
    - Never commit `.env` files to version control
