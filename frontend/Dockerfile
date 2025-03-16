@@ -90,7 +90,6 @@ WORKDIR /app
 # Copy package files and install dependencies
 COPY package.json pnpm-lock.yaml* ./
 COPY frontend/package.json ./frontend/
-COPY turbo.json ./
 
 # Create empty directories for mounting
 RUN mkdir -p /app/frontend

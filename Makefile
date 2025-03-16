@@ -1,7 +1,7 @@
 # DevOps Demo Application Makefile
 # This Makefile simplifies common development tasks
 
-.PHONY: help setup env up down restart init-db test test-backend test-frontend feat fix fix-auto clean build lint check-login
+.PHONY: help setup env up down restart init-db test test-backend test-frontend feat fix fix-automerge clean build lint check-login
 
 # Default target
 help:
@@ -29,7 +29,7 @@ help:
 	@echo "Git Workflow:"
 	@echo "  make feat name=branch-name     Create a new feature branch"
 	@echo "  make fix name=branch-name      Create a new fix branch"
-	@echo "  make fix-auto name=branch-name Create a fix branch with automerge"
+	@echo "  make fix-automerge name=branch-name  Create a fix branch with automerge"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make clean              Clean up temporary files and directories"
