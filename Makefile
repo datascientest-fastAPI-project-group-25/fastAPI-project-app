@@ -11,8 +11,8 @@ help:
 	@echo "  make setup              Setup the project (create .env, install dependencies)"
 	@echo "  make env                Generate a secure .env file from .env.example"
 	@echo ""
-	@echo "Fast Build System (Bun, Traefik, UV):"
-	@echo "  make docker-up          Start Docker containers with Bun and Traefik"
+	@echo "Fast Build System (pnpm, Traefik, UV):"
+	@echo "  make docker-up          Start Docker containers with pnpm and Traefik"
 	@echo "  make docker-down        Stop Docker containers"
 	@echo "  make docker-restart     Restart Docker containers"
 	@echo ""
@@ -101,12 +101,12 @@ test-backend:
 # Run frontend tests
 test-frontend:
 	@echo "Running frontend tests..."
-	docker compose run --rm frontend bun --bun turbo run test
+	docker compose run --rm frontend pnpm run test
 
 # Create a new feature branch
-create-feat:
+feat:
 	@if [ -z "$(name)" ]; then \
-		echo "Error: Branch name not specified. Use 'make create-feature-branch name=branch-name'"; \
+		echo "Error: Branch name not specified. Use 'make feat name=branch-name'"; \
 		exit 1; \
 	fi
 	@echo "Creating feature branch: feat/$(name)"
@@ -146,34 +146,56 @@ clean:
 	@find . -name ".turbo" -delete
 	@echo "Cleanup complete!"
 
-# TurboRepo commands using Docker and Bun
+# TurboRepo commands using Docker and pnpm
 # ----------------------------------------
 
-# Build all workspaces using TurboRepo
-turbo-build:
-	@echo "Building all workspaces using TurboRepo..."
-	@docker compose up -d frontend backend
-	@docker compose exec frontend bun run build
-	@echo "Build complete."
+# Separate TypeScript compilation and Vite build into distinct steps
+frontend-tsc:
+	@echo "Running TypeScript compilation with increased memory..."
+	@docker compose exec frontend sh -c "cd /app/frontend && NODE_OPTIONS='--max-old-space-size=8192' pnpm run tsc"
+	@echo "TypeScript compilation complete."
+
+frontend-vite:
+	@echo "Running Vite build with increased memory..."
+	@docker compose exec frontend sh -c "cd /app/frontend && NODE_OPTIONS='--max-old-space-size=8192' pnpm run build"
+	@echo "Vite build complete."
+
+# Build backend workspace
+backend-build:
+	@echo "Building backend workspace..."
+	@docker compose up -d backend || { echo "Failed to start backend container"; exit 1; }
+	@docker compose exec backend sh -c "cd /app && pip install -e ." || { echo "Backend build failed"; exit 1; }
+	@echo "Backend build complete."
+
+# Build all workspaces sequentially to avoid memory issues
+turbo-build: frontend-tsc frontend-vite backend-build
+	@echo "All builds complete."
 
 # Run tests across all workspaces using TurboRepo
-turbo-test:
+turbo-test: setup-playwright
 	@echo "Running tests across all workspaces using TurboRepo..."
-	@docker compose run --rm frontend bun --bun run build
-	@echo "Tests skipped due to npm dependency issues. Build check completed instead."
+	@docker compose up -d frontend backend
+	@docker compose exec frontend sh -c "cd /app/frontend && NODE_OPTIONS='--max-old-space-size=2048' pnpm run test"
 	@echo "Tests complete."
 
 # Run linting across all workspaces using TurboRepo
 turbo-lint:
 	@echo "Running linting across all workspaces using TurboRepo..."
-	@docker compose run --rm frontend bun --bun biome check --no-errors-on-unmatched --files-ignore-unknown=true ./src
+	@docker compose up -d frontend backend
+	@docker compose exec frontend sh -c "cd /app/frontend && pnpm run lint"
 	@echo "Linting complete."
+
+# Setup Playwright for testing
+setup-playwright:
+	@echo "Setting up Playwright..."
+	@docker compose run --rm frontend sh ./setup-playwright.sh
+	@echo "Playwright setup complete."
 
 # Clean TurboRepo cache
 turbo-clean:
 	@echo "Cleaning TurboRepo cache..."
 	@docker compose up -d frontend
-	@docker compose exec frontend bun run clean
+	@docker compose exec frontend sh -c "cd /app/frontend && pnpm run clean"
 	@echo "TurboRepo cache cleaned."
 
 # Run backend-specific tasks using TurboRepo
@@ -188,3 +210,13 @@ turbo-backend-lint:
 	@docker compose up -d backend
 	@docker compose exec backend ruff check app tests
 	@echo "Backend linting complete."
+
+# Build frontend using Docker multi-stage build
+frontend-build-docker:
+	@echo "Building frontend via Docker multi-stage build..."
+	@docker build --target builder -f frontend/Dockerfile -t frontend-builder .
+	@echo "Extracting build artifacts..."
+	@docker create --name extract-container frontend-builder
+	@docker cp extract-container:/app/frontend/dist ./frontend/dist
+	@docker rm extract-container
+	@echo "Frontend build complete using Docker."

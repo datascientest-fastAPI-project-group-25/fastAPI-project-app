@@ -1,0 +1,15 @@
+{
+  "name": "backend",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@8.15.1",
+  "scripts": {
+    "dev": "uvicorn app.main:app --reload",
+    "build": "echo 'Python backend build step - preparing for production'",
+    "start": "uvicorn app.main:app",
+    "test": "pytest",
+    "lint": "ruff check .",
+    "format": "ruff format .",
+    "clean": "rm -rf .pytest_cache .ruff_cache htmlcov .coverage"
+  }
+}

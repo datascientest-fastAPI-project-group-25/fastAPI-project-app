@@ -2,25 +2,17 @@
   "name": "fastapi-project-app",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "bun@1.0.25",
+  "packageManager": "pnpm@8.15.1",
   "workspaces": [
-    "frontend"
+    "frontend",
+    "backend"
   ],
   "scripts": {
     "commit": "git-cz",
     "release": "semantic-release",
     "prepare": "husky install",
     "create-branch": "node scripts/create-branch.js",
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "test": "turbo run test",
-    "lint": "turbo run lint",
-    "clean": "turbo run clean",
-    "backend:install": "cd backend && pip install -r requirements.txt",
-    "backend:dev": "cd backend && uvicorn app.main:app --reload",
-    "backend:test": "cd backend && pytest",
-    "backend:lint": "cd backend && ruff check .",
-    "backend:format": "cd backend && ruff format ."
+    "backend:install": "pip install -r backend/requirements.txt"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
@@ -34,8 +26,7 @@
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^8.0.3",
     "inquirer": "^8.2.6",
-    "semantic-release": "^24.2.3",
-    "turbo": "^2.0.0"
+    "semantic-release": "^24.2.3"
   },
   "config": {
     "commitizen": {

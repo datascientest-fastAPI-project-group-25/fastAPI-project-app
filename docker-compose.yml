@@ -12,23 +12,30 @@ services:
     networks:
       - default
 
-  # Frontend with Bun for faster builds and development
+  # Frontend with Node.js for development using pnpm
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: development
+    image: node:18-alpine
     restart: "no"
+    mem_limit: "8G"
+    working_dir: /app
     ports:
       - "5173:5173"
+    deploy:
+      resources:
+        limits:
+          memory: 8G
     volumes:
-      - ./frontend:/app/frontend
-      - ./package.json:/app/package.json
-      - ./turbo.json:/app/turbo.json
-      - frontend-bun-cache:/app/node_modules
+      - ./:/app
+      - frontend-pnpm-store:/root/.local/share/pnpm/store
+      - frontend-node-modules:/app/node_modules
+      - frontend-frontend-node-modules:/app/frontend/node_modules
       - turbo-cache:/app/.turbo
     environment:
       - VITE_API_URL=http://api.localhost
+      - NODE_OPTIONS=--max-old-space-size=8192
+      - TURBO_TELEMETRY_DISABLED=1
+      - PNPM_HOME=/usr/local/bin
+    command: sh -c "npm install -g pnpm typescript && pnpm install --frozen-lockfile && tail -f /dev/null"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     labels:
@@ -55,6 +62,7 @@ services:
       - SMTP_HOST=mailcatcher
       - SMTP_PORT=1025
       - SMTP_TLS=false
+      - FRONTEND_HOST=http://dashboard.localhost
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -83,7 +91,9 @@ networks:
     name: fastapi-project-app_default
 
 volumes:
-  frontend-bun-cache:
+  frontend-node-modules:
+  frontend-frontend-node-modules:
+  frontend-pnpm-store:
   backend-cache:
   app-db-data:
   turbo-cache:
