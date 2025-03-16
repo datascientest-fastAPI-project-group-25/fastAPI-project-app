@@ -9,7 +9,8 @@ from app.tests.utils.utils import random_lower_string
 def create_random_item(db: Session) -> Item:
     user = create_random_user(db)
     owner_id = user.id
-    assert owner_id is not None
+    if owner_id is None:
+        raise ValueError("Owner ID cannot be None when creating a random item")
     title = random_lower_string()
     description = random_lower_string()
     item_in = ItemCreate(title=title, description=description)
