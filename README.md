@@ -34,7 +34,7 @@ graph TD
 - **Database**: PostgreSQL
 - **Infrastructure**: Docker, Traefik, GitHub Container Registry (GHCR)
 - **CI/CD**: GitHub Actions
-- **Build Tools**: Bun, TurboRepo, Biome
+- **Build Tools**: pnpm, Biome
 
 ## 🛠️ Development Environment Setup
 
@@ -44,8 +44,7 @@ graph TD
 - [Python](https://www.python.org/) (3.11+)
 - [uv](https://github.com/astral-sh/uv/) for Python package management
 - [Git](https://git-scm.com/)
-- [Bun](https://bun.sh/) for faster frontend builds
-- [TurboRepo](https://turbo.build/) for monorepo management and build caching
+- [pnpm](https://pnpm.io/) for efficient package management and faster builds
 
 ### Initial Setup
 
@@ -92,7 +91,7 @@ make help
 # Setup the project (create .env, install dependencies)
 make setup
 
-# Start Docker containers with Bun, TurboRepo, and UV
+# Start Docker containers with pnpm and UV
 make docker-up
 
 # Initialize the database (create tables and first superuser)
@@ -108,10 +107,13 @@ make docker-restart
 make test
 
 # Create a new feature branch
-make create-feature-branch name=branch-name
+make feat name=branch-name
 
 # Create a new fix branch
-make create-fix-branch name=branch-name
+make fix name=branch-name
+
+# Create a new fix branch with automerge
+make fix-auto name=branch-name
 ```
 
 ## 🗄️ Database Initialization
@@ -131,12 +133,11 @@ After initialization, you can log in with:
 - **Email**: admin@example.com
 - **Password**: The value of `FIRST_SUPERUSER_PASSWORD` in your `.env` file
 
-## 🚀 Fast Build System (Bun + TurboRepo + Traefik + UV)
+## 🚀 Fast Build System (pnpm + Traefik + UV)
 
 This project uses a modern, high-performance build system:
 
-- **Bun**: For faster JavaScript/TypeScript execution and package management
-- **TurboRepo**: For efficient monorepo management and build caching
+- **pnpm**: For efficient package management with disk space optimization and faster builds
 - **Traefik**: For efficient reverse proxy and routing
 - **UV**: For optimized Python package management
 
@@ -195,26 +196,27 @@ make docker-restart
 
 All development is done using Docker and the provided Makefile commands for consistency across environments.
 
-### Using TurboRepo for Faster Builds
+### Using pnpm for Faster Builds
 
-This project uses TurboRepo for monorepo management and build caching, significantly improving build times. All operations are performed using Docker and Bun for maximum performance:
+This project uses pnpm for efficient package management and monorepo capabilities, significantly improving build times and reducing disk space usage. All operations are performed using Docker for consistent environments:
 
 ```bash
 # Using Makefile (recommended)
-make docker-up  # Starts all services with Bun for faster builds
+make up  # Starts all services with pnpm
 
-# Run TurboRepo commands through Makefile
-make turbo-build  # Builds all workspaces with caching (ensures containers are running)
-make turbo-test   # Runs tests across all workspaces
-make turbo-lint   # Runs linting across all workspaces
-make turbo-clean  # Cleans TurboRepo cache
+# Run pnpm commands through Makefile
+make build  # Builds all workspaces (ensures containers are running)
+make lint   # Runs linting across all workspaces
 
 # Run backend-specific tasks through Makefile
-make turbo-backend-test  # Run backend tests
-make turbo-backend-lint  # Run backend linting
+make test-backend  # Run backend tests
+make backend-lint  # Run backend linting
+
+# Test login functionality
+make check-login  # Verify API login works correctly
 ```
 
-TurboRepo caches build outputs between runs, making incremental builds much faster. The cache is persisted in Docker volumes for consistent performance across restarts.
+pnpm uses a content-addressable store for packages, making installations faster and more efficient. The node_modules are linked rather than copied, saving significant disk space.
 
 ## 🔄 Development Workflow
 

@@ -29,13 +29,11 @@ services:
       - frontend-pnpm-store:/root/.local/share/pnpm/store
       - frontend-node-modules:/app/node_modules
       - frontend-frontend-node-modules:/app/frontend/node_modules
-      - turbo-cache:/app/.turbo
     environment:
       - VITE_API_URL=http://api.localhost
       - NODE_OPTIONS=--max-old-space-size=8192
-      - TURBO_TELEMETRY_DISABLED=1
       - PNPM_HOME=/usr/local/bin
-    command: sh -c "npm install -g pnpm typescript && pnpm install --frozen-lockfile && tail -f /dev/null"
+    command: sh -c "npm install -g pnpm typescript && pnpm install --frozen-lockfile && cd frontend && pnpm dev"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     labels:
@@ -96,4 +94,3 @@ volumes:
   frontend-pnpm-store:
   backend-cache:
   app-db-data:
-  turbo-cache:

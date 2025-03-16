@@ -63,11 +63,11 @@ When testing GitHub Actions workflows locally:
    - Use the `--skip-security` flag to skip security checks during local testing
 
 3. **Missing Frontend Test Script**:
-   - npm error "Missing script: test" may occur
+   - pnpm error "Missing script: test" may occur
    - This is expected if you haven't defined a test script in package.json
 
 4. **Vulnerabilities in Frontend Dependencies**:
-   - npm audit may report vulnerabilities
+   - pnpm audit may report vulnerabilities
    - Use `--skip-audit` to bypass this check during local testing
 
 ## Workflow Improvements
@@ -84,7 +84,7 @@ Recent improvements to workflows include:
    - Added proper error handling for git operations
 
 3. **Performance Improvements**:
-   - Added npm caching for frontend
+   - Added pnpm caching for frontend
    - Enabled uv caching for Python dependencies
    - Improved working directory usage
 

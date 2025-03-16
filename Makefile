@@ -1,7 +1,7 @@
 # DevOps Demo Application Makefile
 # This Makefile simplifies common development tasks
 
-.PHONY: help setup env docker-up docker-down docker-restart init-db test test-backend test-frontend create-feature-branch create-fix-branch create-fix-branch-automerge clean turbo-build turbo-test turbo-lint turbo-clean
+.PHONY: help setup env up down restart init-db test test-backend test-frontend feat fix fix-auto clean build lint check-login
 
 # Default target
 help:
@@ -11,35 +11,31 @@ help:
 	@echo "  make setup              Setup the project (create .env, install dependencies)"
 	@echo "  make env                Generate a secure .env file from .env.example"
 	@echo ""
-	@echo "Fast Build System (pnpm, Traefik, UV):"
-	@echo "  make docker-up          Start Docker containers with pnpm and Traefik"
-	@echo "  make docker-down        Stop Docker containers"
-	@echo "  make docker-restart     Restart Docker containers"
+	@echo "Docker & pnpm:"
+	@echo "  make up                 Start Docker containers with pnpm and Traefik"
+	@echo "  make down               Stop Docker containers"
+	@echo "  make restart            Restart Docker containers"
 	@echo ""
-
-	@echo "Testing:"
+	@echo "Testing & Validation:"
 	@echo "  make test               Run all tests"
 	@echo "  make test-backend       Run backend tests"
 	@echo "  make test-frontend      Run frontend tests"
+	@echo "  make check-login        Test login functionality"
 	@echo ""
-	@echo "TurboRepo (Monorepo Management):"
-	@echo "  make turbo-build        Build all workspaces using TurboRepo"
-	@echo "  make turbo-test         Run tests across all workspaces"
-	@echo "  make turbo-lint         Run linting across all workspaces"
-	@echo "  make turbo-clean        Clean TurboRepo cache"
-	@echo "  make turbo-backend-test Run backend tests using TurboRepo"
-	@echo "  make turbo-backend-lint Run backend linting using TurboRepo"
+	@echo "pnpm Monorepo Commands:"
+	@echo "  make build              Build all workspaces using pnpm"
+	@echo "  make lint               Run linting across all workspaces"
 	@echo ""
 	@echo "Git Workflow:"
-	@echo "  make feat name=branch-name    Create a new feature branch"
-	@echo "  make fix name=branch-name        Create a new fix branch"
-	@echo "  make fix-auto name=branch-name  Create a fix branch with automerge"
+	@echo "  make feat name=branch-name     Create a new feature branch"
+	@echo "  make fix name=branch-name      Create a new fix branch"
+	@echo "  make fix-auto name=branch-name Create a fix branch with automerge"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make clean              Clean up temporary files and directories"
 
 # Setup the project
-setup: env docker-up
+setup: env up
 	@echo "Project setup complete!"
 
 # Generate a secure .env file from .env.example
@@ -61,9 +57,9 @@ env:
 		echo "  - Admin Password: $$ADMIN_PASSWORD"; \
 	fi
 
-# Start Docker containers with Bun for faster builds
-docker-up:
-	@echo "Starting Docker containers with Bun for faster builds..."
+# Start Docker containers with pnpm for faster builds
+up: 
+	@echo "Starting Docker containers with pnpm..."
 	docker compose up -d
 	@echo "Docker containers started. You can access the application at:"
 	@echo "  - Frontend: http://dashboard.localhost"
@@ -75,6 +71,10 @@ docker-up:
 	@echo "Default login credentials:"
 	@echo "  - Email: admin@example.com"
 	@echo "  - Password: Check your .env file for FIRST_SUPERUSER_PASSWORD"
+	@echo ""
+	@echo "Validating login functionality..."
+	@sleep 5
+	@$(MAKE) check-login
 
 # Initialize the database (create tables and first superuser)
 init-db:
@@ -83,12 +83,12 @@ init-db:
 	@echo "Database initialization complete."
 
 # Stop Docker containers
-docker-down:
+down:
 	@echo "Stopping Docker containers..."
 	docker compose down --remove-orphans
 
 # Restart Docker containers
-docker-restart: docker-down docker-up
+restart: down up
 
 # Run all tests
 test: test-backend test-frontend
@@ -142,47 +142,24 @@ clean:
 	@find . -name "*.egg-info" -delete
 	@find . -name "dist" -delete
 	@find . -name "build" -delete
-	@find . -name "node_modules" -delete
-	@find . -name ".turbo" -delete
 	@echo "Cleanup complete!"
 
-# TurboRepo commands using Docker and pnpm
+# pnpm commands for monorepo management
 # ----------------------------------------
 
-# Separate TypeScript compilation and Vite build into distinct steps
-frontend-tsc:
-	@echo "Running TypeScript compilation with increased memory..."
-	@docker compose exec frontend sh -c "cd /app/frontend && NODE_OPTIONS='--max-old-space-size=8192' pnpm run tsc"
-	@echo "TypeScript compilation complete."
-
-frontend-vite:
-	@echo "Running Vite build with increased memory..."
-	@docker compose exec frontend sh -c "cd /app/frontend && NODE_OPTIONS='--max-old-space-size=8192' pnpm run build"
-	@echo "Vite build complete."
-
-# Build backend workspace
-backend-build:
-	@echo "Building backend workspace..."
-	@docker compose up -d backend || { echo "Failed to start backend container"; exit 1; }
-	@docker compose exec backend sh -c "cd /app && pip install -e ." || { echo "Backend build failed"; exit 1; }
-	@echo "Backend build complete."
-
-# Build all workspaces sequentially to avoid memory issues
-turbo-build: frontend-tsc frontend-vite backend-build
+# Build all workspaces
+build:
+	@echo "Building all workspaces using pnpm..."
+	@docker compose up -d frontend backend
+	@docker compose exec frontend sh -c "cd /app && pnpm -r build"
+	@docker compose exec backend sh -c "cd /app && pip install -e ."
 	@echo "All builds complete."
 
-# Run tests across all workspaces using TurboRepo
-turbo-test: setup-playwright
-	@echo "Running tests across all workspaces using TurboRepo..."
+# Run linting across all workspaces
+lint:
+	@echo "Running linting across all workspaces..."
 	@docker compose up -d frontend backend
-	@docker compose exec frontend sh -c "cd /app/frontend && NODE_OPTIONS='--max-old-space-size=2048' pnpm run test"
-	@echo "Tests complete."
-
-# Run linting across all workspaces using TurboRepo
-turbo-lint:
-	@echo "Running linting across all workspaces using TurboRepo..."
-	@docker compose up -d frontend backend
-	@docker compose exec frontend sh -c "cd /app/frontend && pnpm run lint"
+	@docker compose exec frontend sh -c "cd /app && pnpm -r lint"
 	@echo "Linting complete."
 
 # Setup Playwright for testing
@@ -191,22 +168,15 @@ setup-playwright:
 	@docker compose run --rm frontend sh ./setup-playwright.sh
 	@echo "Playwright setup complete."
 
-# Clean TurboRepo cache
-turbo-clean:
-	@echo "Cleaning TurboRepo cache..."
-	@docker compose up -d frontend
-	@docker compose exec frontend sh -c "cd /app/frontend && pnpm run clean"
-	@echo "TurboRepo cache cleaned."
+# Test login functionality
+check-login:
+	@echo "Testing login functionality..."
+	@python test_login.py http://api.localhost
+	@echo "Login test complete."
 
-# Run backend-specific tasks using TurboRepo
-turbo-backend-test:
-	@echo "Running backend tests using TurboRepo..."
-	@docker compose up -d backend
-	@docker compose exec backend pytest
-	@echo "Backend tests complete."
-
-turbo-backend-lint:
-	@echo "Running backend linting using TurboRepo..."
+# Run backend linting
+backend-lint:
+	@echo "Running backend linting..."
 	@docker compose up -d backend
 	@docker compose exec backend ruff check app tests
 	@echo "Backend linting complete."
