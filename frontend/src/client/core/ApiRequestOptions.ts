@@ -1,5 +1,5 @@
 export type ApiRequestOptions<T = unknown> = {
-  readonly body?: unknown;
+  readonly body?: T;
   readonly cookies?: Record<string, unknown>;
   readonly errors?: Record<number | string, string>;
   readonly formData?: Record<string, unknown> | T[] | Blob | File;
