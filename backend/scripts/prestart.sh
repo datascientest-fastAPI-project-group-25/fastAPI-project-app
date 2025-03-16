@@ -33,11 +33,17 @@ if [ $COUNTER -eq $TIMEOUT ]; then
 fi
 
 echo "Database is ready, running migrations..."
-# Run migrations with error handling
-if ! alembic upgrade head; then
-  echo "ERROR: Database migration failed"
-  exit 1
-fi
+# Run migrations and capture output
+MIGRATION_OUTPUT=$(alembic upgrade head 2>&1) || {
+  # Check if the error was because tables already exist
+  if echo "$MIGRATION_OUTPUT" | grep -q "relation.*already exists"; then
+    echo "Tables already exist, continuing with startup"
+  else
+    echo "ERROR: Database migration failed with unexpected error"
+    echo "$MIGRATION_OUTPUT"
+    exit 1
+  fi
+}
 
 echo "Creating initial data..."
 # Create initial data in DB with error handling

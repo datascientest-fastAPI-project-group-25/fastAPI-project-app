@@ -36,7 +36,7 @@ The frontend of our DevOps demo application is a modern, responsive web interfac
 ## 📍 Requirements
 
 - [Node.js](https://nodejs.org/) 18+ (use nvm or fnm for version management)
-- [npm](https://www.npmjs.com/) 9+ (comes with Node.js)
+- [pnpm](https://pnpm.io/) (recommended package manager for faster, more efficient builds)
 - [Docker](https://www.docker.com/) (optional, for containerized development)
 
 ## 🔧 Development Setup
@@ -82,13 +82,13 @@ cd frontend
 fnm use    # or: nvm use
 
 # Install dependencies
-npm install
+pnpm install
 ```
 
 3. **Start Development Server**
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 The development server will start at http://localhost:5173 with hot module replacement enabled.

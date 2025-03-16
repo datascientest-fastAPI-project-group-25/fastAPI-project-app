@@ -8,6 +8,7 @@ This repository contains a modern full-stack application with a FastAPI backend 
 
 - [Architecture Overview](#-architecture-overview)
 - [Development Environment Setup](#-development-environment-setup)
+- [Makefile for Local Setup](#-makefile-for-local-setup)
 - [Docker-based Development](#-docker-based-development)
 - [Local Development](#-local-development)
 - [Development Workflow](#-development-workflow)
@@ -21,7 +22,8 @@ This repository contains a modern full-stack application with a FastAPI backend 
 
 ```mermaid
 graph TD
-    A[Frontend - React/TypeScript] --> B[Backend - FastAPI]
+    A[Frontend - React/TypeScript] --> G[Traefik Reverse Proxy]
+    G --> B[Backend - FastAPI]
     B --> C[(PostgreSQL Database)]
     D[CI/CD - GitHub Actions] --> E[GitHub Container Registry]
     E --> F[Deployment Environment]
@@ -30,18 +32,19 @@ graph TD
 - **Frontend**: React, TypeScript, TanStack Query, Chakra UI
 - **Backend**: FastAPI, SQLModel, Pydantic
 - **Database**: PostgreSQL
-- **Infrastructure**: Docker, GitHub Container Registry (GHCR)
+- **Infrastructure**: Docker, Traefik, GitHub Container Registry (GHCR)
 - **CI/CD**: GitHub Actions
+- **Build Tools**: pnpm, Biome
 
 ## 🛠️ Development Environment Setup
 
 ### Prerequisites
 
 - [Docker](https://www.docker.com/) and Docker Compose
-- [Node.js](https://nodejs.org/) (v18+)
 - [Python](https://www.python.org/) (3.11+)
 - [uv](https://github.com/astral-sh/uv/) for Python package management
 - [Git](https://git-scm.com/)
+- [pnpm](https://pnpm.io/) for efficient package management and faster builds
 
 ### Initial Setup
 
@@ -52,10 +55,19 @@ git clone https://github.com/yourusername/fastAPI-project-app.git
 cd fastAPI-project-app
 ```
 
-2. **Set up environment variables**
+2. **Use the Makefile for setup**
 
 ```bash
-cp .env.example .env
+# Setup the project (create .env, install dependencies)
+make setup
+```
+
+Or manually:
+
+```bash
+# Generate a secure .env file from .env.example
+make env
+# Or manually: cp .env.example .env
 # Edit .env with your preferred settings
 ```
 
@@ -68,13 +80,80 @@ pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre
 
 This will set up git hooks to automatically format code, run linting checks, and ensure code quality on commit.
 
+## 🔧 Makefile for Local Setup
+
+The project includes a Makefile to simplify common development tasks:
+
+```bash
+# Show available commands
+make help
+
+# Setup the project (create .env, install dependencies)
+make setup
+
+# Start Docker containers with pnpm
+make up
+
+# Initialize the database (create tables and first superuser)
+make init-db
+
+# Stop Docker containers
+make down
+
+# Restart Docker containers
+make restart
+
+# Run all tests
+make test
+
+# Create a new feature branch
+make feat name=branch-name
+
+# Create a new fix branch
+make fix name=branch-name
+
+# Create a new fix branch with automerge
+make fix-auto name=branch-name
+```
+
+## 🗄️ Database Initialization
+
+The application automatically initializes the database when the backend container starts, creating all necessary tables and the first superuser account. This process is handled by the prestart script that runs before the FastAPI application starts.
+
+If you need to manually initialize or reset the database, you can use:
+
+```bash
+# Initialize the database (create tables and first superuser)
+make init-db
+```
+
+### Default Login Credentials
+
+After initialization, you can log in with:
+- **Email**: admin@example.com
+- **Password**: The value of `FIRST_SUPERUSER_PASSWORD` in your `.env` file
+
+## 🚀 Fast Build System (pnpm + Traefik + UV)
+
+This project uses a modern, high-performance build system:
+
+- **pnpm**: For efficient package management with disk space optimization and faster builds
+- **Traefik**: For efficient reverse proxy and routing
+- **UV**: For optimized Python package management
+
+All build operations are handled through Docker and the Makefile for consistency.
+
 ## 🐳 Docker-based Development
 
-The easiest way to get started is using Docker Compose, which sets up all services including the frontend, backend, and database.
+The easiest way to get started is using our optimized Docker Compose setup, which configures all services including the frontend, backend, and database.
 
 ### Starting the Environment
 
 ```bash
+# Using Makefile (recommended)
+make up
+
+# Or directly with Docker Compose
 docker compose up -d
 ```
 
@@ -83,7 +162,15 @@ docker compose up -d
 - **Frontend**: http://dashboard.localhost
 - **Backend API**: http://api.localhost
 - **API Documentation**: http://api.localhost/docs
-- **Database Admin**: http://adminer.localhost (System: PostgreSQL, Server: db, User: postgres)
+- **API ReDoc**: http://api.localhost/redoc
+- **API OpenAPI Schema**: http://api.localhost/openapi.json
+- **Traefik Dashboard**: http://localhost:8080
+
+### Default Login Credentials
+
+After initialization, you can log in with:
+- **Email**: admin@example.com
+- **Password**: The value of `FIRST_SUPERUSER_PASSWORD` in your `.env` file
 
 ### Viewing Logs
 
@@ -99,42 +186,37 @@ docker compose logs -f backend
 
 ```bash
 # After code changes
-docker compose up -d --build backend
+docker compose up -d --build
+
+# Restart all services
+make docker-restart
 ```
 
-## 💻 Local Development
+## 💻 Development Workflow
 
-For a more responsive development experience, you can run services locally.
+All development is done using Docker and the provided Makefile commands for consistency across environments.
 
-### Backend Setup
+### Using pnpm for Faster Builds
+
+This project uses pnpm for efficient package management and monorepo capabilities, significantly improving build times and reducing disk space usage. All operations are performed using Docker for consistent environments:
 
 ```bash
-# Navigate to backend directory
-cd backend
+# Using Makefile (recommended)
+make up  # Starts all services with pnpm
 
-# Create and activate virtual environment
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Run pnpm commands through Makefile
+make build  # Builds all workspaces (ensures containers are running)
+make lint   # Runs linting across all workspaces
 
-# Install dependencies
-uv pip install -e .
+# Run backend-specific tasks through Makefile
+make test-backend  # Run backend tests
+make backend-lint  # Run backend linting
 
-# Run development server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Test login functionality
+make check-login  # Verify API login works correctly
 ```
 
-### Frontend Setup
-
-```bash
-# Navigate to frontend directory
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
+pnpm uses a content-addressable store for packages, making installations faster and more efficient. The node_modules are linked rather than copied, saving significant disk space.
 
 ## 🔄 Development Workflow
 
@@ -328,7 +410,14 @@ npm run test:e2e
 3. **Frontend API Connection Issues**
    - Verify CORS settings in `.env`
    - Check API URL configuration in frontend
-   - `FIRST_SUPERUSER_*`: Initial admin user credentials
+
+4. **Login Issues**
+   - If you can't log in, ensure the database is properly initialized: `make init-db`
+   - Default login credentials are:
+     - Email: admin@example.com
+     - Password: Check your `.env` file for FIRST_SUPERUSER_PASSWORD
+   - If login still fails, check the backend logs: `docker compose logs backend`
+   - For a complete database reset: `docker compose down -v && make up && make init-db`
 
 3. **Security Best Practices**:
    - Never commit `.env` files to version control
@@ -344,6 +433,7 @@ The application uses a subdomain-based routing approach for different services:
    - API: http://api.localhost
    - Frontend: http://dashboard.localhost
    - API Docs: http://api.localhost/docs
+   - API ReDoc: http://api.localhost/redoc
    - Adminer: http://db.localhost
 
 2. **Configuration**:

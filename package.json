@@ -2,11 +2,17 @@
   "name": "fastapi-project-app",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@8.15.1",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
     "commit": "git-cz",
     "release": "semantic-release",
     "prepare": "husky install",
-    "create-branch": "node scripts/create-branch.js"
+    "create-branch": "node scripts/create-branch.js",
+    "backend:install": "pip install -r backend/requirements.txt"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
