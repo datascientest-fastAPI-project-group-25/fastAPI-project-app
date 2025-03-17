@@ -205,6 +205,11 @@ jobs:
           cd backend
           pytest -xvs app/tests/
 
+      - name: Install Playwright browsers
+        run: |
+          cd frontend
+          pnpm exec playwright install --with-deps
+
       - name: Run frontend tests
         run: |
           cd frontend

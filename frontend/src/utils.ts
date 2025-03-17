@@ -55,6 +55,14 @@ export const formatApiError = (err: ApiError): string => {
   return errorMessage;
 };
 
+// This is a placeholder for components that import handleError directly
+// They should be updated to use useApiErrorHandler hook instead
+export const handleError = (err: ApiError) => {
+  console.error("API Error:", formatApiError(err));
+  // Note: This is a temporary solution. Components should use useApiErrorHandler hook
+  // which provides proper toast notifications
+};
+
 export const useApiErrorHandler = () => {
   const { showErrorToast } = useCustomToast();
 
