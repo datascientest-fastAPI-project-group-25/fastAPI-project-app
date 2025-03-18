@@ -13,6 +13,7 @@ try {
   console.log("Inquirer not found, using fallback for non-interactive mode");
 }
 const { execSync } = require("child_process");
+const readline = require("readline");
 
 // ANSI color codes as fallback if chalk is not available
 const colors = {
@@ -40,49 +41,51 @@ try {
   };
 }
 
+// Command line arguments
+const args = process.argv.slice(2);
+let branchType = "";
+let branchName = "";
+let automerge = false;
+
 // Parse command line arguments
-function parseArgs() {
-  const args = process.argv.slice(2);
-  const result = {
-    branchType: null,
-    branchName: null,
-    automerge: false,
-    nonInteractive: false,
-  };
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--type" || args[i] === "-t") {
-      result.branchType = args[i + 1];
-      i++;
-    } else if (args[i] === "--name" || args[i] === "-n") {
-      result.branchName = args[i + 1];
-      i++;
-    } else if (args[i] === "--automerge" || args[i] === "-a") {
-      result.automerge = true;
-    } else if (args[i] === "--non-interactive") {
-      result.nonInteractive = true;
-    }
+for (let i = 0; i < args.length; i++) {
+  switch (args[i]) {
+    case "--type":
+      branchType = args[++i];
+      break;
+    case "--name":
+      branchName = args[++i];
+      break;
+    case "--automerge":
+      automerge = true;
+      break;
   }
+}
 
-  // Validate branch type
-  if (result.branchType && !["feat", "fix"].includes(result.branchType)) {
-    console.error(
-      chalk.red('Error: Branch type must be either "feat" or "fix"'),
-    );
-    process.exit(1);
-  }
+// Create readline interface
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
-  // Validate branch name if provided
-  if (result.branchName && !/^[a-z0-9-_]+$/i.test(result.branchName)) {
-    console.error(
-      chalk.red(
-        "Error: Branch name should only contain letters, numbers, hyphens, and underscores",
-      ),
-    );
-    process.exit(1);
-  }
+// Branch types
+const branchTypes = [
+  "feat",
+  "fix",
+  "docs",
+  "style",
+  "refactor",
+  "perf",
+  "test",
+  "build",
+  "ci",
+  "chore",
+  "revert",
+];
 
-  return result;
+// Function to validate branch name
+function isValidBranchName(name) {
+  return /^[a-z0-9-]+$/.test(name);
 }
 
 // Helper function to run git commands
@@ -169,79 +172,50 @@ async function updateMainBranch() {
   }
 }
 
-// Interactive branch creation using inquirer
-async function interactiveBranchCreation() {
-  if (!inquirer) {
-    console.error(
-      chalk.red(
-        'Error: Inquirer is required for interactive mode. Install it with "npm install inquirer" or use non-interactive mode.',
-      ),
+// Interactive branch creation if no arguments provided
+if (!branchType || !branchName) {
+  console.log("Interactive Branch Creation\n");
+
+  // Ask for branch type
+  rl.question(`Branch type (${branchTypes.join(", ")}): `, (type) => {
+    if (!branchTypes.includes(type)) {
+      console.error("Invalid branch type");
+      rl.close();
+      process.exit(1);
+    }
+
+    // Ask for branch name
+    rl.question(
+      "Branch name (lowercase letters, numbers, and hyphens only): ",
+      (name) => {
+        if (!isValidBranchName(name)) {
+          console.error("Invalid branch name");
+          rl.close();
+          process.exit(1);
+        }
+
+        // Ask for automerge
+        rl.question("Enable automerge? (y/N): ", (answer) => {
+          const enableAutomerge = answer.toLowerCase() === "y";
+          rl.close();
+          createBranchWithParams(type, name, enableAutomerge);
+        });
+      },
     );
-    console.log(
-      chalk.yellow(
-        "Example: node create-branch.js --type fix --name my-fix-name --automerge",
-      ),
-    );
+  });
+} else {
+  // Non-interactive branch creation
+  if (!branchTypes.includes(branchType)) {
+    console.error("Invalid branch type");
     process.exit(1);
   }
 
-  console.log(
-    `${colors.green}✨ Interactive Branch Creation Tool ✨${colors.reset}`,
-  );
-  console.log(
-    `${colors.cyan}This tool will help you create a new branch following our branching strategy.${colors.reset}`,
-  );
-
-  try {
-    const answers = await inquirer.prompt([
-      {
-        type: "list",
-        name: "branchType",
-        message: "What type of branch do you want to create?",
-        choices: [
-          { name: "🚀 Feature branch (feat/)", value: "feat" },
-          { name: "🔧 Fix branch (fix/)", value: "fix" },
-        ],
-      },
-      {
-        type: "input",
-        name: "branchName",
-        message: "Enter a descriptive name for your branch (without prefix):",
-        validate: (input) => {
-          if (input.trim() === "") {
-            return "Branch name cannot be empty";
-          }
-          if (!/^[a-z0-9-_]+$/i.test(input)) {
-            return "Branch name should only contain letters, numbers, hyphens, and underscores";
-          }
-          return true;
-        },
-      },
-      {
-        type: "confirm",
-        name: "automerge",
-        message: "Enable automerge for this branch? (Only for fix branches)",
-        default: false,
-        when: (answers) => answers.branchType === "fix",
-      },
-    ]);
-
-    return createBranchWithParams(
-      answers.branchType,
-      answers.branchName,
-      answers.automerge,
-    );
-  } catch (error) {
-    console.error(
-      chalk.red("An error occurred during interactive prompt:"),
-      error.message,
-    );
-    console.log(chalk.yellow("Try using non-interactive mode:"));
-    console.log(
-      "node create-branch.js --type fix --name my-fix-name --automerge",
-    );
-    return false;
+  if (!isValidBranchName(branchName)) {
+    console.error("Invalid branch name");
+    process.exit(1);
   }
+
+  createBranchWithParams(branchType, branchName, automerge);
 }
 
 // Main function
