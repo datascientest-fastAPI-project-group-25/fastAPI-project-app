@@ -1,13 +1,46 @@
 import { test as setup } from "@playwright/test";
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts";
+import fs from "fs";
+import path from "path";
 
 const authFile = "playwright/.auth/user.json";
 
+// Ensure the auth directory exists
+const authDir = path.dirname(authFile);
+if (!fs.existsSync(authDir)) {
+  fs.mkdirSync(authDir, { recursive: true });
+}
+
 setup("authenticate", async ({ page }) => {
-  await page.goto("/login");
+  console.log("Starting authentication setup...");
+  console.log(`Using credentials: ${firstSuperuser} / [password hidden]`);
+
+  // Navigate to login page with longer timeout and retry
+  await page.goto("/login", { timeout: 60000 });
+
+  // Wait for the login form to be visible
+  await page
+    .getByPlaceholder("Email")
+    .waitFor({ state: "visible", timeout: 10000 });
+
+  // Fill in credentials
   await page.getByPlaceholder("Email").fill(firstSuperuser);
   await page.getByPlaceholder("Password").fill(firstSuperuserPassword);
+
+  // Click login and wait for navigation with extended timeout
   await page.getByRole("button", { name: "Log In" }).click();
-  await page.waitForURL("/");
+
+  try {
+    // Increase timeout for navigation to 60 seconds
+    await page.waitForURL("/", { timeout: 60000 });
+    console.log("Successfully navigated to home page");
+  } catch (error) {
+    console.error("Navigation timeout occurred. Current URL:", page.url());
+    console.error("Page content:", await page.content());
+    throw error;
+  }
+
+  // Save authentication state
   await page.context().storageState({ path: authFile });
+  console.log("Authentication state saved successfully");
 });
