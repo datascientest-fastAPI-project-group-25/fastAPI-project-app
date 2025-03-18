@@ -59,7 +59,7 @@ env:
 	fi
 
 # Start Docker containers with pnpm for faster builds
-up: 
+up:
 	@echo "Starting Docker containers with pnpm..."
 	docker compose up -d
 	@echo "Docker containers started. You can access the application at:"

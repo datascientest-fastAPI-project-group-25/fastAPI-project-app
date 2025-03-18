@@ -35,12 +35,14 @@ make/
 ## Core Development Targets
 
 ### Project Setup
+
 - `make start` - Initial setup after cloning the repository
 - `make branch` - Create a new branch using the interactive CLI
 - `make install` - Install all dependencies (backend and frontend)
 - `make dev` - Start development mode with hot reload
 
 ### Code Quality
+
 - `make format-backend` - Format backend code using Black
 - `make format-frontend` - Format frontend code using Prettier
 - `make format-all` - Format all code (backend and frontend)
@@ -128,6 +130,7 @@ make/
 ## Common Workflows
 
 ### Starting a New Feature
+
 ```bash
 make branch  # Create a new feature branch
 make install # Install dependencies
@@ -135,6 +138,7 @@ make dev     # Start development server
 ```
 
 ### Running Tests
+
 ```bash
 make test-unit-all    # Run all unit tests
 make test-integration # Run integration tests
@@ -142,6 +146,7 @@ make test-e2e        # Run end-to-end tests
 ```
 
 ### Code Quality Checks
+
 ```bash
 make pretty          # Run all formatting and linting
 make security-all    # Run security checks
@@ -149,12 +154,14 @@ make a11y-audit      # Run accessibility checks
 ```
 
 ### Documentation
+
 ```bash
 make docs           # Generate all documentation
 make docs-serve     # Serve documentation locally
 ```
 
 ### Docker Operations
+
 ```bash
 make docker-build   # Build containers
 make docker-push    # Push to registry
@@ -179,7 +186,8 @@ make docker-prune   # Clean up Docker system
 ## Contributing
 
 When adding new targets:
+
 1. Add the target to the appropriate section file
 2. Add help text in `variables.mk`
 3. Update this documentation
-4. Test the new target using `scripts/test_makefile.sh` 
+4. Test the new target using `scripts/test_makefile.sh`

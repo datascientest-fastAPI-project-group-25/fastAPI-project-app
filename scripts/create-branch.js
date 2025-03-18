@@ -13,7 +13,7 @@ try {
   console.log("Inquirer not found, using fallback for non-interactive mode");
 }
 const { execSync } = require("child_process");
-const readline = require('readline');
+const readline = require("readline");
 
 // ANSI color codes as fallback if chalk is not available
 const colors = {
@@ -43,20 +43,20 @@ try {
 
 // Command line arguments
 const args = process.argv.slice(2);
-let branchType = '';
-let branchName = '';
+let branchType = "";
+let branchName = "";
 let automerge = false;
 
 // Parse command line arguments
 for (let i = 0; i < args.length; i++) {
   switch (args[i]) {
-    case '--type':
+    case "--type":
       branchType = args[++i];
       break;
-    case '--name':
+    case "--name":
       branchName = args[++i];
       break;
-    case '--automerge':
+    case "--automerge":
       automerge = true;
       break;
   }
@@ -65,11 +65,23 @@ for (let i = 0; i < args.length; i++) {
 // Create readline interface
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 // Branch types
-const branchTypes = ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert'];
+const branchTypes = [
+  "feat",
+  "fix",
+  "docs",
+  "style",
+  "refactor",
+  "perf",
+  "test",
+  "build",
+  "ci",
+  "chore",
+  "revert",
+];
 
 // Function to validate branch name
 function isValidBranchName(name) {
@@ -162,41 +174,44 @@ async function updateMainBranch() {
 
 // Interactive branch creation if no arguments provided
 if (!branchType || !branchName) {
-  console.log('Interactive Branch Creation\n');
+  console.log("Interactive Branch Creation\n");
 
   // Ask for branch type
-  rl.question(`Branch type (${branchTypes.join(', ')}): `, (type) => {
+  rl.question(`Branch type (${branchTypes.join(", ")}): `, (type) => {
     if (!branchTypes.includes(type)) {
-      console.error('Invalid branch type');
+      console.error("Invalid branch type");
       rl.close();
       process.exit(1);
     }
 
     // Ask for branch name
-    rl.question('Branch name (lowercase letters, numbers, and hyphens only): ', (name) => {
-      if (!isValidBranchName(name)) {
-        console.error('Invalid branch name');
-        rl.close();
-        process.exit(1);
-      }
+    rl.question(
+      "Branch name (lowercase letters, numbers, and hyphens only): ",
+      (name) => {
+        if (!isValidBranchName(name)) {
+          console.error("Invalid branch name");
+          rl.close();
+          process.exit(1);
+        }
 
-      // Ask for automerge
-      rl.question('Enable automerge? (y/N): ', (answer) => {
-        const enableAutomerge = answer.toLowerCase() === 'y';
-        rl.close();
-        createBranchWithParams(type, name, enableAutomerge);
-      });
-    });
+        // Ask for automerge
+        rl.question("Enable automerge? (y/N): ", (answer) => {
+          const enableAutomerge = answer.toLowerCase() === "y";
+          rl.close();
+          createBranchWithParams(type, name, enableAutomerge);
+        });
+      },
+    );
   });
 } else {
   // Non-interactive branch creation
   if (!branchTypes.includes(branchType)) {
-    console.error('Invalid branch type');
+    console.error("Invalid branch type");
     process.exit(1);
   }
 
   if (!isValidBranchName(branchName)) {
-    console.error('Invalid branch name');
+    console.error("Invalid branch name");
     process.exit(1);
   }
 

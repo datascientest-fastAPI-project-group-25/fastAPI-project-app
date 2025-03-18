@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 import logging
-from typing import Dict, List, Optional
-from pydantic import BaseModel, EmailStr, SecretStr, ValidationError
+from typing import List, Optional
+from pydantic import EmailStr, SecretStr, ValidationError
 from pydantic_settings import BaseSettings
 
 # Configure logging
