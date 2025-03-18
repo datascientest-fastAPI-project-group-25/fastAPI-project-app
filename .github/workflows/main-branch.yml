@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - main
-    types: [closed]
+    types: [opened, synchronize, reopened, closed]
 
 permissions:
   contents: write
@@ -15,17 +15,25 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
+      should_run_tests: true
     steps:
-      - name: Check if PR was merged to main
+      - name: Check workflow conditions
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.merged }}" == "true" ]]; then
             echo "PR was merged to main, proceeding with deployment"
+          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "opened" || \
+                 "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" || \
+                 "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "reopened" ]]; then
+            echo "PR was created or updated, running tests"
+            echo "should_run_tests=true" >> $GITHUB_OUTPUT
           else
             echo "Not a merged PR to main, skipping deployment"
           fi
 
   lint:
     runs-on: ubuntu-latest
+    needs: check-conditions
+    if: needs.check-conditions.outputs.should_run_tests == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,7 +88,7 @@ jobs:
             ${{ runner.os }}-pnpm-
 
       - name: Install frontend dependencies
-        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        # Always install dependencies to ensure Playwright is available
         run: |
           cd frontend
           pnpm install --frozen-lockfile
@@ -101,6 +109,7 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
+    needs: check-conditions
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -157,7 +166,7 @@ jobs:
             ${{ runner.os }}-pnpm-
 
       - name: Install frontend dependencies
-        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        # Always install dependencies to ensure Playwright is available
         run: |
           cd frontend
           pnpm install --frozen-lockfile
@@ -168,7 +177,8 @@ jobs:
           pnpm audit
 
   test:
-    needs: [lint]
+    needs: [lint, security-scan, check-conditions]
+    if: needs.check-conditions.outputs.should_run_tests == 'true'
     runs-on: ubuntu-latest
     # Add job-level environment variables to avoid redundancy
     env:
@@ -253,7 +263,7 @@ jobs:
             ${{ runner.os }}-pnpm-
 
       - name: Install frontend dependencies
-        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        # Always install dependencies to ensure Playwright is available
         run: |
           cd frontend
           pnpm install --frozen-lockfile
@@ -276,6 +286,11 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ hashFiles('frontend/playwright.config.ts') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
+
+      - name: Install Playwright
+        run: |
+          cd frontend
+          pnpm add -D @playwright/test
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
