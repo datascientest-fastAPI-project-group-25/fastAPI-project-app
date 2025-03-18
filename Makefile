@@ -32,6 +32,14 @@ help:
 	@echo "  make fix name=branch-name      Create a new fix branch"
 	@echo "  make fix-automerge name=branch-name  Create a fix branch with automerge"
 	@echo ""
+	@echo "GitHub Actions:"
+	@echo "  make act-test           Show available GitHub Actions workflow tests"
+	@echo "  make act-test-main      Test main-branch.yml workflow"
+	@echo "  make act-test-protection Test branch-protection.yml workflow"
+	@echo "  make act-test-all      Test all workflows"
+	@echo "  make act-test-dry-run  Dry run of workflows (no execution)"
+	@echo "  make act-test-job      Test specific job in a workflow (see usage in Makefile)"
+	@echo ""
 	@echo "Maintenance:"
 	@echo "  make clean              Clean up temporary files and directories"
 
@@ -159,8 +167,16 @@ build:
 lint:
 	@echo "Running linting across all workspaces..."
 	@docker compose up -d frontend backend
-	@docker compose exec frontend sh -c "cd /app && pnpm -r lint"
+	@docker compose exec frontend sh -c "cd /app && pnpm install && cd frontend && pnpm run lint"
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff check app"
 	@echo "Linting complete."
+
+# Run backend linting
+backend-lint:
+	@echo "Running backend linting..."
+	@docker compose up -d backend
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff check app"
+	@echo "Backend linting complete."
 
 # Setup Playwright for testing
 setup-playwright:
@@ -174,13 +190,6 @@ check-login:
 	@python test_login.py http://api.localhost
 	@echo "Login test complete."
 
-# Run backend linting
-backend-lint:
-	@echo "Running backend linting..."
-	@docker compose up -d backend
-	@docker compose exec backend ruff check app tests
-	@echo "Backend linting complete."
-
 # Build frontend using Docker multi-stage build
 frontend-build-docker:
 	@echo "Building frontend via Docker multi-stage build..."
@@ -191,6 +200,57 @@ frontend-build-docker:
 	@docker rm extract-container
 	@echo "Frontend build complete using Docker."
 
+# Test GitHub Actions workflows locally
+act-test:
+	@echo "Testing GitHub Actions workflows locally..."
+	@echo "Available workflow tests:"
+	@echo "  make act-test-main         Test main-branch.yml workflow"
+	@echo "  make act-test-protection   Test branch-protection.yml workflow"
+	@echo "  make act-test-all          Test all workflows"
+	@echo "  make act-test-dry-run      Dry run of all workflows (no execution)"
+
+# Test main-branch.yml workflow
+act-test-main:
+	@echo "Testing main-branch.yml workflow..."
+	@timeout 60 ./scripts/test-workflow.sh main-branch.yml pull_request || echo "Test timed out after 60 seconds"
+	@echo "Main branch workflow test complete."
+
+# Test branch-protection.yml workflow
+act-test-protection:
+	@echo "Testing branch-protection.yml workflow..."
+	@timeout 60 ./scripts/test-workflow.sh branch-protection.yml push || echo "Test timed out after 60 seconds"
+	@echo "Branch protection workflow test complete."
+
+# Test all workflows
+act-test-all: act-test-main act-test-protection
+	@echo "All workflow tests complete."
+
+# Dry run of workflows (shows what would be executed without running)
+act-test-dry-run:
+	@echo "Performing dry run of workflows..."
+	@act -n \
+		--eventpath .github/workflows/test-event.json \
+		--env GITHUB_TOKEN=test-token
+	@echo "Dry run complete."
+
+# Test specific job in a workflow
+# Usage: make act-test-job workflow=main-branch.yml job=lint event=pull_request
+act-test-job:
+	@if [ -z "$(workflow)" ]; then \
+		echo "Error: Workflow not specified. Use 'make act-test-job workflow=<workflow-file> job=<job-id> [event=<event-type>]'"; \
+		exit 1; \
+	fi
+	@if [ -z "$(job)" ]; then \
+		echo "Error: Job not specified. Use 'make act-test-job workflow=<workflow-file> job=<job-id> [event=<event-type>]'"; \
+		exit 1; \
+	fi
+	@echo "Testing job '$(job)' in workflow '$(workflow)'..."
+	@EVENT="$(event)" || "pull_request"; \
+	echo "Using event: $$EVENT"; \
+	timeout 120 act $$EVENT -W .github/workflows/$(workflow) -j $(job) --verbose || echo "Test timed out after 120 seconds"
+	@echo "Job test complete."
+
 .PHONY: help setup env up down restart init-db test test-backend test-frontend \
         feat fix fix-automerge clean build lint setup-playwright check-login \
-        backend-lint frontend-build-docker
+        backend-lint frontend-build-docker act-test act-test-main act-test-protection \
+        act-test-all act-test-dry-run act-test-job
