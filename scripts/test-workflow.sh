@@ -1,3 +1,4 @@
+#!/bin/bash
 # Script to test GitHub Actions workflows locally using act
 # Usage: ./scripts/test-workflow.sh <workflow-file> [event-type]
 
@@ -24,7 +25,13 @@ echo "Testing workflow: $WORKFLOW_FILE with event: $EVENT_TYPE"
 echo "=================================================="
 
 # Run the workflow with act
-act $EVENT_TYPE -W .github/workflows/$WORKFLOW_FILE
+echo "Running: act $EVENT_TYPE -W .github/workflows/$WORKFLOW_FILE --verbose"
+act $EVENT_TYPE -W .github/workflows/$WORKFLOW_FILE --verbose || {
+  echo "Error: act command failed or timed out"
+  echo "You can try running with specific jobs or steps using:"
+  echo "act $EVENT_TYPE -W .github/workflows/$WORKFLOW_FILE -j <job_id>"
+  exit 1
+}
 
 echo "=================================================="
 echo "Workflow test complete"
