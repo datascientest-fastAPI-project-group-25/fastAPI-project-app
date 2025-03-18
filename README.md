@@ -80,9 +80,11 @@ pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre
 
 This will set up git hooks to automatically format code, run linting checks, and ensure code quality on commit.
 
-## 🔧 Makefile for Local Setup
+## 🔧 Makefile - The Central Interface for All Project Tasks
 
-The project includes a Makefile to simplify common development tasks:
+**The Makefile is the primary and recommended way to interact with this project throughout its entire lifecycle.** From initial setup and development to testing, deployment, and maintenance, all operations should be performed using the Makefile commands for consistency and efficiency.
+
+All team members should use these commands rather than running individual tools directly to ensure everyone follows the same workflows and processes:
 
 ```bash
 # Show available commands
@@ -130,6 +132,7 @@ make init-db
 ### Default Login Credentials
 
 After initialization, you can log in with:
+
 - **Email**: admin@example.com
 - **Password**: The value of `FIRST_SUPERUSER_PASSWORD` in your `.env` file
 
@@ -169,6 +172,7 @@ docker compose up -d
 ### Default Login Credentials
 
 After initialization, you can log in with:
+
 - **Email**: admin@example.com
 - **Password**: The value of `FIRST_SUPERUSER_PASSWORD` in your `.env` file
 
@@ -194,7 +198,7 @@ make docker-restart
 
 ## 💻 Development Workflow
 
-All development is done using Docker and the provided Makefile commands for consistency across environments.
+**All development must be done using the Makefile commands** for consistency across environments. The Makefile abstracts away the complexity of individual tools and provides a standardized interface for all development tasks, ensuring that everyone follows the same processes regardless of their local setup.
 
 ### Using pnpm for Faster Builds
 
@@ -223,34 +227,36 @@ pnpm uses a content-addressable store for packages, making installations faster 
 ### Branch Strategy
 
 1. **🌱 Feature Branches (`feat/* || fix/*`)**
+
    - Create for new features or bug fixes
    - Must pass pre-commit hooks before pushing
    - On push triggers:
-     * Style checks (black, flake8, eslint, prettier)
-     * Security checks (bandit, npm audit, pip-audit)
-     * Linting & formatting
-     * Unit tests
+     - Style checks (black, flake8, eslint, prettier)
+     - Security checks (bandit, npm audit, pip-audit)
+     - Linting & formatting
+     - Unit tests
    - Requires PR review to merge to `dev`
 
 2. **🔨 Development Branch (`dev`)**
+
    - Integration branch for feature development
    - On push triggers:
-     * Minimal test suite (unit, linting, security)
-     * Automatic staging deployment
+     - Minimal test suite (unit, linting, security)
+     - Automatic staging deployment
    - PR to `main` triggers:
-     * Full test suite (integration, e2e, API)
-     * Security scans
-     * Performance tests
-     * Documentation updates
-     * Changelog generation
+     - Full test suite (integration, e2e, API)
+     - Security scans
+     - Performance tests
+     - Documentation updates
+     - Changelog generation
 
 3. **🚀 Main Branch (`main`)**
    - Production-ready code
    - Protected branch requiring PR approval
    - On push/PR merge:
-     * Complete test suite
-     * Security scans
-     * Dependency checks
+     - Complete test suite
+     - Security scans
+     - Dependency checks
    - Release tags trigger production deployment
 
 ### Creating a Feature
@@ -324,12 +330,14 @@ All project documentation is organized in the `docs/` directory for better maint
 - **[Release Notes](./docs/release-notes.md)** - Comprehensive changelog of all project changes
 
 Component-specific documentation can be found in the respective directories:
+
 - **[Backend Documentation](./backend/README.md)**
 - **[Frontend Documentation](./frontend/README.md)**
 
 For a complete overview of all documentation, see the [Documentation Index](./docs/README.md).
 
 1. **Continuous Integration**
+
    - Automated testing
    - Code quality checks
    - Security scanning
@@ -347,14 +355,14 @@ The application uses environment variables for configuration. A sample `.env.exa
 
 ### Important Environment Variables
 
-| Variable | Purpose | Example |
-|----------|---------|--------|
-| `DOMAIN` | Base domain for the application | `localhost` |
-| `SECRET_KEY` | Used for JWT token generation | `your-secret-key` |
-| `BACKEND_CORS_ORIGINS` | Configures CORS for the API | `["http://localhost"]` |
-| `POSTGRES_USER` | Database username | `postgres` |
-| `POSTGRES_PASSWORD` | Database password | `postgres` |
-| `POSTGRES_DB` | Database name | `app` |
+| Variable               | Purpose                         | Example                |
+| ---------------------- | ------------------------------- | ---------------------- |
+| `DOMAIN`               | Base domain for the application | `localhost`            |
+| `SECRET_KEY`           | Used for JWT token generation   | `your-secret-key`      |
+| `BACKEND_CORS_ORIGINS` | Configures CORS for the API     | `["http://localhost"]` |
+| `POSTGRES_USER`        | Database username               | `postgres`             |
+| `POSTGRES_PASSWORD`    | Database password               | `postgres`             |
+| `POSTGRES_DB`          | Database name                   | `app`                  |
 
 ### Subdomain-based Routing
 
@@ -374,24 +382,45 @@ To enable this on your local machine, add these entries to your hosts file:
 
 ## 🧪 Testing
 
-### Backend Tests
+**All testing should be performed using the Makefile commands** to ensure consistent test environments and configurations. The Makefile provides a unified interface for running all types of tests, from unit tests to GitHub Actions workflow tests.
+
+### Running Tests with Makefile (Recommended)
 
 ```bash
+# Run all tests
+make test
+
+# Run backend tests only
+make test-backend
+
+# Run frontend tests only
+make test-frontend
+
+# Run end-to-end tests
+make test-e2e
+
+# Test GitHub Actions workflows locally
+make act-test-main         # Test main-branch.yml workflow
+make act-test-protection   # Test branch-protection.yml workflow
+make act-test-all          # Test all workflows
+make act-test-dry-run      # Dry run of workflows (no execution)
+```
+
+### Manual Testing (Not Recommended)
+
+If you must run tests manually (not recommended):
+
+```bash
+# Backend Tests
 cd backend
 source .venv/bin/activate
 pytest
-```
 
-### Frontend Tests
-
-```bash
+# Frontend Tests
 cd frontend
 npm test
-```
 
-### End-to-End Tests
-
-```bash
+# End-to-End Tests
 cd frontend
 npm run test:e2e
 ```
@@ -401,17 +430,21 @@ npm run test:e2e
 ### Common Issues
 
 1. **Docker Compose Network Issues**
+
    - Restart Docker: `docker compose down && docker compose up -d`
 
 2. **Database Connection Failures**
+
    - Check database credentials in `.env`
    - Ensure PostgreSQL service is running: `docker compose ps`
 
 3. **Frontend API Connection Issues**
+
    - Verify CORS settings in `.env`
    - Check API URL configuration in frontend
 
 4. **Login Issues**
+
    - If you can't log in, ensure the database is properly initialized: `make init-db`
    - Default login credentials are:
      - Email: admin@example.com
@@ -419,7 +452,7 @@ npm run test:e2e
    - If login still fails, check the backend logs: `docker compose logs backend`
    - For a complete database reset: `docker compose down -v && make up && make init-db`
 
-3. **Security Best Practices**:
+5. **Security Best Practices**:
    - Never commit `.env` files to version control
    - Use strong, unique passwords for all credentials
    - Rotate secrets regularly in production environments
@@ -430,6 +463,7 @@ npm run test:e2e
 The application uses a subdomain-based routing approach for different services:
 
 1. **Local Development**:
+
    - API: http://api.localhost
    - Frontend: http://dashboard.localhost
    - API Docs: http://api.localhost/docs
@@ -437,6 +471,7 @@ The application uses a subdomain-based routing approach for different services:
    - Adminer: http://db.localhost
 
 2. **Configuration**:
+
    - The routing is handled by Traefik reverse proxy
    - Local development uses Traefik with appropriate hosts file entries
    - CORS is configured in Traefik to allow cross-subdomain communication
@@ -444,12 +479,14 @@ The application uses a subdomain-based routing approach for different services:
 3. **Startup Information**:
 
    When you run `docker compose up`, you'll see:
+
    - Application URLs for all services
    - Default login credentials
    - Database initialization status
    - Health status of all components
 
    If you want to run the application in detached mode, use `docker compose up -d`.
+
    - than you can see the startup information in the logs `docker compose logs app-status`
 
 4. **Adding a Host Entry (Local Development)**:

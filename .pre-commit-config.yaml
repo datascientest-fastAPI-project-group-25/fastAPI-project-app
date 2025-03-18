@@ -48,13 +48,7 @@ repos:
         args: [-r, backend]
         exclude: ^backend/tests/
 
-  - repo: https://github.com/python-poetry/poetry
-    rev: 1.7.1
-    hooks:
-      - id: poetry-check
-        files: ^backend/pyproject\.toml$
-      - id: poetry-lock
-        files: ^backend/pyproject\.toml$
+  # Poetry hooks removed since we're using UV for package management
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.9.0.6

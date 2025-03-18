@@ -4,6 +4,10 @@ This document describes the Makefile system used in our project for managing dev
 
 ## Overview
 
+**The Makefile is the central interface for all aspects of our project.** It serves as the primary and recommended way to interact with the codebase throughout its entire lifecycle - from initial setup and development to testing, deployment, and maintenance.
+
+All team members should use the Makefile commands for consistency, rather than running individual tools directly. This ensures that everyone follows the same workflows and processes, reducing errors and improving productivity.
+
 The Makefile system is organized into several sections, each handling a specific aspect of the project:
 
 - Core Development
@@ -82,6 +86,15 @@ make/
 - `make ci-validate` - Run pre-commit checks
 - `make ci-build` - Run full CI pipeline locally
 - `make ci-test` - Run CI test suite
+
+### GitHub Actions Workflow Testing
+
+- `make act-test` - Show available GitHub Actions workflow tests
+- `make act-test-main` - Test main-branch.yml workflow
+- `make act-test-protection` - Test branch-protection.yml workflow
+- `make act-test-all` - Test all workflows
+- `make act-test-dry-run` - Dry run of workflows (no execution)
+- `make act-test-job` - Test specific job in a workflow (usage: `make act-test-job workflow=main-branch.yml job=lint event=pull_request`)
 
 ## Documentation Targets
 
@@ -168,13 +181,25 @@ make docker-push    # Push to registry
 make docker-prune   # Clean up Docker system
 ```
 
+### CI/CD Workflow Testing
+
+```bash
+make act-test           # Show available workflow tests
+make act-test-dry-run   # Dry run of workflows without execution
+make act-test-main      # Test main branch workflow
+make act-test-job workflow=main-branch.yml job=lint event=pull_request  # Test specific job
+```
+
 ## Best Practices
 
-1. Always run `make pretty` before committing changes
-2. Run `make test-unit-all` before pushing changes
-3. Use `make branch` to create new branches
-4. Keep dependencies updated with `make update`
-5. Clean up regularly with `make prune`
+1. **Always use the Makefile** for all project tasks rather than running individual tools directly
+2. Always run `make pretty` before committing changes
+3. Run `make test-unit-all` before pushing changes
+4. Use `make branch` to create new branches
+5. Keep dependencies updated with `make update`
+6. Clean up regularly with `make prune`
+7. Test GitHub Actions workflows locally with `make act-test-*` commands before pushing to GitHub
+8. Use `make act-test-job` for testing specific jobs when debugging workflow issues
 
 ## Troubleshooting
 
@@ -191,3 +216,7 @@ When adding new targets:
 2. Add help text in `variables.mk`
 3. Update this documentation
 4. Test the new target using `scripts/test_makefile.sh`
+
+### Backend Commands
+
+- `make backend-lint` - Run backend linting using Ruff
