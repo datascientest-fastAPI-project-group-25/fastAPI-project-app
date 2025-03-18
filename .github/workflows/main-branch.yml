@@ -41,7 +41,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 8.15.1
           run_install: false
 
       - name: Set up Node.js
@@ -94,7 +94,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 8.15.1
           run_install: false
 
       - name: Set up Node.js
@@ -176,7 +176,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 8.15.1
           run_install: false
 
       - name: Set up Node.js
@@ -233,7 +233,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 8.15.1
           run_install: false
 
       - name: Set up Node.js
@@ -261,7 +261,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 8.15.1
           run_install: false
 
       - name: Set up Node.js
