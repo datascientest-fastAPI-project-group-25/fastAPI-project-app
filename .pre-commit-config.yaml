@@ -5,62 +5,68 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-        args: [--allow-multiple-documents]
       - id: check-added-large-files
       - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-docstring-first
       - id: check-json
       - id: check-toml
       - id: detect-private-key
 
   - repo: https://github.com/psf/black
-    rev: 24.2.0
+    rev: 24.1.1
     hooks:
       - id: black
         language_version: python3.11
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.3.0
+    rev: v0.2.1
     hooks:
       - id: ruff
-        args: [--fix]
-      - id: ruff-format
+        args: [--fix, --exit-non-zero-on-fix]
 
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.8
-    hooks:
-      - id: bandit
-        args: ["-ll"]
-        exclude: ^tests/
-
-  # Frontend checks
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.1.0
     hooks:
       - id: prettier
-        types_or: [javascript, jsx, ts, tsx, json, css, scss, yaml]
-        additional_dependencies:
-          - prettier@3.2.5
+        types_or: [javascript, jsx, ts, tsx, json, yaml, markdown]
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.0.0-alpha.2
+    rev: v8.56.0
     hooks:
       - id: eslint
-        files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
+        files: \.(js|jsx|ts|tsx)$
         types: [file]
         additional_dependencies:
-          - eslint@8.57.0
-          - eslint-plugin-react@7.33.2
-          - eslint-config-prettier@9.1.0
-          - "@typescript-eslint/eslint-plugin@7.1.0"
-          - "@typescript-eslint/parser@7.1.0"
+          - eslint
+          - "@typescript-eslint/parser"
+          - "@typescript-eslint/eslint-plugin"
+          - eslint-config-prettier
+          - eslint-plugin-react
+          - eslint-plugin-react-hooks
+          - eslint-plugin-jsx-a11y
+          - eslint-plugin-import
 
-  # Python dependency checks
-  # - repo: https://github.com/python-poetry/poetry
-  #   rev: "1.7.1"
-  #   hooks:
-  #     - id: poetry-check
-  #       name: Check Poetry configuration
-  #       files: ^pyproject\.toml$
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.7
+    hooks:
+      - id: bandit
+        args: [-r, backend]
+        exclude: ^backend/tests/
+
+  - repo: https://github.com/python-poetry/poetry
+    rev: 1.7.1
+    hooks:
+      - id: poetry-check
+        files: ^backend/pyproject\.toml$
+      - id: poetry-lock
+        files: ^backend/pyproject\.toml$
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        args: [--severity=warning]
 
   # Custom hooks
   - repo: local

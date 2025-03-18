@@ -1,9 +1,10 @@
 # DevOps Demo Application Makefile
 # This Makefile simplifies common development tasks
 
-.PHONY: help setup env up down restart init-db test test-backend test-frontend feat fix fix-automerge clean build lint check-login
-
 # Default target
+.DEFAULT_GOAL := help
+
+# Help target
 help:
 	@echo "DevOps Demo Application Makefile"
 	@echo ""
@@ -101,7 +102,7 @@ test-backend:
 # Run frontend tests
 test-frontend:
 	@echo "Running frontend tests..."
-	docker compose run --rm frontend pnpm run test
+	@docker compose run --rm frontend-test /bin/bash -c "cd /app/frontend && node node_modules/@playwright/test/cli.js test --config=/app/frontend/playwright.config.ts"
 
 # Create a new feature branch
 feat:
@@ -129,7 +130,6 @@ fix-automerge:
 	fi
 	@echo "Creating fix branch with automerge: fix/$(name)-automerge"
 	@node ./scripts/create-branch.js --type fix --name $(name) --automerge
-
 
 # Clean up temporary files and directories
 clean:
@@ -165,7 +165,7 @@ lint:
 # Setup Playwright for testing
 setup-playwright:
 	@echo "Setting up Playwright..."
-	@docker compose run --rm frontend sh ./setup-playwright.sh
+	@docker compose run --rm frontend sh /app/frontend/setup-playwright.sh
 	@echo "Playwright setup complete."
 
 # Test login functionality
@@ -190,3 +190,7 @@ frontend-build-docker:
 	@docker cp extract-container:/app/frontend/dist ./frontend/dist
 	@docker rm extract-container
 	@echo "Frontend build complete using Docker."
+
+.PHONY: help setup env up down restart init-db test test-backend test-frontend \
+        feat fix fix-automerge clean build lint setup-playwright check-login \
+        backend-lint frontend-build-docker
