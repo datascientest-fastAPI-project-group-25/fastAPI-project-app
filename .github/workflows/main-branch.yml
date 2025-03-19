@@ -160,7 +160,7 @@ jobs:
           uv venv
           uv pip install -r requirements.txt
           uv pip install -e .
-          pip install bandit safety
+          uv pip install bandit safety
 
       - name: Run backend security scan
         run: |
