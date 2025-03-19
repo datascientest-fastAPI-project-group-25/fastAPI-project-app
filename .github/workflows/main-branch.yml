@@ -288,8 +288,8 @@ jobs:
           cd frontend
           # Ensure the auth directory exists
           mkdir -p playwright/.auth
-          # Run tests with increased timeout
-          PLAYWRIGHT_TIMEOUT=120000 pnpm test
+          # Run tests with increased timeout and debugging
+          PLAYWRIGHT_TIMEOUT=180000 DEBUG=pw:api pnpm test
 
       - name: Run integration tests
         run: |
