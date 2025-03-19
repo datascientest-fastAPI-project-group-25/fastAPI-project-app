@@ -21,9 +21,7 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     permissions:
-      actions: write
       contents: read
-      security-events: write
 
     steps:
       - name: Checkout repository
@@ -33,7 +31,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
 
       - name: Install dependencies
         run: |
@@ -41,14 +38,7 @@ jobs:
           pip install bandit safety pip-audit
 
       - name: Run Bandit security scan
-        run: bandit -c backend/bandit.yaml -r backend -f json -o results.json
-
-      - name: Upload Bandit scan results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: results.json
-          category: bandit
-          checkout_path: ${{ github.workspace }}
+        run: bandit -c backend/bandit.yaml -r backend -f text
 
       - name: Run Safety check
         run: safety check
