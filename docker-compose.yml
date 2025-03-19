@@ -70,7 +70,7 @@ services:
       # Move unit tests back
       mv /tmp/unit-tests/* /app/frontend/tests/unit/ 2>/dev/null || true
 
-  # Backend with improved caching
+  # Backend with improved caching using uv
   backend:
     build:
       context: ./backend
@@ -94,7 +94,7 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - db
-    command: sh -c "bash /app/scripts/prestart.sh && fastapi run --reload app/main.py"
+    command: sh -c "python -m pip install uv && uv venv && source .venv/bin/activate && uv pip install -e '.[dev,lint,types,test]' && bash /app/scripts/prestart.sh && fastapi run --reload app/main.py"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.localhost`)"

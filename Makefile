@@ -127,13 +127,11 @@ test-integration:
 # Run backend tests
 test-backend:
 	@echo "Running backend tests..."
-	docker compose run --rm backend pytest
+	docker compose run --rm backend bash -c "source /app/.venv/bin/activate && pytest"
 
 test-frontend:
 	@echo "Running frontend tests..."
 	@docker-compose -f docker-compose.test.yml up frontend-test --exit-code-from frontend-test
-
-
 
 # Create a new feature branch
 feat:
@@ -183,7 +181,7 @@ build:
 	@echo "Building all workspaces using pnpm..."
 	@docker compose up -d frontend backend
 	@docker compose exec frontend sh -c "cd /app && pnpm -r build"
-	@docker compose exec backend sh -c "cd /app && pip install -e ."
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev,lint,types,test]' && ruff check app"
 	@echo "All builds complete."
 
 # Run linting across all workspaces
@@ -191,7 +189,7 @@ lint:
 	@echo "Running linting across all workspaces..."
 	@docker compose up -d frontend backend
 	@docker compose exec frontend sh -c "cd /app && pnpm install && cd frontend && pnpm run lint"
-	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff check app"
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev,lint,types,test]' && ruff check app"
 	@echo "Linting complete."
 
 # Format code across all workspaces
@@ -199,14 +197,14 @@ format:
 	@echo "Formatting code across all workspaces..."
 	@docker compose up -d frontend backend
 	@docker compose exec frontend sh -c "cd /app && npm install -g pnpm && pnpm install && cd frontend && pnpm run format"
-	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff format app"
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev,lint,types,test]' && ruff format app"
 	@echo "Formatting complete."
 
 # Run backend linting
 backend-lint:
 	@echo "Running backend linting..."
 	@docker compose up -d backend
-	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff check app"
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev,lint,types,test]' && ruff check app"
 	@echo "Backend linting complete."
 
 # Setup Playwright for testing
