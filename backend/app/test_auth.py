@@ -75,6 +75,9 @@ def main() -> NoReturn:
     auth_test_result = test_authentication()
     logger.info(f"Authentication test result: {auth_test_result}")
 
+    # Since this function is declared to return NoReturn, we need to raise an exception
+    raise SystemExit(0 if hash_test_result and auth_test_result else 1)
+
 
 if __name__ == "__main__":
     main()

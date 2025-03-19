@@ -80,9 +80,11 @@ jobs:
       - name: Install backend dependencies
         run: |
           cd backend
+          python -m pip install uv
           uv venv
           uv pip install -r requirements.txt
           uv pip install -e .
+          pip install bandit safety
 
       - name: Cache frontend dependencies
         uses: actions/cache@v4
@@ -154,6 +156,7 @@ jobs:
       - name: Install backend dependencies
         run: |
           cd backend
+          python -m pip install uv
           uv venv
           uv pip install -r requirements.txt
           uv pip install -e .
@@ -260,9 +263,11 @@ jobs:
       - name: Install backend dependencies
         run: |
           cd backend
+          python -m pip install uv
           uv venv
           uv pip install -r requirements.txt
           uv pip install -e .
+          pip install bandit safety
 
       - name: Cache frontend dependencies
         uses: actions/cache@v4
