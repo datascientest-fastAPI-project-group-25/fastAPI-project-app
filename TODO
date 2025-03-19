@@ -37,8 +37,10 @@
 - [ ] Add WCAG compliance checks
 - [ ] Set up accessibility reporting
 - [x] Add unit test separation (backend/frontend)
-- [ ] Add integration test separation (backend/frontend)
+- [x] Add integration test separation (backend/frontend)
 - [x] Add end-to-end test suite
+- [x] Standardize frontend testing workflow for local and CI environments
+- [x] Implement consistent Playwright testing setup
 - [ ] Add test coverage reporting
 - [ ] Add test report generation
 
@@ -52,12 +54,14 @@
 - [ ] Create a **database strategy** document (Markdown file)
 
 ## CI/CD
-- [ ] Set up GitHub Actions workflows
-- [ ] Add automated testing in CI
+- [x] Set up GitHub Actions workflows
+- [x] Add automated testing in CI
 - [ ] Add automated deployment
 - [ ] Add automated documentation generation
 - [ ] Improve main action to be triggered before merge, not on merge
 - [ ] Main [automerge] using `MACHINE_USER_TOKEN`
+- [x] Implement caching for frontend dependencies
+- [x] Optimize CI workflow for faster test execution
 
 ## Security
 - [ ] Implement security scanning
