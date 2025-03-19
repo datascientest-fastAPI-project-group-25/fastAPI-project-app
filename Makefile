@@ -38,6 +38,7 @@ help:
 	@echo "pnpm Monorepo Commands:"
 	@echo "  make build              Build all workspaces using pnpm"
 	@echo "  make lint               Run linting across all workspaces"
+	@echo "  make format             Format code across all workspaces"
 	@echo ""
 	@echo "Git Workflow:"
 	@echo "  make feat name=branch-name     Create a new feature branch"
@@ -192,6 +193,14 @@ lint:
 	@docker compose exec frontend sh -c "cd /app && pnpm install && cd frontend && pnpm run lint"
 	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff check app"
 	@echo "Linting complete."
+
+# Format code across all workspaces
+format:
+	@echo "Formatting code across all workspaces..."
+	@docker compose up -d frontend backend
+	@docker compose exec frontend sh -c "cd /app && pnpm install && cd frontend && pnpm run format"
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff format app"
+	@echo "Formatting complete."
 
 # Run backend linting
 backend-lint:
