@@ -127,14 +127,17 @@ test-frontend:
 		echo "EMAILS_ENABLED=False" >> .env; \
 		echo "VITE_API_URL=http://localhost:8000" >> .env; \
 	fi
-	@docker compose up -d backend || (echo "Failed to start backend services" && exit 1)
+	@echo "Using port 5433 for PostgreSQL to avoid conflicts..."
+	@sed 's/"5432:5432"/"5433:5432"/g' docker-compose.yml > docker-compose.test.yml
+	@docker compose -f docker-compose.test.yml up -d backend || (echo "Failed to start backend services" && exit 1)
 	@echo "Waiting for backend to be ready..."
 	@sleep 5
 	@echo "Running Playwright tests with debugging enabled..."
-	@docker compose run --rm frontend-test || \
-	(echo "\033[0;31mFrontend tests failed. Check the error messages above.\033[0m" && exit 1)
+	@docker compose -f docker-compose.test.yml run --rm frontend-test || \
+	(echo "\033[0;31mFrontend tests failed. Check the error messages above.\033[0m" && docker compose -f docker-compose.test.yml down --remove-orphans && rm docker-compose.test.yml && exit 1)
 	@echo "\033[0;32mFrontend tests completed successfully.\033[0m"
-	@docker compose down --remove-orphans
+	@docker compose -f docker-compose.test.yml down --remove-orphans
+	@rm docker-compose.test.yml
 
 
 
