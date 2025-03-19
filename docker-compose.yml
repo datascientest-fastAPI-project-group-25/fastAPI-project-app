@@ -41,6 +41,35 @@ services:
       - "traefik.http.routers.frontend.rule=Host(`dashboard.localhost`)"
       - "traefik.http.services.frontend.loadbalancer.server.port=5173"
 
+  # Frontend test service for running Playwright tests
+  frontend-test:
+    image: mcr.microsoft.com/playwright:v1.42.1-focal
+    depends_on:
+      - backend
+    volumes:
+      - ./:/app
+      - ./frontend/playwright-report:/app/frontend/playwright-report
+      - ./frontend/test-results:/app/frontend/test-results
+    working_dir: /app
+    environment:
+      - VITE_API_URL=http://backend:8000
+      - PLAYWRIGHT_TIMEOUT=60000
+      - DEBUG=pw:api
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      cd frontend && \
+      npm install -g pnpm && \
+      pnpm install --no-frozen-lockfile && \
+      pnpm add @mui/material @emotion/styled && \
+      mkdir -p /app/frontend/playwright/.auth && \
+      pnpm exec playwright install --with-deps chromium && \
+      # Temporarily move unit tests to prevent them from being discovered
+      mkdir -p /tmp/unit-tests && \
+      mv /app/frontend/tests/unit/* /tmp/unit-tests/ 2>/dev/null || true && \
+      NODE_ENV=test pnpm exec playwright test --project=chromium --timeout=60000 --retries=1 && \
+      # Move unit tests back
+      mv /tmp/unit-tests/* /app/frontend/tests/unit/ 2>/dev/null || true
+
   # Backend with improved caching
   backend:
     build:
