@@ -1,0 +1,151 @@
+services:
+  # Traefik reverse proxy
+  traefik:
+    image: traefik:v2.10
+    restart: always
+    ports:
+      - "80:80" # Web
+      - "8080:8080" # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - default
+
+  # Frontend with Node.js for development using pnpm
+  frontend:
+    image: node:18-alpine
+    restart: "no"
+    mem_limit: "8G"
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+    volumes:
+      - ./:/app
+      - frontend-pnpm-store:/root/.local/share/pnpm/store
+      - frontend-node-modules:/app/node_modules
+      - frontend-frontend-node-modules:/app/frontend/node_modules
+    environment:
+      - VITE_API_URL=http://api.localhost
+      - NODE_OPTIONS=--max-old-space-size=8192
+      - PNPM_HOME=/usr/local/bin
+    command: sh -c "npm install -g pnpm typescript && pnpm install --frozen-lockfile && cd frontend && pnpm dev"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`dashboard.localhost`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=5173"
+
+  # Frontend test service for running Playwright tests
+  frontend-test:
+    image: mcr.microsoft.com/playwright:v1.42.1-focal
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+      - ./frontend/playwright-report:/app/frontend/playwright-report
+      - ./frontend/test-results:/app/frontend/test-results
+      - frontend-test-node-modules:/app/frontend/node_modules
+    working_dir: /app
+    environment:
+      - VITE_API_URL=http://backend:8000
+      - PLAYWRIGHT_TIMEOUT=60000
+      - DEBUG=pw:api
+      - CI=true
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      cd frontend && \
+      npm install -g pnpm && \
+      pnpm install --frozen-lockfile && \
+      pnpm add @mui/material @emotion/styled && \
+      mkdir -p /app/frontend/playwright/.auth && \
+      pnpm exec playwright install --with-deps chromium && \
+      NODE_ENV=test pnpm exec playwright test --project=chromium --timeout=60000 --retries=1
+
+  # Backend with improved caching and health check
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    restart: "no"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - backend-cache:/root/.cache/uv
+    env_file:
+      - .env.test
+    environment:
+      - POSTGRES_SERVER=db
+      - SMTP_HOST=mailcatcher
+      - SMTP_PORT=1025
+      - SMTP_TLS=false
+      - FRONTEND_HOST=http://dashboard.localhost
+      - CI=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "bash /app/scripts/prestart.sh && fastapi run --reload app/main.py"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.localhost`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+
+  # Database with health check
+  db:
+    image: postgres:12
+    restart: always
+    env_file:
+      - .env.test
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - app-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Backend tests service for integration tests
+  backend-tests:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME:-FastAPI Project}
+      - POSTGRES_SERVER=${POSTGRES_SERVER:-db}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-app}
+      - FIRST_SUPERUSER=${FIRST_SUPERUSER:-admin@example.com}
+      - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD:-adminpass123}
+      - EMAILS_ENABLED=${EMAILS_ENABLED:-True}
+      - SMTP_HOST=${SMTP_HOST:-localhost}
+      - SMTP_PORT=${SMTP_PORT:-25}
+      - SMTP_USER=${SMTP_USER:-test@example.com}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-testpassword}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL:-test@example.com}
+      - SECRET_KEY=${SECRET_KEY:-testing_secret_key_for_ci}
+    command: sh -c "cd /app && python -m pytest -xvs app/tests/"
