@@ -34,10 +34,16 @@ setup("authenticate", async ({ page }) => {
     // Increase timeout for navigation to 60 seconds
     await page.waitForURL("/", { timeout: 60000 });
     console.log("Successfully navigated to home page");
-  } catch (error) {
-    console.error("Navigation timeout occurred. Current URL:", page.url());
-    console.error("Page content:", await page.content());
-    throw error;
+  } catch (error: any) {
+    // Safely log error information without accessing page content
+    console.error("Navigation timeout occurred.");
+    try {
+      // Only try to access URL if page is still available
+      console.error("Current URL (if available):", page.url());
+    } catch (e) {
+      console.error("Could not access page URL - page may be closed");
+    }
+    throw new Error(`Authentication failed: ${error.message || 'Unknown error'}`);
   }
 
   // Save authentication state
