@@ -285,11 +285,8 @@ jobs:
 
       - name: Run frontend tests
         run: |
-          cd frontend
-          # Ensure the auth directory exists
-          mkdir -p playwright/.auth
-          # Run tests with increased timeout and debugging
-          PLAYWRIGHT_TIMEOUT=180000 DEBUG=pw:api pnpm test
+          # Use the standardized make target for frontend tests
+          make test-frontend
 
       - name: Run integration tests
         run: |

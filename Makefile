@@ -20,7 +20,7 @@ help:
 	@echo "Testing & Validation:"
 	@echo "  make test               Run all tests"
 	@echo "  make test-backend       Run backend tests"
-	@echo "  make test-frontend      Run frontend tests"
+	@echo "  make test-frontend      Run frontend tests with improved reliability"
 	@echo "  make check-login        Test login functionality"
 	@echo ""
 	@echo "pnpm Monorepo Commands:"
@@ -111,10 +111,20 @@ test-backend:
 	@echo "Running backend tests..."
 	docker compose run --rm backend pytest
 
-# Run frontend tests
+# Run frontend tests locally using Docker
 test-frontend:
 	@echo "Running frontend tests..."
-	@docker compose run --rm frontend-test /bin/bash -c "cd /app/frontend && node node_modules/@playwright/test/cli.js test --config=/app/frontend/playwright.config.ts"
+	@echo "Setting up test environment..."
+	@docker compose up -d backend || (echo "Failed to start backend services" && exit 1)
+	@echo "Waiting for backend to be ready..."
+	@sleep 5
+	@echo "Running Playwright tests with debugging enabled..."
+	@docker compose run --rm frontend-test || \
+	(echo "\033[0;31mFrontend tests failed. Check the error messages above.\033[0m" && exit 1)
+	@echo "\033[0;32mFrontend tests completed successfully.\033[0m"
+	@docker compose down --remove-orphans
+
+
 
 # Create a new feature branch
 feat:
@@ -254,7 +264,7 @@ act-test-job:
 	timeout 120 act $$EVENT -W .github/workflows/$(workflow) -j $(job) --verbose || echo "Test timed out after 120 seconds"
 	@echo "Job test complete."
 
-.PHONY: help setup env up down restart init-db test test-backend test-frontend \
+.PHONY: help setup env up down restart init-db test test-backend test-frontend test-frontend-ci \
         feat fix fix-automerge clean build lint setup-playwright check-login \
         backend-lint frontend-build-docker act-test act-test-main act-test-protection \
         act-test-all act-test-dry-run act-test-job
