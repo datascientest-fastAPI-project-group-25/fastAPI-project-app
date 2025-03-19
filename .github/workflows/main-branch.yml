@@ -66,7 +66,7 @@ jobs:
           python -m pip install uv
           uv venv
           source .venv/bin/activate
-          uv pip install -e ".[dev]"
+          uv pip install -e ".[dev,lint,types,test]"
 
       - name: Cache backend dependencies
         uses: actions/cache@v4
@@ -82,9 +82,8 @@ jobs:
           cd backend
           python -m pip install uv
           uv venv
-          uv pip install -r requirements.txt
-          uv pip install -e .
-          pip install bandit safety
+          source .venv/bin/activate
+          uv pip install -e ".[dev,lint,types,test]"
 
       - name: Cache frontend dependencies
         uses: actions/cache@v4
@@ -158,9 +157,8 @@ jobs:
           cd backend
           python -m pip install uv
           uv venv
-          uv pip install -r requirements.txt
-          uv pip install -e .
-          uv pip install bandit safety
+          source .venv/bin/activate
+          uv pip install -e ".[dev,lint,types,test]"
 
       - name: Run backend security scan
         run: |
@@ -266,9 +264,8 @@ jobs:
           cd backend
           python -m pip install uv
           uv venv
-          uv pip install -r requirements.txt
-          uv pip install -e .
-          pip install bandit safety
+          source .venv/bin/activate
+          uv pip install -e ".[dev,lint,types,test]"
 
       - name: Cache frontend dependencies
         uses: actions/cache@v4
