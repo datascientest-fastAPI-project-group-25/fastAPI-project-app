@@ -115,6 +115,18 @@ test-backend:
 test-frontend:
 	@echo "Running frontend tests..."
 	@echo "Setting up test environment..."
+	@if [ ! -f .env ]; then \
+		echo "Creating default .env file for CI environment..."; \
+		echo "PROJECT_NAME=FastAPI Project" > .env; \
+		echo "POSTGRES_SERVER=localhost" >> .env; \
+		echo "POSTGRES_USER=postgres" >> .env; \
+		echo "POSTGRES_PASSWORD=postgres" >> .env; \
+		echo "POSTGRES_DB=app" >> .env; \
+		echo "FIRST_SUPERUSER=admin@example.com" >> .env; \
+		echo "FIRST_SUPERUSER_PASSWORD=adminpass123" >> .env; \
+		echo "EMAILS_ENABLED=False" >> .env; \
+		echo "VITE_API_URL=http://localhost:8000" >> .env; \
+	fi
 	@docker compose up -d backend || (echo "Failed to start backend services" && exit 1)
 	@echo "Waiting for backend to be ready..."
 	@sleep 5
