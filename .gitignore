@@ -26,6 +26,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.pnpm-store/
 
 # ----------------------------------------
 # Python and Backend
@@ -49,6 +50,8 @@ ENV/
 backend/test-results/
 frontend/test-results/
 /playwright-report/
+frontend/Dockerfile.test
+scripts/run-frontend-tests.sh
 /blob-report/
 /playwright/.cache/
 .coverage
