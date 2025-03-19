@@ -45,8 +45,14 @@ repos:
     rev: 1.7.7
     hooks:
       - id: bandit
-        args: [-r, backend]
+        name: Run bandit security tests
+        description: Security oriented static analyser for python code.
+        entry: bandit
+        language: python
+        types: [python]
+        args: [-c, backend/bandit.yaml, -r, backend]
         exclude: ^backend/tests/
+        require_serial: true
 
   # Poetry hooks removed since we're using UV for package management
 

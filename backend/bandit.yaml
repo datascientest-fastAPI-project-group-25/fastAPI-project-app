@@ -1,0 +1,53 @@
+# Bandit configuration file
+# See: https://bandit.readthedocs.io/en/latest/config.html
+
+# Skip tests in virtualenv and third-party packages
+exclude_dirs: [".venv", "tests", "__pycache__"]
+
+# Tests to skip globally
+skips: []
+
+# Per-file skips for specific test IDs
+per_file_ignores:
+  # SQLAlchemy files contain SQL strings that are safe by design
+  "backend/.venv/lib/python3.11/site-packages/sqlalchemy/**":
+    - B608 # Possible SQL injection
+    - B102 # Use of exec
+    - B311 # Standard pseudo-random generators
+    - B403 # Import of deprecated module
+
+  # Starlette and FastAPI internals
+  "backend/.venv/lib/python3.11/site-packages/starlette/**":
+    - B106 # Possible hardcoded password
+    - B701 # Jinja2 autoescape false
+
+  # Testing utilities
+  "backend/.venv/lib/python3.11/site-packages/pytest/**":
+    - B404 # Import of subprocess module
+    - B603 # Subprocess without shell
+    - B607 # Start process with partial path
+
+  # Websockets package
+  "backend/.venv/lib/python3.11/site-packages/websockets/**":
+    - B311 # Standard pseudo-random generators
+    - B504 # SSL with no version
+
+# Severity levels
+any_other_function_with_shell_equals_true: HIGH
+assert_used: LOW
+hardcoded_bind_all_interfaces: MEDIUM
+hardcoded_password_string: HIGH
+hardcoded_sql_expressions: MEDIUM
+hardcoded_tmp_directory: MEDIUM
+linux_commands_wildcard_injection: MEDIUM
+missing_function_docstring: LOW
+password_config_option_not_marked_secret: MEDIUM
+request_with_no_cert_validation: HIGH
+sql_statements_without_parameters: MEDIUM
+ssl_with_bad_defaults: HIGH
+ssl_with_no_version: MEDIUM
+start_process_with_no_shell: LOW
+start_process_with_partial_path: LOW
+subprocess_without_shell_equals_true: LOW
+try_except_pass: LOW
+weak_cryptographic_key: HIGH
