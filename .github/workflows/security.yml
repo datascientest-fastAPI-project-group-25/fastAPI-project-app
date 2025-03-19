@@ -38,7 +38,7 @@ jobs:
           pip install bandit safety pip-audit
 
       - name: Run Bandit security scan
-        run: bandit -c backend/bandit.yaml -r backend -f text
+        run: bandit -c backend/bandit.yaml -r backend -f txt
 
       - name: Run Safety check
         run: safety check
