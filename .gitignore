@@ -52,6 +52,9 @@ frontend/test-results/
 /playwright-report/
 frontend/Dockerfile.test
 scripts/run-frontend-tests.sh
+frontend/jest.config.js
+.github/workflows/ci.yml
+Dockerfile
 /blob-report/
 /playwright/.cache/
 .coverage
