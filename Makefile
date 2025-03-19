@@ -83,7 +83,11 @@ up:
 	@echo ""
 	@echo "Validating login functionality..."
 	@sleep 5
-	@$(MAKE) check-login
+	@if command -v python3 > /dev/null && python3 -c "import requests" 2>/dev/null; then \
+		$(MAKE) check-login; \
+	else \
+		echo "Skipping login check (python3 or requests module not available)"; \
+	fi
 
 # Initialize the database (create tables and first superuser)
 init-db:
@@ -187,7 +191,7 @@ setup-playwright:
 # Test login functionality
 check-login:
 	@echo "Testing login functionality..."
-	@python test_login.py http://api.localhost
+	@python3 test_login.py http://api.localhost
 	@echo "Login test complete."
 
 # Build frontend using Docker multi-stage build
