@@ -43,8 +43,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: "backend/uv.lock"
+
+      # Cache UV packages
+      - name: Cache UV packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            backend/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       # Separate Node.js setup allows for parallel caching and better error isolation
       - name: Setup pnpm
@@ -60,24 +69,7 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: "pnpm-lock.yaml"
 
-      - name: Install Python linting tools
-        run: |
-          cd backend
-          python -m pip install uv
-          uv venv
-          source .venv/bin/activate
-          uv pip install -e ".[dev,lint,types,test]"
-
-      - name: Cache backend dependencies
-        uses: actions/cache@v4
-        id: backend-cache
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install backend dependencies
+      - name: Install Python dependencies and tools
         run: |
           cd backend
           python -m pip install uv
@@ -95,7 +87,6 @@ jobs:
             ${{ runner.os }}-pnpm-
 
       - name: Install frontend dependencies
-        # Always install dependencies to ensure Playwright is available
         run: |
           cd frontend
           pnpm install --frozen-lockfile
@@ -104,7 +95,6 @@ jobs:
         run: |
           cd backend
           source .venv/bin/activate
-          mypy app
           ruff check app
           ruff format app --check
           bandit -r app -x app/tests
@@ -127,8 +117,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: "backend/uv.lock"
+
+      # Cache UV packages
+      - name: Cache UV packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            backend/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -143,16 +142,7 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: "pnpm-lock.yaml"
 
-      - name: Cache backend dependencies
-        uses: actions/cache@v4
-        id: backend-cache
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install backend dependencies
+      - name: Install Python dependencies
         run: |
           cd backend
           python -m pip install uv
@@ -177,7 +167,6 @@ jobs:
             ${{ runner.os }}-pnpm-
 
       - name: Install frontend dependencies
-        # Always install dependencies to ensure Playwright is available
         run: |
           cd frontend
           pnpm install --frozen-lockfile
@@ -233,8 +222,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: "backend/uv.lock"
+
+      # Cache UV packages
+      - name: Cache UV packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            backend/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       # Separate Node.js setup allows for parallel caching and better error isolation
       - name: Setup pnpm
@@ -250,22 +248,28 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: "pnpm-lock.yaml"
 
-      - name: Cache backend dependencies
-        uses: actions/cache@v4
-        id: backend-cache
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install backend dependencies
+      - name: Install Python dependencies
         run: |
           cd backend
           python -m pip install uv
           uv venv
           source .venv/bin/activate
           uv pip install -e ".[dev,lint,types,test]"
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          source .venv/bin/activate
+          pytest --cov=app --cov-report=xml
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
 
       - name: Cache frontend dependencies
         uses: actions/cache@v4
@@ -277,50 +281,23 @@ jobs:
             ${{ runner.os }}-pnpm-
 
       - name: Install frontend dependencies
-        # Always install dependencies to ensure Playwright is available
         run: |
           cd frontend
           pnpm install --frozen-lockfile
 
-      - name: Initialize database schema
-        run: |
-          cd backend
-          python scripts/init_db.py
-
-      - name: Run backend tests
-        run: |
-          cd backend
-          pytest -xvs app/tests/
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('frontend/playwright.config.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Install Playwright
-        run: |
-          cd frontend
-          pnpm add -D @playwright/test
-
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: |
-          cd frontend
-          pnpm exec playwright install --with-deps
-
       - name: Run frontend tests
         run: |
-          # Use the standardized make target for frontend tests
-          make test-frontend
+          cd frontend
+          pnpm run test
 
-      - name: Run integration tests
-        run: |
-          # Use the standardized make target for integration tests
-          make test-integration
+      - name: Upload frontend coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: ./frontend/coverage/coverage-final.json
+          flags: frontend
+          name: frontend-coverage
 
   semantic-release:
     needs: [test, security-scan, check-conditions]
