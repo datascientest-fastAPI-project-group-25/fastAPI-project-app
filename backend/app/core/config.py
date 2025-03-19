@@ -1,3 +1,4 @@
+import os
 import secrets
 import warnings
 from typing import Annotated, Any, Literal
@@ -27,7 +28,11 @@ def parse_cors(v: Any) -> list[str] | str:
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         # Use top level .env file (one level above ./backend/)
-        env_file="../.env",
+        env_file=(
+            ["../env.test", "../.env"]
+            if os.getenv("ENVIRONMENT") == "test"
+            else ["../.env"]
+        ),
         env_ignore_empty=True,
         extra="ignore",
     )
