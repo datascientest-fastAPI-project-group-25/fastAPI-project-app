@@ -32,6 +32,10 @@ per_file_ignores:
     - B311 # Standard pseudo-random generators
     - B504 # SSL with no version
 
+# Plugin configurations
+try_except_pass:
+  check_typed_exception: true
+
 # Severity levels
 any_other_function_with_shell_equals_true: HIGH
 assert_used: LOW
@@ -49,5 +53,4 @@ ssl_with_no_version: MEDIUM
 start_process_with_no_shell: LOW
 start_process_with_partial_path: LOW
 subprocess_without_shell_equals_true: LOW
-try_except_pass: LOW
 weak_cryptographic_key: HIGH
