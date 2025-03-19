@@ -198,7 +198,7 @@ lint:
 format:
 	@echo "Formatting code across all workspaces..."
 	@docker compose up -d frontend backend
-	@docker compose exec frontend sh -c "cd /app && pnpm install && cd frontend && pnpm run format"
+	@docker compose exec frontend sh -c "cd /app && npm install -g pnpm && pnpm install && cd frontend && pnpm run format"
 	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff format app"
 	@echo "Formatting complete."
 
