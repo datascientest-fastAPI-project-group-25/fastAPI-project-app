@@ -61,7 +61,7 @@ jobs:
           path: |
             ~/.cache/uv
             backend/.venv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml', 'pnpm-lock.yaml', 'backend/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-
 
@@ -74,6 +74,9 @@ jobs:
 
       - name: Install dependencies
         run: make install
+
+      - name: Install frontend dependencies
+        run: cd frontend && pnpm install --frozen-lockfile
 
       - name: Run linting
         run: make lint
@@ -108,7 +111,7 @@ jobs:
           path: |
             ~/.cache/uv
             backend/.venv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml', 'pnpm-lock.yaml', 'backend/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-
 
@@ -121,6 +124,9 @@ jobs:
 
       - name: Install dependencies
         run: make install
+
+      - name: Install frontend dependencies
+        run: cd frontend && pnpm install --frozen-lockfile
 
       - name: Run security scan
         run: make security-scan
@@ -176,7 +182,7 @@ jobs:
           path: |
             ~/.cache/uv
             backend/.venv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml', 'pnpm-lock.yaml', 'backend/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-
 
