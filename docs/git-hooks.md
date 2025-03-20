@@ -11,6 +11,7 @@ pre-commit is a framework for managing and maintaining multi-language pre-commit
 Our pre-commit configuration provides:
 
 - **Pre-commit hooks**:
+
   - Code formatting with Black
   - Linting and auto-fixing with Ruff
   - Security scanning with Bandit
@@ -19,6 +20,7 @@ Our pre-commit configuration provides:
   - Merge conflict detection
 
 - **Pre-push hooks**:
+
   - Running tests with pytest
 
 - **Commit message validation**:

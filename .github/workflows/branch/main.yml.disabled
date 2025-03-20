@@ -163,11 +163,11 @@ jobs:
         run: |
           # Install security scanning tools
           pip install bandit safety || echo "Failed to install security tools, but continuing workflow"
-          
+
           # Run Bandit security scanner with permissive settings
           echo "Running Bandit security scanner..."
           bandit -r . -ll --skip B101,B105,B106,B110,B311 --exclude './tests/,./app/tests/,./.venv/' || echo "Bandit scan failed, but continuing workflow"
-          
+
           # Run pip-audit on Python dependencies
           echo "Running pip-audit on Python dependencies..."
           if [ -f "requirements.txt" ]; then
@@ -184,19 +184,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
-          
+
       - name: Check backend dependencies
         run: |
           pip install pip-audit || echo "Failed to install pip-audit, but continuing workflow"
@@ -207,7 +207,7 @@ jobs:
             echo "No requirements.txt found, skipping backend dependency check"
           fi
         working-directory: backend
-        
+
       - name: Check frontend dependencies
         run: |
           echo "Checking frontend dependencies..."
@@ -228,7 +228,7 @@ jobs:
             source .venv/bin/activate || echo "Failed to activate venv, but continuing"
             pip install pip-audit ruff mypy || echo "Failed to install tools, but continuing"
           fi
-          
+
           # Run checks with error handling
           echo "Running Python code quality checks..."
           ruff check . || echo "Ruff check failed, but continuing workflow"

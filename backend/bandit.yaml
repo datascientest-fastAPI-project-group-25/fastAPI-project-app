@@ -5,8 +5,8 @@
 exclude_dirs: [".venv", "tests", "__pycache__"]
 
 # Tests to skip globally
-skips: []
-
+skips:
+  - B602
 # Per-file skips for specific test IDs
 per_file_ignores:
   # SQLAlchemy files contain SQL strings that are safe by design

@@ -10,9 +10,9 @@ name: Branch Protection
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   branch-protection:
@@ -33,11 +33,11 @@ jobs:
         run: |
           # Extract the commits JSON to a file for processing
           echo "$COMMITS_JSON" > commits.json
-          
+
           # More robust detection of PR merge commits:
           # 1. Check if commit message contains 'Merge pull request'
           # 2. Check if it's a merge commit (has multiple parents)
-          
+
           # Check if this is a merge commit by examining the head_commit structure
           IS_MERGE_COMMIT="false"
           if [ "$HEAD_COMMIT_JSON" != "null" ] && [ "$HEAD_COMMIT_JSON" != "{}" ]; then
@@ -56,15 +56,15 @@ jobs:
               fi
             fi
           fi
-          
+
           echo "PR merge message: $PR_MERGE_MESSAGE, Is merge commit: $IS_MERGE_COMMIT"
-          
+
           if [ "$PR_MERGE_MESSAGE" == "true" ] || [ "$IS_MERGE_COMMIT" == "true" ]; then
             echo "Detected PR merge commit (message pattern or merge structure), allowing it"
             echo "is_blocked=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           # Check if commits array exists and is not empty
           if [ "$COMMITS_JSON" != "null" ] && [ "$COMMITS_JSON" != "[]" ]; then
             # Use jq to safely extract the author name if it exists
@@ -74,7 +74,7 @@ jobs:
               # Fallback if jq is not available
               AUTHOR_NAME=$(grep -o '"name":"[^"]*"' commits.json | head -1 | cut -d':' -f2 | tr -d '"')
             fi
-            
+
             if [ "$AUTHOR_NAME" != "semantic-release-bot" ] && [ "$AUTHOR_NAME" != "null" ] && [ "$AUTHOR_NAME" != "unknown" ]; then
               echo "is_blocked=true" >> $GITHUB_OUTPUT
             else
@@ -90,7 +90,7 @@ jobs:
           echo "::warning::This check is SUPPOSED TO FAIL for direct pushes to main - this is not an error in the workflow. See docs/BRANCHING_STRATEGY.md for more information."
           echo "::error::Direct pushes to main branch are not allowed. Please create a pull request from a feature or fix branch."
           exit 1
-          
+
       - name: Verification passed
         if: steps.check_author.outputs.is_blocked != 'true'
         run: |

@@ -39,12 +39,14 @@ This document outlines the consolidated structure for the `.github` directory an
 These workflows are triggered based on branch activity:
 
 - **feature.yml**: Triggered on pushes to `feat/*` and `fix/*` branches
+
   - Style checks (black, flake8, eslint, prettier)
   - Security checks (bandit, npm audit, pip-audit)
   - Linting & formatting
   - Unit tests
 
 - **dev.yml**: Triggered on pushes to `dev` branch
+
   - Minimal test suite (unit, linting, security)
   - Staging deployment
 
@@ -56,6 +58,7 @@ These workflows are triggered based on branch activity:
 ### Deployment Workflows
 
 - **staging.yml**: Deploys to staging environment
+
   - Triggered by successful `dev` branch workflow
   - Uses AWS ECS for deployment
 

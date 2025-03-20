@@ -99,7 +99,7 @@ if [[ $create_new =~ ^[Yy]$ ]]; then
                 echo -e "${YELLOW}Exiting...${NC}"
                 exit 0
                 ;;
-            *) 
+            *)
                 echo -e "${RED}Invalid option${NC}"
                 ;;
         esac

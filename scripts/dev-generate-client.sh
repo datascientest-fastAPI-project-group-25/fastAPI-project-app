@@ -39,18 +39,21 @@ check_python() {
     echo "Please install Python 3.11+ and try again"
     exit 1
   fi
-  
+
   # Check Python version
-  local python_version=$(python --version | awk '{print $2}')
-  local python_major=$(echo $python_version | cut -d. -f1)
-  local python_minor=$(echo $python_version | cut -d. -f2)
-  
+  local python_version
+  python_version=$(python --version | awk '{print $2}')
+  local python_major
+  python_major=$(echo $python_version | cut -d. -f1)
+  local python_minor
+  python_minor=$(echo $python_version | cut -d. -f2)
+
   if [ "$python_major" -lt 3 ] || ([ "$python_major" -eq 3 ] && [ "$python_minor" -lt 11 ]); then
     echo -e "${RED}Error: Python 3.11+ is required, found $python_version${NC}"
     echo "Please upgrade Python and try again"
     exit 1
   fi
-  
+
   echo -e "${GREEN}✓ Python $python_version is available${NC}"
 }
 
@@ -61,13 +64,13 @@ check_node() {
     echo "Please install Node.js and try again"
     exit 1
   fi
-  
+
   if ! command -v npm &> /dev/null; then
     echo -e "${RED}Error: npm is not installed or not in PATH${NC}"
     echo "Please install npm and try again"
     exit 1
   fi
-  
+
   echo -e "${GREEN}✓ Node.js $(node --version) and npm $(npm --version) are available${NC}"
 }
 
@@ -85,11 +88,11 @@ check_biome() {
 # Function to generate OpenAPI schema
 generate_schema() {
   echo -e "${BLUE}Generating OpenAPI schema from backend...${NC}"
-  
+
   cd backend
   python -c "import app.main; import json; print(json.dumps(app.main.app.openapi()))" > ../openapi.json
   cd ..
-  
+
   if [ -f "openapi.json" ]; then
     echo -e "${GREEN}✓ OpenAPI schema generated successfully${NC}"
     mv openapi.json frontend/
@@ -102,10 +105,10 @@ generate_schema() {
 # Function to generate TypeScript client
 generate_client() {
   echo -e "${BLUE}Generating TypeScript client in frontend...${NC}"
-  
+
   cd frontend
   npm run generate-client
-  
+
   if [ -d "./src/client" ]; then
     echo -e "${GREEN}✓ TypeScript client generated successfully${NC}"
   else
@@ -118,10 +121,10 @@ generate_client() {
 format_code() {
   if [ -z "${SKIP_FORMAT}" ]; then
     echo -e "${BLUE}Formatting generated client code...${NC}"
-    
+
     cd frontend
     npx biome format --write ./src/client
-    
+
     echo -e "${GREEN}✓ Client code formatted successfully${NC}"
   else
     echo -e "${YELLOW}Skipping code formatting (SKIP_FORMAT is set)${NC}"
@@ -131,21 +134,21 @@ format_code() {
 # Main execution
 main() {
   echo -e "${BLUE}=== DevOps Demo Application - API Client Generator ===${NC}"
-  
+
   # Check dependencies
   check_python
   check_node
   check_biome
-  
+
   # Generate OpenAPI schema
   generate_schema
-  
+
   # Generate TypeScript client
   generate_client
-  
+
   # Format generated code
   format_code
-  
+
   echo -e "${GREEN}=== API client generation completed successfully ===${NC}"
 }
 

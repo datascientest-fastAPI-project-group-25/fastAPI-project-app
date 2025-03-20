@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import requests
 import sys
+import os
 
 
 def test_login(base_url, username, password):
@@ -17,7 +18,10 @@ def test_login(base_url, username, password):
     try:
         # Make the login request
         response = requests.post(
-            f"{base_url}/api/v1/login/access-token", data=form_data, headers=headers, timeout=10
+            f"{base_url}/api/v1/login/access-token",
+            data=form_data,
+            headers=headers,
+            timeout=10,
         )
 
         # Print response details
@@ -49,7 +53,7 @@ if __name__ == "__main__":
     # Default values
     base_url = "http://localhost:8000"
     username = "admin@example.com"
-    password = "FastAPI_Secure_2025!"
+    password = os.environ.get("TEST_PASSWORD", "FastAPI_Secure_2025!")
 
     # Allow command-line overrides
     if len(sys.argv) > 1:

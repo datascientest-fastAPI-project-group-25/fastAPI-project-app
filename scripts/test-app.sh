@@ -52,16 +52,16 @@ check_docker() {
     echo "Please start Docker and try again"
     exit 1
   fi
-  
+
   echo -e "${GREEN}✓ Docker is available${NC}"
 }
 
 # Function to clean up previous test environments
 cleanup_previous() {
   echo -e "${BLUE}Cleaning up previous test environments...${NC}"
-  
+
   docker compose down -v --remove-orphans
-  
+
   echo -e "${GREEN}✓ Previous environments cleaned up${NC}"
 }
 
@@ -69,14 +69,14 @@ cleanup_previous() {
 cleanup_cache() {
   if [ "$(uname -s)" = "Linux" ]; then
     echo -e "${BLUE}Removing __pycache__ files...${NC}"
-    
+
     # Use sudo only if necessary
     if [ -w "$(find . -name __pycache__ -type d | head -n 1 2>/dev/null)" ] || [ -z "$(find . -name __pycache__ -type d | head -n 1 2>/dev/null)" ]; then
       find . -type d -name __pycache__ -exec rm -r {} \+ 2>/dev/null || true
     else
       sudo find . -type d -name __pycache__ -exec rm -r {} \+ 2>/dev/null || true
     fi
-    
+
     echo -e "${GREEN}✓ Cache files removed${NC}"
   fi
 }
@@ -85,32 +85,33 @@ cleanup_cache() {
 build_images() {
   if [ -z "${SKIP_BUILD}" ]; then
     echo -e "${BLUE}Building Docker images...${NC}"
-    
+
     docker compose build
-    
+
     echo -e "${GREEN}✓ Docker images built successfully${NC}"
   else
     echo -e "${YELLOW}Skipping build step (SKIP_BUILD is set)${NC}"
+    echo -e "${YELLOW}Don't forget to run 'docker compose down -v' when you're done${NC}"
   fi
 }
 
 # Function to start Docker services
 start_services() {
   echo -e "${BLUE}Starting Docker services...${NC}"
-  
+
   docker compose up -d
-  
+
   echo -e "${GREEN}✓ Docker services started${NC}"
 }
 
 # Function to run tests
 run_tests() {
-  local test_args=$@
-  
+  local test_args="$*"
+
   echo -e "${BLUE}Running tests with arguments: ${test_args}${NC}"
-  
-  docker compose exec -T backend bash scripts/tests-start.sh $test_args
-  
+
+  docker compose exec -T backend bash scripts/tests-start.sh "$test_args"
+
   echo -e "${GREEN}✓ Tests completed${NC}"
 }
 
@@ -118,9 +119,9 @@ run_tests() {
 cleanup_after() {
   if [ -z "${SKIP_CLEANUP}" ]; then
     echo -e "${BLUE}Cleaning up after tests...${NC}"
-    
+
     docker compose down -v --remove-orphans
-    
+
     echo -e "${GREEN}✓ Test environment cleaned up${NC}"
   else
     echo -e "${YELLOW}Skipping cleanup (SKIP_CLEANUP is set)${NC}"
@@ -130,40 +131,40 @@ cleanup_after() {
 
 # Function to run tests in CI environment
 run_ci_tests() {
-  local test_args=$@
-  
+  local test_args="$*"
+
   # In CI, we want to build, run tests, and clean up regardless of errors
   build_images
-  
+
   # Start services
   start_services
-  
+
   # Run tests
   run_tests $test_args
-  
+
   # Always clean up in CI
   docker compose down -v --remove-orphans
 }
 
 # Function to run tests in local environment
 run_local_tests() {
-  local test_args=$@
-  
+  local test_args="$*"
+
   # Clean up previous environments
   cleanup_previous
-  
+
   # Clean up cache files
   cleanup_cache
-  
+
   # Build images
   build_images
-  
+
   # Start services
   start_services
-  
+
   # Run tests
   run_tests $test_args
-  
+
   # Clean up after tests
   cleanup_after
 }
@@ -172,12 +173,12 @@ run_local_tests() {
 main() {
   local mode=${1:-local}
   shift || true
-  
+
   echo -e "${BLUE}=== DevOps Demo Application - Testing Script ===${NC}"
-  
+
   # Check Docker availability
   check_docker
-  
+
   # Perform the requested operation
   case "$mode" in
     local)
@@ -192,9 +193,9 @@ main() {
       echo -e "${RED}Error: Invalid mode: $mode${NC}"
       echo "Usage: $0 [local|ci] [test_args...]"
       exit 1
-      ;;
+    ;;
   esac
-  
+
   echo -e "${GREEN}=== Testing completed successfully ===${NC}"
 }
 

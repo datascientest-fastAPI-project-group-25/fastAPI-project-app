@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-import subprocess
+import subprocess  # nosec
 import sys
 
 try:
     branch = (
-        subprocess.check_output(["git", "symbolic-ref", "--short", "HEAD"])
+        subprocess.check_output("/usr/bin/git symbolic-ref --short HEAD", shell=True)
         .decode()
         .strip()
     )

@@ -316,7 +316,9 @@ deploy:
         feat fix fix-automerge clean build lint setup-playwright check-login \
         backend-lint frontend-build-docker act-test act-test-main act-test-protection \
         act-test-all act-test-dry-run act-test-job ci cd security-scan validate-workflows deploy \
-        setup-hooks run-hooks validate-hooks
+        setup-hooks run-hooks validate-hooks install lint test security-scan format clean \
+        backend-install backend-lint backend-format backend-test backend-security \
+        frontend-install frontend-lint frontend-format frontend-test frontend-security
 
 # Git Hooks Management
 setup-hooks:
@@ -334,3 +336,53 @@ validate-hooks:
 	@pre-commit validate-config
 	@pre-commit validate-manifest
 	@echo "✅ Pre-commit hook configuration is valid!"
+
+# Backend commands
+backend-install:
+	cd backend && python3 -m pip install uv && uv venv && . .venv/bin/activate && uv pip install -e ".[dev,lint,types,test]"
+
+backend-lint:
+	cd backend && source .venv/bin/activate && ruff check app && ruff format app --check
+
+backend-format:
+	cd backend && source .venv/bin/activate && ruff format app
+
+backend-test:
+	cd backend && source .venv/bin/activate && pytest --cov=app --cov-report=xml
+
+backend-security:
+	cd backend && source .venv/bin/activate && bandit -r app -x app/tests && safety check
+
+# Frontend commands
+frontend-install:
+	cd frontend && pnpm install --frozen-lockfile
+
+frontend-lint:
+	cd frontend && pnpm run lint && pnpm run format:check
+
+frontend-format:
+	cd frontend && pnpm run format
+
+frontend-test:
+	cd frontend && pnpm run test
+
+frontend-security:
+	cd frontend && pnpm audit
+
+# Combined commands
+install: backend-install frontend-install
+lint: backend-lint frontend-lint
+test: backend-test frontend-test
+security-scan: backend-security frontend-security
+format: backend-format frontend-format
+
+# Cleanup
+clean:
+	rm -rf backend/.venv
+	rm -rf frontend/node_modules
+	rm -rf backend/__pycache__
+	rm -rf backend/app/__pycache__
+	rm -rf backend/.pytest_cache
+	rm -rf backend/.coverage
+	rm -rf backend/coverage.xml
+	rm -rf frontend/coverage

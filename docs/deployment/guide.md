@@ -4,11 +4,9 @@ This document describes how to deploy the application to AWS ECS using GitHub Ac
 
 ## Prerequisites
 
-
 ## GitHub Actions Secrets
 
 The following secrets need to be configured in your GitHub repository:
-
 
 ## CI/CD Pipeline
 
@@ -22,7 +20,6 @@ The CI/CD pipeline consists of the following stages:
 ## AWS Resources
 
 The application requires the following AWS resources:
-
 
 ## Infrastructure as Code
 

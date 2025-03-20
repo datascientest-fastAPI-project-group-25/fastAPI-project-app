@@ -29,10 +29,10 @@ The backend of our DevOps demo application is built with FastAPI, providing a hi
 
 ## 📍 Requirements
 
-* [Docker](https://www.docker.com/) and Docker Compose
-* [Python](https://www.python.org/) 3.11+
-* [uv](https://github.com/astral-sh/uv/) for Python package and environment management
-* [PostgreSQL](https://www.postgresql.org/) (when running locally without Docker)
+- [Docker](https://www.docker.com/) and Docker Compose
+- [Python](https://www.python.org/) 3.11+
+- [uv](https://github.com/astral-sh/uv/) for Python package and environment management
+- [PostgreSQL](https://www.postgresql.org/) (when running locally without Docker)
 
 ## 🔧 Development Setup
 
@@ -46,6 +46,7 @@ docker compose up -d
 ```
 
 This will start:
+
 - Backend API at http://api.localhost
 - PostgreSQL database
 - Adminer (database management) at http://adminer.localhost
@@ -89,6 +90,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 FastAPI automatically generates interactive API documentation:
 
 - **Swagger UI**: http://localhost:8000/docs
+
   - Interactive documentation with request/response examples
   - Try out API endpoints directly from the browser
 

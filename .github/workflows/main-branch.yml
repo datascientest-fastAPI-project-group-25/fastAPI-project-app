@@ -34,17 +34,27 @@ jobs:
     runs-on: ubuntu-latest
     needs: check-conditions
     if: needs.check-conditions.outputs.should_run_tests == 'true'
+    container:
+      image: ubuntu:22.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Keep Python and Node.js setup steps separate for optimal caching
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Install Python and Node.js
+        run: |
+          apt-get update && apt-get install -y \
+            curl \
+            gnupg \
+            python3.10 \
+            python3.10-venv \
+            python3-pip \
+            && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+            && apt-get install -y nodejs \
+            && npm install -g pnpm@10.6.4 \
+            && pip3 install --no-cache-dir uv \
+            && apt-get clean \
+            && rm -rf /var/lib/apt/lists/*
 
-      # Cache UV packages
       - name: Cache UV packages
         uses: actions/cache@v4
         with:
@@ -55,13 +65,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-uv-
 
-      # Separate Node.js setup allows for parallel caching and better error isolation
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.6.4
-          run_install: false
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -69,56 +72,36 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: "pnpm-lock.yaml"
 
-      - name: Install Python dependencies and tools
-        run: |
-          cd backend
-          python -m pip install uv
-          uv venv
-          source .venv/bin/activate
-          uv pip install -e ".[dev,lint,types,test]"
+      - name: Install dependencies
+        run: make install
 
-      - name: Cache frontend dependencies
-        uses: actions/cache@v4
-        id: frontend-cache
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          pnpm install --frozen-lockfile
-
-      - name: Run backend linting
-        run: |
-          cd backend
-          source .venv/bin/activate
-          ruff check app
-          ruff format app --check
-          bandit -r app -x app/tests
-
-      - name: Run frontend linting
-        run: |
-          cd frontend
-          pnpm run lint
-          pnpm run format:check
+      - name: Run linting
+        run: make lint
 
   security-scan:
     runs-on: ubuntu-latest
     needs: check-conditions
+    container:
+      image: ubuntu:22.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Keep Python and Node.js setup steps separate for optimal caching
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Install Python and Node.js
+        run: |
+          apt-get update && apt-get install -y \
+            curl \
+            gnupg \
+            python3.10 \
+            python3.10-venv \
+            python3-pip \
+            && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+            && apt-get install -y nodejs \
+            && npm install -g pnpm@10.6.4 \
+            && pip3 install --no-cache-dir uv \
+            && apt-get clean \
+            && rm -rf /var/lib/apt/lists/*
 
-      # Cache UV packages
       - name: Cache UV packages
         uses: actions/cache@v4
         with:
@@ -129,12 +112,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-uv-
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.6.4
-          run_install: false
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -142,45 +119,16 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: "pnpm-lock.yaml"
 
-      - name: Install Python dependencies
-        run: |
-          cd backend
-          python -m pip install uv
-          uv venv
-          source .venv/bin/activate
-          uv pip install -e ".[dev,lint,types,test]"
+      - name: Install dependencies
+        run: make install
 
-      - name: Run backend security scan
-        run: |
-          cd backend
-          source .venv/bin/activate
-          bandit -r app -x app/tests
-          safety check
-
-      - name: Cache frontend dependencies
-        uses: actions/cache@v4
-        id: frontend-cache
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          pnpm install --frozen-lockfile
-
-      - name: Run frontend security scan
-        run: |
-          cd frontend
-          pnpm audit
+      - name: Run security scan
+        run: make security-scan
 
   test:
     needs: [lint, security-scan, check-conditions]
     if: needs.check-conditions.outputs.should_run_tests == 'true'
     runs-on: ubuntu-latest
-    # Add job-level environment variables to avoid redundancy
     env:
       PROJECT_NAME: "FastAPI Project"
       POSTGRES_SERVER: "localhost"
@@ -217,13 +165,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Keep Python and Node.js setup steps separate for optimal caching
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.10"
 
-      # Cache UV packages
       - name: Cache UV packages
         uses: actions/cache@v4
         with:
@@ -234,7 +180,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-uv-
 
-      # Separate Node.js setup allows for parallel caching and better error isolation
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -248,56 +193,24 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: "pnpm-lock.yaml"
 
-      - name: Install Python dependencies
-        run: |
-          cd backend
-          python -m pip install uv
-          uv venv
-          source .venv/bin/activate
-          uv pip install -e ".[dev,lint,types,test]"
+      - name: Install dependencies
+        run: make install
 
-      - name: Run backend tests
-        run: |
-          cd backend
-          source .venv/bin/activate
-          pytest --cov=app --cov-report=xml
+      - name: Run tests
+        run: make test
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          files: ./backend/coverage.xml
-          flags: backend
-          name: backend-coverage
-
-      - name: Cache frontend dependencies
-        uses: actions/cache@v4
-        id: frontend-cache
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          pnpm install --frozen-lockfile
-
-      - name: Run frontend tests
-        run: |
-          cd frontend
-          pnpm run test
-
-      - name: Upload frontend coverage reports to Codecov
-        uses: codecov/codecov-action@v4
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        with:
-          files: ./frontend/coverage/coverage-final.json
-          flags: frontend
-          name: frontend-coverage
+          files: |
+            ./backend/coverage.xml
+            ./frontend/coverage/coverage-final.json
+          flags: |
+            backend
+            frontend
+          name: coverage-report
 
   semantic-release:
     needs: [test, security-scan, check-conditions]
