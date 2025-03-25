@@ -117,7 +117,7 @@ jobs:
 
     - name: Push changes
       if: |
-        github.event.pull_request.head.repo.full_name == github.repository && 
+        github.event.pull_request.head.repo.full_name == github.repository &&
         steps.check-changes.outputs.changes_detected == 'true'
       run: git push
       continue-on-error: true

@@ -5,6 +5,7 @@ Test script to verify authentication functionality directly.
 import logging
 import secrets
 import string
+from typing import NoReturn
 
 from app.core.security import get_password_hash, verify_password
 
@@ -17,7 +18,7 @@ TEST_EMAIL = "admin@example.com"
 
 
 # Generate a random password for testing instead of hardcoding
-def generate_test_password(length=12):
+def generate_test_password(length: int = 12) -> str:
     """Generate a random password for testing purposes."""
     alphabet = string.ascii_letters + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))
@@ -26,7 +27,7 @@ def generate_test_password(length=12):
 TEST_PASSWORD = generate_test_password()
 
 
-def test_password_hashing():
+def test_password_hashing() -> bool:
     """Test that password hashing and verification works correctly."""
     logger.info("Testing password hashing and verification...")
     # Hash a test password
@@ -41,7 +42,7 @@ def test_password_hashing():
     return True
 
 
-def test_authentication():
+def test_authentication() -> bool:
     """Test authentication without database connection.
 
     This is a simplified test that only tests password hashing and
@@ -62,7 +63,8 @@ def test_authentication():
     return True
 
 
-if __name__ == "__main__":
+def main() -> NoReturn:
+    """Run all authentication tests."""
     logger.info("Starting authentication test...")
 
     # Test password hashing
@@ -72,3 +74,10 @@ if __name__ == "__main__":
     # Test authentication
     auth_test_result = test_authentication()
     logger.info(f"Authentication test result: {auth_test_result}")
+
+    # Since this function is declared to return NoReturn, we need to raise an exception
+    raise SystemExit(0 if hash_test_result and auth_test_result else 1)
+
+
+if __name__ == "__main__":
+    main()

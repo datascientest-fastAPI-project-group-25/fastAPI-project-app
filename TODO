@@ -1,0 +1,156 @@
+# TODO List
+
+## Makefile System
+- [ ] Create a proper modular Makefile system with clear separation of concerns
+  - [ ] Move targets to appropriate module files:
+    - [ ] `variables.mk` (common variables and settings)
+    - [ ] `environment.mk` (environment setup and configuration)
+    - [ ] `docker.mk` (Docker-related targets)
+    - [ ] `testing.mk` (testing and validation targets)
+    - [ ] `maintenance.mk` (cleanup and maintenance targets)
+    - [ ] `development.mk` (development workflow targets)
+    - [ ] `ci.mk` (CI/CD related targets)
+  - [ ] Ensure proper dependency management between modules
+  - [ ] Add validation to ensure all required variables are set
+  - [ ] Add error handling and logging
+  - [ ] Add progress indicators for long-running tasks
+  - [ ] Add dry-run capability for destructive operations
+  - [ ] Add help text for each module
+  - [ ] Add version information
+  - [ ] Add module-specific configuration options
+- [ ] Align linting, formatting, and security checks
+- [ ] Fix & improve local main protection + CLI with make (direct or interactive mode)
+  - [ ] Main branch:
+    - [ ] On manual checkout → give info/warning and recommend the `make branch` command
+    - [ ] After pull → Show reminder about the rules → Start CLI automatically
+    - [ ] Attempt to push to main → Show warning → Start CLI automatically
+- [ ] Update batches on merge to main
+- [ ] Fix the pre-commit configuration
+
+## Testing
+- [ ] Implement accessibility testing:
+  - [ ] `a11y-audit`
+  - [ ] `a11y-lighthouse`
+  - [ ] `a11y-wcag`
+  - [ ] `a11y-report`
+- [ ] Add Lighthouse performance testing
+- [ ] Add WCAG compliance checks
+- [ ] Set up accessibility reporting
+- [x] Add unit test separation (backend/frontend)
+- [x] Add integration test separation (backend/frontend)
+- [x] Add end-to-end test suite
+- [x] Standardize frontend testing workflow for local and CI environments
+- [x] Implement consistent Playwright testing setup
+- [ ] Add test coverage reporting
+- [ ] Add test report generation
+
+## Documentation
+- [ ] Add detailed documentation for each Makefile section
+- [ ] Create architecture documentation
+- [ ] Add API documentation
+- [ ] Add frontend documentation
+- [ ] Add backend documentation
+- [ ] Update README files with new workflows and scripts
+- [ ] Create a **database strategy** document (Markdown file)
+
+## CI/CD
+- [x] Set up GitHub Actions workflows
+- [x] Add automated testing in CI
+- [ ] Add automated deployment
+- [ ] Add automated documentation generation
+- [ ] Improve main action to be triggered before merge, not on merge
+- [ ] Main [automerge] using `MACHINE_USER_TOKEN`
+- [x] Implement caching for frontend dependencies
+- [x] Optimize CI workflow for faster test execution
+
+## Security
+- [ ] Implement security scanning
+- [ ] Add dependency vulnerability checks
+- [ ] Add code security analysis
+- [ ] Add container security scanning
+
+## Monitoring
+- [ ] Set up Prometheus metrics
+- [ ] Configure Grafana dashboards
+- [ ] Add logging infrastructure
+- [ ] Add alerting system
+- [ ] Move alerts from GitHub to the dashboard monitor
+
+## Docker Management
+- [x] Add container build targets:
+  - [x] `docker-build`
+  - [x] `docker-build-frontend`
+  - [x] `docker-build-backend`
+- [ ] Add container registry management:
+  - [ ] `docker-push`
+  - [ ] `docker-pull`
+- [x] Add container monitoring:
+  - [x] `docker-logs`
+  - [x] `docker-stats`
+- [x] Add container maintenance:
+  - [x] `docker-prune`
+- [x] Add container shell access:
+  - [x] `docker-shell`
+
+## Improvements
+
+### Development Experience
+- [ ] Add development environment setup script
+- [ ] Improve error messages in Makefile targets
+- [ ] Add progress indicators for long-running tasks
+- [ ] Add validation for environment variables
+
+### Code Quality
+- [ ] Add more comprehensive linting rules
+- [ ] Add code coverage requirements
+- [ ] Add performance benchmarks
+- [ ] Add code complexity checks
+
+### Docker
+- [ ] Optimize Docker builds
+- [ ] Add multi-stage builds for all services
+- [ ] Add Docker Compose profiles
+- [ ] Add Docker health checks
+
+### Maintenance
+- [x] Add cleanup targets:
+  - [x] `clean-docker`
+  - [x] `clean-node`
+  - [x] `clean-python`
+- [x] Add dependency update targets:
+  - [x] `update`
+  - [x] `update-backend`
+  - [x] `update-frontend`
+- [x] Add development tools update target:
+  - [x] `update-tools`
+
+## Today's Tasks (2025-03-25)
+- [ ] Update branching strategy:
+  - [ ] Feature branches (feat/*):
+    - [ ] Auto-open PR to dev branch
+    - [ ] Run all tests and checks
+  - [ ] Development branch (dev):
+    - [ ] Auto-open PR to main branch on merge
+    - [ ] Tag and build staging image
+  - [ ] Main branch:
+    - [ ] Tag release version with semver
+    - [ ] Tag as Latest image
+- [ ] Update workflows:
+  - [ ] Make workflows pass locally with act in Docker
+  - [ ] Use Makefile as central control point
+  - [ ] Ensure compatibility with GitHub Actions
+- [ ] Test full flow:
+  - [ ] Verify feat -> dev -> main pipeline
+  - [ ] Ensure successful tests, checks, and builds
+  - [ ] Validate changelog generation
+  - [ ] Confirm proper image tagging and deployment
+
+## Notes
+- These features should be implemented incrementally
+- Each feature should be properly tested before being added
+- Documentation should be updated as features are added
+- Consider adding feature flags for experimental features
+- Makefile modularization should be done carefully to avoid breaking existing functionality
+- Each module should be self-contained and have clear dependencies
+- Consider using a module loader pattern for better organization
+- Add version compatibility checks between modules

@@ -41,39 +41,39 @@
 </head>
 <body>
     <h1>Direct FastAPI Login</h1>
-    
+
     <div class="form-group">
         <label for="username">Email:</label>
         <input type="email" id="username" value="admin@example.com">
     </div>
-    
+
     <div class="form-group">
         <label for="password">Password:</label>
         <input type="password" id="password" value="FastAPI_Secure_2025!">
     </div>
-    
+
     <button id="loginButton">Login</button>
-    
+
     <h3>Response:</h3>
     <pre id="response">Click the login button to authenticate...</pre>
-    
+
     <script>
         document.getElementById('loginButton').addEventListener('click', async () => {
             const responseElement = document.getElementById('response');
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            
+
             responseElement.textContent = 'Attempting login...';
-            
+
             try {
                 // Create form data
                 const formData = new URLSearchParams();
                 formData.append('username', username);
                 formData.append('password', password);
                 formData.append('grant_type', 'password');
-                
+
                 console.log('Form data:', formData.toString());
-                
+
                 // Make the direct request to the backend
                 const response = await fetch('http://api.localhost/api/v1/login/access-token', {
                     method: 'POST',
@@ -82,26 +82,26 @@
                     },
                     body: formData,
                 });
-                
+
                 // Get response details
                 const status = response.status;
                 const statusText = response.statusText;
-                
+
                 if (response.ok) {
                     // Try to parse the response as JSON
                     const data = await response.json();
-                    
+
                     // Store the token in localStorage
                     if (data.access_token) {
                         localStorage.setItem('access_token', data.access_token);
-                        
+
                         responseElement.textContent = JSON.stringify({
                             status,
                             statusText,
                             message: 'Login successful! Token stored in localStorage.',
                             token: data.access_token
                         }, null, 2);
-                        
+
                         // Redirect to the dashboard after 2 seconds
                         setTimeout(() => {
                             window.location.href = '/';
@@ -122,7 +122,7 @@
                     } catch (e) {
                         errorData = await response.text();
                     }
-                    
+
                     responseElement.textContent = JSON.stringify({
                         status,
                         statusText,

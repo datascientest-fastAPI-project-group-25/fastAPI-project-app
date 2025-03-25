@@ -20,16 +20,19 @@ You can test GitHub Actions workflows locally using [act](https://github.com/nek
 ### Setup
 
 1. Install act:
+
    ```bash
    brew install act
    ```
 
 2. Use the provided script to test workflows:
+
    ```bash
    ./scripts/test-workflow.sh [workflow-file] [event-type]
    ```
 
    Example:
+
    ```bash
    ./scripts/test-workflow.sh feature-branch-checks.yml push
    ```
@@ -46,6 +49,7 @@ The project includes an `.actrc` file with the following configurations:
 ```
 
 This configuration:
+
 - Uses Node.js-based Docker images required for workflows using Node.js
 - Sets CI=true to avoid warnings
 - Configures secrets as needed
@@ -55,14 +59,17 @@ This configuration:
 When testing GitHub Actions workflows locally:
 
 1. **Docker Image Configuration**:
+
    - Node-based images (node:18-bullseye, node:16-bullseye) are required for workflows using Node.js
    - These images have Node.js pre-installed, solving the "node: executable file not found" error
 
 2. **Security Scan Failures**:
+
    - Bandit may detect low severity issues in test code
    - Use the `--skip-security` flag to skip security checks during local testing
 
 3. **Missing Frontend Test Script**:
+
    - pnpm error "Missing script: test" may occur
    - This is expected if you haven't defined a test script in package.json
 
@@ -75,11 +82,13 @@ When testing GitHub Actions workflows locally:
 Recent improvements to workflows include:
 
 1. **Error Handling**:
+
    - Added checks for tool availability (Docker, `uv`)
    - Implemented conditional steps based on tool availability
    - Enhanced logging for better debugging
 
 2. **Cleanup Steps**:
+
    - Made cleanup steps always run, even if previous steps fail
    - Added proper error handling for git operations
 

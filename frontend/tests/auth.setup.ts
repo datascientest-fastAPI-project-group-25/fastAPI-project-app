@@ -43,7 +43,9 @@ setup("authenticate", async ({ page }) => {
     } catch (e) {
       console.error("Could not access page URL - page may be closed");
     }
-    throw new Error(`Authentication failed: ${error.message || 'Unknown error'}`);
+    throw new Error(
+      `Authentication failed: ${error.message || "Unknown error"}`,
+    );
   }
 
   // Save authentication state

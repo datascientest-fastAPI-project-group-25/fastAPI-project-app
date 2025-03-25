@@ -20,19 +20,19 @@ jobs:
           script: |
             const branch = context.payload.pull_request.head.ref;
             const labels = [];
-            
+
             if (branch.startsWith('feat/')) {
               labels.push('feature');
             } else if (branch.startsWith('fix/')) {
               labels.push('bug');
             }
-            
+
             if (context.payload.pull_request.base.ref === 'main') {
               labels.push('production');
             } else if (context.payload.pull_request.base.ref === 'dev') {
               labels.push('development');
             }
-            
+
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -55,15 +55,15 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
-            
+
             // Define potential reviewers with fallbacks
             const reviewerMap = {
               'backend': ['backend-reviewer', 'tech-lead'],
               'frontend': ['frontend-reviewer', 'tech-lead']
             };
-            
+
             const reviewersToAssign = new Set();
-            
+
             try {
               // Get repository collaborators to check if reviewers exist
               const collaborators = await github.rest.repos.listCollaborators({
@@ -71,10 +71,10 @@ jobs:
                 repo: context.repo.repo,
                 per_page: 100
               });
-              
+
               const collaboratorLogins = collaborators.data.map(user => user.login);
               console.log('Available collaborators:', collaboratorLogins);
-              
+
               // Determine which files were changed
               const fileTypes = new Set();
               files.data.forEach(file => {
@@ -84,7 +84,7 @@ jobs:
                   fileTypes.add('frontend');
                 }
               });
-              
+
               // Try to find valid reviewers from our map
               fileTypes.forEach(type => {
                 const potentialReviewers = reviewerMap[type] || [];
@@ -95,12 +95,12 @@ jobs:
                   }
                 }
               });
-              
+
               // If no valid reviewers found, try to assign the PR author's team lead
               if (reviewersToAssign.size === 0 && collaboratorLogins.includes('tech-lead')) {
                 reviewersToAssign.add('tech-lead');
               }
-              
+
               // Request reviews if we found valid reviewers
               if (reviewersToAssign.size > 0) {
                 console.log('Assigning reviewers:', Array.from(reviewersToAssign));

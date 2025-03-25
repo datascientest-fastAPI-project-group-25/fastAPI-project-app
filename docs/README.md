@@ -5,14 +5,17 @@ Welcome to the documentation for the DevOps Demo Application. This directory con
 ## Documentation Structure
 
 - **[Development](./development/)**
+
   - [Development Guide](./development/guide.md) - How to set up and run the application for local development
   - [Development Scripts](./development/scripts.md) - Utility scripts for development, testing, and deployment
 
 - **[Deployment](./deployment/)**
+
   - [Deployment Guide](./deployment/guide.md) - How to deploy the application to AWS ECS using GitHub Actions
 
 - **[Workflows](./workflows/)**
-  - *This directory will contain documentation for GitHub Actions workflows*
+
+  - _This directory will contain documentation for GitHub Actions workflows_
 
 - **[Git Hooks](./git-hooks.md)** - Documentation for the pre-commit git hooks setup
 

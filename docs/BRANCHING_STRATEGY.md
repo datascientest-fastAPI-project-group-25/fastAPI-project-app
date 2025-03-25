@@ -44,14 +44,17 @@ This project follows a structured branching strategy that enforces best practice
 ## Development Workflow
 
 1. **Start from main**:
+
    - When checking out the main branch, you'll be prompted to create a feature or fix branch
    - Use the interactive CLI tool to create a properly named branch
 
 2. **Make changes**:
+
    - Commit your changes with meaningful commit messages
    - Push your branch to origin
 
 3. **Pull Request**:
+
    - GitHub Actions will run tests on your branch
    - Create a pull request to merge into main
    - For fix branches with `-automerge` suffix, merging can be automatic after tests pass
@@ -75,6 +78,7 @@ npm run create-branch
 ```
 
 The tool will:
+
 - Ensure you're up to date with the main branch
 - Guide you through selecting a branch type (feature or fix)
 - Help you name your branch correctly
@@ -85,11 +89,13 @@ The tool will:
 We use pre-commit to manage Git hooks:
 
 1. **Post-Checkout Hook**:
+
    - Triggers when checking out the main branch
    - Prompts you to create a feature or fix branch
    - Launches the interactive branch creation tool
 
 2. **Pre-Push Hook**:
+
    - Prevents direct pushes to the main branch
    - Ensures all changes go through the proper workflow
 
@@ -119,14 +125,17 @@ pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre
 ## Best Practices
 
 1. **Never work directly on main**:
+
    - Always create a feature or fix branch
    - Use the interactive CLI tool to ensure proper naming
 
 2. **Use meaningful branch names**:
+
    - Choose descriptive names that reflect the purpose of your changes
    - Follow the naming convention: `feat/feature-name` or `fix/bug-name`
 
 3. **Write meaningful commit messages**:
+
    - Clearly describe what your changes do
    - Provide context for why the changes are needed
 

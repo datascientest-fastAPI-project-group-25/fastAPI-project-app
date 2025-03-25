@@ -12,20 +12,33 @@ help:
 	@echo "  make setup              Setup the project (create .env, install dependencies)"
 	@echo "  make env                Generate a secure .env file from .env.example"
 	@echo ""
-	@echo "Docker & pnpm:"
-	@echo "  make up                 Start Docker containers with pnpm and Traefik"
-	@echo "  make down               Stop Docker containers"
-	@echo "  make restart            Restart Docker containers"
+	@echo "Development Setup:"
+	@echo "  make setup-hooks        Setup git hooks with pre-commit"
+	@echo "  make run-hooks          Run pre-commit hooks manually"
+	@echo "  make validate-hooks     Validate pre-commit hook configuration"
+	@echo ""
+	@echo "CI/CD Workflows:"
+	@echo "  make ci                 Run full CI pipeline (lint, test, security)"
+	@echo "  make cd                 Run full CD pipeline (build, deploy)"
+	@echo "  make security-scan      Run security scanning and audits"
+	@echo "  make validate-workflows Validate all GitHub Actions workflows"
 	@echo ""
 	@echo "Testing & Validation:"
 	@echo "  make test               Run all tests"
 	@echo "  make test-backend       Run backend tests"
 	@echo "  make test-frontend      Run frontend tests with improved reliability"
+	@echo "  make test-integration   Run integration tests"
 	@echo "  make check-login        Test login functionality"
+	@echo ""
+	@echo "Docker & pnpm:"
+	@echo "  make up                 Start Docker containers with pnpm and Traefik"
+	@echo "  make down               Stop Docker containers"
+	@echo "  make restart            Restart Docker containers"
 	@echo ""
 	@echo "pnpm Monorepo Commands:"
 	@echo "  make build              Build all workspaces using pnpm"
 	@echo "  make lint               Run linting across all workspaces"
+	@echo "  make format             Format code across all workspaces"
 	@echo ""
 	@echo "Git Workflow:"
 	@echo "  make feat name=branch-name     Create a new feature branch"
@@ -104,27 +117,21 @@ down:
 restart: down up
 
 # Run all tests
-test: test-backend test-frontend
+test: test-backend test-frontend test-integration
+
+# Run integration tests
+test-integration:
+	@echo "Running integration tests..."
+	@docker-compose -f docker-compose.test.yml up backend-tests --exit-code-from backend-tests
 
 # Run backend tests
 test-backend:
 	@echo "Running backend tests..."
-	docker compose run --rm backend pytest
+	docker compose run --rm backend bash -c "source /app/.venv/bin/activate && pytest"
 
-# Run frontend tests locally using Docker
 test-frontend:
 	@echo "Running frontend tests..."
-	@echo "Setting up test environment..."
-	@docker compose up -d backend || (echo "Failed to start backend services" && exit 1)
-	@echo "Waiting for backend to be ready..."
-	@sleep 5
-	@echo "Running Playwright tests with debugging enabled..."
-	@docker compose run --rm frontend-test || \
-	(echo "\033[0;31mFrontend tests failed. Check the error messages above.\033[0m" && exit 1)
-	@echo "\033[0;32mFrontend tests completed successfully.\033[0m"
-	@docker compose down --remove-orphans
-
-
+	@docker-compose -f docker-compose.test.yml up frontend-test --exit-code-from frontend-test
 
 # Create a new feature branch
 feat:
@@ -174,7 +181,7 @@ build:
 	@echo "Building all workspaces using pnpm..."
 	@docker compose up -d frontend backend
 	@docker compose exec frontend sh -c "cd /app && pnpm -r build"
-	@docker compose exec backend sh -c "cd /app && pip install -e ."
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev,lint,types,test]' && ruff check app"
 	@echo "All builds complete."
 
 # Run linting across all workspaces
@@ -182,14 +189,22 @@ lint:
 	@echo "Running linting across all workspaces..."
 	@docker compose up -d frontend backend
 	@docker compose exec frontend sh -c "cd /app && pnpm install && cd frontend && pnpm run lint"
-	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff check app"
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev,lint,types,test]' && ruff check app"
 	@echo "Linting complete."
+
+# Format code across all workspaces
+format:
+	@echo "Formatting code across all workspaces..."
+	@docker compose up -d frontend backend
+	@docker compose exec frontend sh -c "cd /app && npm install -g pnpm && pnpm install && cd frontend && pnpm run format"
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev,lint,types,test]' && ruff format app"
+	@echo "Formatting complete."
 
 # Run backend linting
 backend-lint:
 	@echo "Running backend linting..."
 	@docker compose up -d backend
-	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff check app"
+	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev,lint,types,test]' && ruff check app"
 	@echo "Backend linting complete."
 
 # Setup Playwright for testing
@@ -226,7 +241,11 @@ act-test:
 # Test main-branch.yml workflow
 act-test-main:
 	@echo "Testing main-branch.yml workflow..."
-	@timeout 60 ./scripts/test-workflow.sh main-branch.yml pull_request || echo "Test timed out after 60 seconds"
+	@timeout 300 ./scripts/test-workflow.sh main-branch.yml pull_request || echo "Test timed out after 5 minutes"
+	@echo "\nTip: If the test fails, try:"
+	@echo "1. Running specific jobs: make act-test-job workflow=main-branch.yml job=<job_id>"
+	@echo "2. Check if required secrets are set in .secrets file"
+	@echo "3. Use --privileged flag if Docker permissions are needed"
 	@echo "Main branch workflow test complete."
 
 # Test branch-protection.yml workflow
@@ -264,7 +283,106 @@ act-test-job:
 	timeout 120 act $$EVENT -W .github/workflows/$(workflow) -j $(job) --verbose || echo "Test timed out after 120 seconds"
 	@echo "Job test complete."
 
+# CI Pipeline
+ci: lint test security-scan validate-workflows
+	@echo "CI pipeline completed successfully!"
+
+# CD Pipeline
+cd: build deploy
+	@echo "CD pipeline completed successfully!"
+
+# Security scanning
+security-scan:
+	@echo "Running security scans..."
+	@docker compose run --rm backend safety check
+	@docker compose run --rm frontend pnpm audit
+	@echo "Security scanning complete."
+
+# Validate all workflows
+validate-workflows: act-test-all
+	@echo "All workflows validated successfully."
+
+# Deploy application
+deploy:
+	@echo "Deploying application..."
+	@if [ -f "./scripts/deploy-app.sh" ]; then \
+		./scripts/deploy-app.sh; \
+	else \
+		echo "No deployment script found. Please create ./scripts/deploy-app.sh"; \
+		exit 1; \
+	fi
+
 .PHONY: help setup env up down restart init-db test test-backend test-frontend test-frontend-ci \
         feat fix fix-automerge clean build lint setup-playwright check-login \
         backend-lint frontend-build-docker act-test act-test-main act-test-protection \
-        act-test-all act-test-dry-run act-test-job
+        act-test-all act-test-dry-run act-test-job ci cd security-scan validate-workflows deploy \
+        setup-hooks run-hooks validate-hooks install lint test security-scan format clean \
+        backend-install backend-lint backend-format backend-test backend-security \
+        frontend-install frontend-lint frontend-format frontend-test frontend-security
+
+# Git Hooks Management
+setup-hooks:
+	@echo "🔧 Setting up git hooks with pre-commit..."
+	@./scripts/setup-precommit.sh
+	@echo "✅ Git hooks setup complete!"
+
+run-hooks:
+	@echo "🔍 Running pre-commit hooks..."
+	@pre-commit run --all-files
+	@echo "✅ Pre-commit hooks check complete!"
+
+validate-hooks:
+	@echo "🔍 Validating pre-commit hook configuration..."
+	@pre-commit validate-config
+	@pre-commit validate-manifest
+	@echo "✅ Pre-commit hook configuration is valid!"
+
+# Backend commands
+backend-install:
+	cd backend && python3 -m pip install uv && uv venv && . .venv/bin/activate && uv pip install -e ".[dev,lint,types,test]"
+
+backend-lint:
+	cd backend && source .venv/bin/activate && ruff check app && ruff format app --check
+
+backend-format:
+	cd backend && source .venv/bin/activate && ruff format app
+
+backend-test:
+	cd backend && source .venv/bin/activate && pytest --cov=app --cov-report=xml
+
+backend-security:
+	cd backend && source .venv/bin/activate && bandit -r app -x app/tests && safety check
+
+# Frontend commands
+frontend-install:
+	cd frontend && pnpm install --frozen-lockfile
+
+frontend-lint:
+	cd frontend && pnpm run lint && pnpm run format:check
+
+frontend-format:
+	cd frontend && pnpm run format
+
+frontend-test:
+	cd frontend && pnpm run test
+
+frontend-security:
+	cd frontend && pnpm audit
+
+# Combined commands
+install: backend-install frontend-install
+lint: backend-lint frontend-lint
+test: backend-test frontend-test
+security-scan: backend-security frontend-security
+format: backend-format frontend-format
+
+# Cleanup
+clean:
+	rm -rf backend/.venv
+	rm -rf frontend/node_modules
+	rm -rf backend/__pycache__
+	rm -rf backend/app/__pycache__
+	rm -rf backend/.pytest_cache
+	rm -rf backend/.coverage
+	rm -rf backend/coverage.xml
+	rm -rf frontend/coverage

@@ -21,20 +21,23 @@ Use the `enable-workflow.sh` script in the root directory:
 When re-enabling workflows, consider these dependencies:
 
 1. Core workflows:
+
    - branch-protection.yml
    - main-branch.yml
    - feature-branch.yml
    - fix-branch.yml
 
 2. Support workflows:
+
    - pr-workflow.yml
    - push-to-ghcr.yml
    - auto-pr.yml
 
 3. CI/CD workflows:
-   - testing/*
-   - ci/*
-   - deploy/*
+
+   - testing/\*
+   - ci/\*
+   - deploy/\*
 
 4. Utility workflows:
    - latest-changes.yml

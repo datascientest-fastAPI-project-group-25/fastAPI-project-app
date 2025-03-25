@@ -6,7 +6,7 @@ global:
 # Enable API and Dashboard
 api:
   dashboard: true
-  insecure: true  # For development only, use secure: true with proper authentication in production
+  insecure: true # For development only, use secure: true with proper authentication in production
 
 # Configure entrypoints
 entryPoints:
