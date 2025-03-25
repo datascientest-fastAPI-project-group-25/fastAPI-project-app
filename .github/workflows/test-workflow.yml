@@ -1,0 +1,24 @@
+name: Test Workflow
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/workflow-development
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test environment
+        run: |
+          echo "Testing workflow in ${GITHUB_REF_NAME}"
+          echo "Event: ${GITHUB_EVENT_NAME}"
+          echo "Workflow: ${GITHUB_WORKFLOW}"
+          echo "Run ID: ${GITHUB_RUN_ID}"
+
+      - name: Show git status
+        run: git status
