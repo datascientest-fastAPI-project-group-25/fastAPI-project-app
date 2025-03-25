@@ -1,0 +1,43 @@
+name: Test Changelog Generation
+
+on:
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  test-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get latest commits
+        id: get_commits
+        run: |
+          # Get the last 10 commits
+          curl -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/commits?per_page=10 > commits.json
+
+      - name: Parse commits and generate changelog
+        id: generate_changelog
+        run: |
+          echo "# Changelog" > CHANGELOG.md
+          echo "## ${GITHUB_REF_NAME} (${GITHUB_RUN_ID})" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+          # Parse commits and add to changelog
+          cat commits.json | jq -r '.[] | "* \(.commit.message) by \(.commit.author.name) on \(.commit.author.date)"' >> CHANGELOG.md
+
+      - name: Show generated changelog
+        run: cat CHANGELOG.md
+
+      - name: Show commit details
+        run: cat commits.json | jq .
+
+      - name: Get diff between commits
+        run: |
+          # Get the diff between the last two commits
+          curl -H "Accept: application/vnd.github.v3.diff" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/compare/${GITHUB_SHA}~1...${GITHUB_SHA}

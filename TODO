@@ -124,6 +124,27 @@
 - [x] Add development tools update target:
   - [x] `update-tools`
 
+## Today's Tasks (2025-03-25)
+- [ ] Update branching strategy:
+  - [ ] Feature branches (feat/*):
+    - [ ] Auto-open PR to dev branch
+    - [ ] Run all tests and checks
+  - [ ] Development branch (dev):
+    - [ ] Auto-open PR to main branch on merge
+    - [ ] Tag and build staging image
+  - [ ] Main branch:
+    - [ ] Tag release version with semver
+    - [ ] Tag as Latest image
+- [ ] Update workflows:
+  - [ ] Make workflows pass locally with act in Docker
+  - [ ] Use Makefile as central control point
+  - [ ] Ensure compatibility with GitHub Actions
+- [ ] Test full flow:
+  - [ ] Verify feat -> dev -> main pipeline
+  - [ ] Ensure successful tests, checks, and builds
+  - [ ] Validate changelog generation
+  - [ ] Confirm proper image tagging and deployment
+
 ## Notes
 - These features should be implemented incrementally
 - Each feature should be properly tested before being added

@@ -1,0 +1,43 @@
+name: Update Docs
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get changed files
+        id: changed_files
+        run: |
+          echo "changed_files=$(git diff --name-only HEAD~1 HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Check if docs need update
+        id: check_docs
+        run: |
+          if [ -n "${{ steps.changed_files.outputs.changed_files }}" ]; then
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger docs update
+        if: ${{ steps.check_docs.outputs.needs_update == 'true' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { context } = require('@actions/github');
+            const payload = {
+              event_type: 'update-docs',
+              client_payload: {
+                repository: 'fastAPI-project-docs',
+                branch: 'main'
+              }
+            };
+            await github.rest.repos.createDispatchEvent(payload);

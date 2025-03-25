@@ -33,7 +33,7 @@ services:
       - VITE_API_URL=http://api.localhost
       - NODE_OPTIONS=--max-old-space-size=8192
       - PNPM_HOME=/usr/local/bin
-    command: sh -c "npm install -g pnpm typescript && pnpm install --frozen-lockfile && cd frontend && pnpm dev"
+    command: sh -c "npm install -g pnpm && pnpm install --frozen-lockfile && cd frontend && pnpm dev"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     labels:
