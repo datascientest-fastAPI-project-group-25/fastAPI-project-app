@@ -103,6 +103,64 @@
 - [x] Add dependency update targets (update, update-backend, update-frontend)
 - [x] Add development tools update target (update-tools)
 
+## Workflow Optimization Plan
+
+1. **Streamline Python tools**
+   - [x] Remove redundant tools (black, mypy)
+   - [x] Focus on uv for dependency management
+   - [x] Use ruff for linting and formatting
+
+2. **Frontend improvements**
+   - [x] Use Biome for formatting and linting
+   - [x] Maintain pnpm for package management
+
+3. **Security checks**
+   - [x] Keep bandit and pip-audit
+   - [x] Add safety checks for Python dependencies
+   - [x] Run npm audit for frontend
+
+4. **Testing strategy**
+   - [x] Maintain pytest for backend tests
+   - [x] Keep frontend test framework
+   - [ ] Add coverage reporting
+
+5. **Workflow optimization**
+   - [x] Reduce duplicate setup steps
+   - [x] Enable caching for uv and pnpm
+   - [x] Set appropriate timeouts
+
+## Branching Strategy Implementation Plan (2025-03-25)
+
+1. **Main Branch Protection**
+   - [ ] Add workflow to block direct pushes to main
+   - [ ] Configure MachineUser for main branch testing
+   - [ ] Set up required reviews for PRs to main
+
+2. **Dev Branch Setup**
+   - [ ] Create dev branch if not exists
+   - [ ] Add workflow for staging deployments
+   - [ ] Configure PR requirements for dev branch
+
+3. **Branch Creation Process**
+   - [ ] Enhance create-branch CLI tool
+   - [ ] Add pre-branch creation checks (fetch main)
+   - [ ] Implement branch type validation (feat/fix)
+
+4. **Automated PR Workflow**
+   - [ ] Add auto-PR creation for feat/fix branches
+   - [ ] Configure required checks for PRs
+   - [ ] Set up automatic staging builds on PR merge
+
+5. **Main Branch Integration**
+   - [ ] Add auto-PR creation from dev to main
+   - [ ] Configure production builds on main merge
+   - [ ] Implement version tagging and changelog generation
+
+6. **Testing & Validation**
+   - [ ] Test MachineUser access with GH Action Secrets
+   - [ ] Verify staging deployment workflow
+   - [ ] Validate production build process
+
 ## Notes
 
 - These features should be implemented incrementally
