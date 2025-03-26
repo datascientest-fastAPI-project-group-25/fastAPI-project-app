@@ -2,13 +2,19 @@
 
 ## Workflow Organization
 
-### Core Workflows
+Workflows are now organized into subdirectories by function:
+
+- **branch/**: Workflows related to branch operations and protection
+- **ci/**: Continuous integration workflows for testing, linting, and security checks
+- **utils/**: Utility workflows and scripts for testing and maintenance
+
+### Branch Workflows
 These workflows manage our branching strategy and core CI/CD processes:
 
-- **branch-protection.yml**: Protects main and dev branches from direct pushes
-- **feature-branch-checks.yml**: Runs checks for feature branches
-- **fix-branch.yml**: Handles fix branches with optional automerge
-- **main-branch.yml**: Main branch production workflow
+- **branch/branch-protection.yml**: Protects main and dev branches from direct pushes
+- **branch/feature-branch.yml**: Runs checks for feature branches
+- **branch/fix-branch.yml**: Handles fix branches with optional automerge
+- **branch/main-branch.yml**: Main branch production workflow
 
 ## Branch Protection Rules
 
@@ -25,7 +31,7 @@ These workflows manage our branching strategy and core CI/CD processes:
 1. Core Workflows (must be enabled first):
    - branch-protection.yml
    - main-branch.yml
-   - feature-branch-checks.yml
+   - feature-branch.yml
    - fix-branch.yml
 
 ## Best Practices
@@ -34,6 +40,23 @@ These workflows manage our branching strategy and core CI/CD processes:
 2. Use fix branches for bug fixes
 3. Merge to dev first, then to main
 4. Ensure all tests pass before merging
+
+## Local Testing with Act
+
+You can test workflows locally using Act:
+
+```bash
+# Test a specific workflow
+./.github/workflows/test-workflow.sh feature-branch.yml push
+
+# Test a specific job within a workflow
+./.github/workflows/test-workflow.sh feature-branch.yml push style-checks
+```
+
+The test-workflow.sh script will:
+1. Create a .actrc file with recommended settings if it doesn't exist
+2. Create a test-event.json file if it doesn't exist
+3. Run the workflow with the specified event type
 
 ## Troubleshooting
 
@@ -48,4 +71,4 @@ If you encounter issues with workflows, check:
 All workflow files should be version controlled and follow these naming conventions:
 
 - Active workflows: `*.yml`
-- Shared components: `_shared/*`
+- Archived workflows: `archive/*`

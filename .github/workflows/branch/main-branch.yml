@@ -5,6 +5,7 @@ on:
     branches:
       - main
     types: [closed]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -37,18 +38,23 @@ jobs:
 
       - name: Install Python and Node.js
         run: |
-          apt-get update && apt-get install -y \
-            curl \
-            gnupg \
-            python3.10 \
-            python3.10-venv \
-            python3-pip \
-            && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-            && apt-get install -y nodejs \
-            && npm install -g pnpm@10.6.4 \
-            && pip3 install --no-cache-dir uv \
-            && apt-get clean \
-            && rm -rf /var/lib/apt/lists/*
+          # Skip installation in Act environment
+          if [ "$GITHUB_ACTIONS" = "true" ] && [ "$ACT" != "true" ]; then
+            apt-get update && apt-get install -y \
+              curl \
+              gnupg \
+              python3.10 \
+              python3.10-venv \
+              python3-pip \
+              && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+              && apt-get install -y nodejs \
+              && npm install -g pnpm@10.6.4 \
+              && pip3 install --no-cache-dir uv \
+              && apt-get clean \
+              && rm -rf /var/lib/apt/lists/*
+          else
+            echo "Running in Act environment, skipping system package installation"
+          fi
 
       - name: Cache UV packages
         uses: actions/cache@v4
@@ -88,18 +94,23 @@ jobs:
 
       - name: Install Python and Node.js
         run: |
-          apt-get update && apt-get install -y \
-            curl \
-            gnupg \
-            python3.10 \
-            python3.10-venv \
-            python3-pip \
-            && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-            && apt-get install -y nodejs \
-            && npm install -g pnpm@10.6.4 \
-            && pip3 install --no-cache-dir uv \
-            && apt-get clean \
-            && rm -rf /var/lib/apt/lists/*
+          # Skip installation in Act environment
+          if [ "$GITHUB_ACTIONS" = "true" ] && [ "$ACT" != "true" ]; then
+            apt-get update && apt-get install -y \
+              curl \
+              gnupg \
+              python3.10 \
+              python3.10-venv \
+              python3-pip \
+              && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+              && apt-get install -y nodejs \
+              && npm install -g pnpm@10.6.4 \
+              && pip3 install --no-cache-dir uv \
+              && apt-get clean \
+              && rm -rf /var/lib/apt/lists/*
+          else
+            echo "Running in Act environment, skipping system package installation"
+          fi
 
       - name: Cache UV packages
         uses: actions/cache@v4

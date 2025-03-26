@@ -1,10 +1,14 @@
-name: Fix Branch Workflow
+name: Feature Branch Checks
 
 on:
   push:
     branches:
-      - 'fix/*'
+      - 'feat/*'
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   style-checks:
@@ -27,7 +31,11 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install -r requirements.txt
+          if [ -f requirements.txt ]; then
+            uv pip install -r requirements.txt
+          elif [ -f pyproject.toml ]; then
+            uv pip install -e .
+          fi
           uv pip install pytest pytest-cov ruff bandit pip-audit
         working-directory: backend
 
@@ -70,7 +78,11 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install -r requirements.txt
+          if [ -f requirements.txt ]; then
+            uv pip install -r requirements.txt
+          elif [ -f pyproject.toml ]; then
+            uv pip install -e .
+          fi
           uv pip install pytest pytest-cov
         working-directory: backend
 
@@ -91,6 +103,12 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.4
+          run_install: false
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -102,7 +120,7 @@ jobs:
         working-directory: frontend
 
       - name: Run Biome check
-        run: npx biome check --no-errors-on-unmatched --files-ignore-unknown=true ./
+        run: pnpm biome check --no-errors-on-unmatched --files-ignore-unknown=true ./
         working-directory: frontend
 
       - name: Run tests
@@ -125,8 +143,8 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Run npm audit
-        run: npm audit
+      - name: Run pnpm audit
+        run: pnpm audit
         working-directory: frontend
 
       - name: Set up uv
@@ -148,70 +166,27 @@ jobs:
           safety check
         working-directory: backend
 
-  build-image:
-    needs: security-checks
-    name: Build Fix Image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=sha
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
   create-pr:
-    needs: [security-checks, build-image]
+    needs: security-checks
     name: Create PR to dev
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - name: Check for automerge
-        id: check-automerge
-        run: |
-          if [[ "$GITHUB_REF" == *"-automerge"* ]]; then
-            echo "AUTOMERGE=1" >> $GITHUB_ENV
-          fi
-
-      - name: Create PR (standard)
-        if: env.AUTOMERGE != '1'
-        uses: peter-evans/create-pull-request@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: "fix: ${GITHUB_REF_NAME}"
-          body: "Automatically created PR from fix branch\n\nImage built: ${{ steps.meta.outputs.tags }}"
-          base: dev
-          branch: ${{ github.event.pull_request.head.ref }}
-          labels: fix
-          assignees: ${{ github.actor }}
 
-      - name: Create PR (automerge)
-        if: env.AUTOMERGE == '1'
-        uses: peter-evans/create-pull-request@v4
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: "fix: ${GITHUB_REF_NAME} [AUTOMERGE]"
-          body: "Automatically created PR from fix branch\n\nImage built: ${{ steps.meta.outputs.tags }}"
+          title: "feat: ${{ github.ref_name }}"
+          body: "Automatically created PR from feature branch"
           base: dev
-          branch: ${{ github.event.pull_request.head.ref }}
-          labels: fix,automated
+          branch: ${{ github.ref_name }}
+          labels: feature
           assignees: ${{ github.actor }}

@@ -69,8 +69,8 @@ repos:
       - id: shellcheck
         args: [--severity=warning]
 
-  - repo: https://github.com/pre-commit/mirrors-black
-    rev: v25.1.0
+  - repo: https://github.com/psf/black
+    rev: 24.3.0 # Use a recent stable version
     hooks:
       - id: black
         args: ["--line-length=88"]

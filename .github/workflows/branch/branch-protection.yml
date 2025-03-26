@@ -9,6 +9,10 @@ on:
     branches: [main, dev]
   pull_request:
     branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   branch-protection:
@@ -21,12 +25,21 @@ jobs:
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
         id: check_author
         env:
-          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+          # For Act compatibility, provide fallbacks for all variables
+          COMMITS_JSON: ${{ toJSON(github.event.commits || '[]') }}
           # Check if commit message contains PR merge pattern
           PR_MERGE_MESSAGE: ${{ contains(github.event.head_commit.message || '', 'Merge pull request') }}
           # Pass the full head_commit object as JSON to analyze in the script
           HEAD_COMMIT_JSON: ${{ toJSON(github.event.head_commit || '{}') }}
+          # Add environment variable for Act detection
+          ACT: ${{ env.ACT }}
         run: |
+          # Skip check in Act environment or set to success for testing
+          if [ "$ACT" = "true" ]; then
+            echo "Running in Act environment, skipping branch protection check"
+            exit 0
+          fi
+
           # Extract the commits JSON to a file for processing
           echo "$COMMITS_JSON" > commits.json
 
@@ -62,7 +75,16 @@ jobs:
 
       - name: Verify PR source
         if: github.event_name == 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+        env:
+          # Add environment variable for Act detection
+          ACT: ${{ env.ACT }}
         run: |
+          # Skip check in Act environment or set to success for testing
+          if [ "$ACT" = "true" ]; then
+            echo "Running in Act environment, skipping PR source verification"
+            exit 0
+          fi
+
           # For PRs to main, ensure they come from dev
           if [ "$GITHUB_REF" == "refs/heads/main" ]; then
             if [ "$GITHUB_HEAD_REF" != "dev" ]; then
@@ -73,7 +95,16 @@ jobs:
 
       - name: Verify PR state
         if: github.event_name == 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+        env:
+          # Add environment variable for Act detection
+          ACT: ${{ env.ACT }}
         run: |
+          # Skip check in Act environment or set to success for testing
+          if [ "$ACT" = "true" ]; then
+            echo "Running in Act environment, skipping PR state verification"
+            exit 0
+          fi
+
           # For PRs to main, ensure they are approved
           if [ "$GITHUB_REF" == "refs/heads/main" ]; then
             if [ "$GITHUB_EVENT_NAME" == "pull_request" ] && [ "$GITHUB_EVENT_ACTION" == "closed" ]; then

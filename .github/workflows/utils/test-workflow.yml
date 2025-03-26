@@ -1,0 +1,58 @@
+name: Test Workflow
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/workflow-development
+
+permissions:
+  contents: read
+
+jobs:
+  test-act-compatibility:
+    name: Test Act Compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test environment
+        run: |
+          echo "Testing workflow in ${GITHUB_REF_NAME:-local}"
+          echo "Event: ${GITHUB_EVENT_NAME:-manual}"
+          echo "Workflow: ${GITHUB_WORKFLOW:-test-workflow}"
+          echo "Run ID: ${GITHUB_RUN_ID:-local}"
+          echo "ACT: ${ACT:-false}"
+
+      - name: Test uv installation
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.5.11"
+          enable-cache: true
+
+      - name: Test pnpm installation
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.4
+          run_install: false
+
+      - name: Test Node.js installation
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Test Python installation
+        run: |
+          # Check if Python is already installed
+          python3 --version || echo "Python not available in this environment"
+
+          # For Act compatibility, we'll skip the setup-python action
+          # as it may not work properly in the Act environment
+
+      - name: Show git status
+        run: git status
+
+      - name: Test successful
+        run: echo "✅ Act compatibility test completed successfully"
