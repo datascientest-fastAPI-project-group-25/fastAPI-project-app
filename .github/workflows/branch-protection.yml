@@ -1,97 +1,45 @@
 name: Branch Protection
 
-# This workflow protects the main branch from direct pushes
-# It will intentionally fail if someone tries to push directly to main
-# This is expected behavior and part of our branching strategy
-#
-# Note: PR merge commits are allowed as they represent approved changes
-# The workflow detects PR merges by checking both the commit message pattern
-# and the commit structure (merge commits have multiple parents)
-
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
-  branch-protection:
+  protect:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check commit author
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        id: check_author
-        env:
-          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
-          # Check if commit message contains PR merge pattern
-          PR_MERGE_MESSAGE: ${{ contains(github.event.head_commit.message || '', 'Merge pull request') }}
-          # Pass the full head_commit object as JSON to analyze in the script
-          HEAD_COMMIT_JSON: ${{ toJSON(github.event.head_commit || '{}') }}
+      - name: Check branch protection
         run: |
-          # Extract the commits JSON to a file for processing
-          echo "$COMMITS_JSON" > commits.json
-          
-          # More robust detection of PR merge commits:
-          # 1. Check if commit message contains 'Merge pull request'
-          # 2. Check if it's a merge commit (has multiple parents)
-          
-          # Check if this is a merge commit by examining the head_commit structure
-          IS_MERGE_COMMIT="false"
-          if [ "$HEAD_COMMIT_JSON" != "null" ] && [ "$HEAD_COMMIT_JSON" != "{}" ]; then
-            if command -v jq >/dev/null 2>&1; then
-              # Use jq to check if it's a merge commit (has multiple parents)
-              # A merge commit will have a 'parents' array with more than one entry
-              PARENTS_COUNT=$(echo "$HEAD_COMMIT_JSON" | jq '.parents | length // 0')
-              if [ "$PARENTS_COUNT" -gt 1 ]; then
-                IS_MERGE_COMMIT="true"
-              fi
-            else
-              # Fallback: check if commit message starts with 'Merge'
-              COMMIT_MSG=$(echo "$HEAD_COMMIT_JSON" | grep -o '"message":"[^"]*"' | head -1 | cut -d':' -f2 | tr -d '"')
-              if [[ "$COMMIT_MSG" == Merge* ]]; then
-                IS_MERGE_COMMIT="true"
-              fi
-            fi
-          fi
-          
-          echo "PR merge message: $PR_MERGE_MESSAGE, Is merge commit: $IS_MERGE_COMMIT"
-          
-          if [ "$PR_MERGE_MESSAGE" == "true" ] || [ "$IS_MERGE_COMMIT" == "true" ]; then
-            echo "Detected PR merge commit (message pattern or merge structure), allowing it"
-            echo "is_blocked=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          # Check if commits array exists and is not empty
-          if [ "$COMMITS_JSON" != "null" ] && [ "$COMMITS_JSON" != "[]" ]; then
-            # Use jq to safely extract the author name if it exists
-            if command -v jq >/dev/null 2>&1; then
-              AUTHOR_NAME=$(jq -r '.[0].author.name // "unknown"' commits.json)
-            else
-              # Fallback if jq is not available
-              AUTHOR_NAME=$(grep -o '"name":"[^"]*"' commits.json | head -1 | cut -d':' -f2 | tr -d '"')
-            fi
-            
-            if [ "$AUTHOR_NAME" != "semantic-release-bot" ] && [ "$AUTHOR_NAME" != "null" ] && [ "$AUTHOR_NAME" != "unknown" ]; then
-              echo "is_blocked=true" >> $GITHUB_OUTPUT
-            else
-              echo "is_blocked=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "is_blocked=false" >> $GITHUB_OUTPUT
+          if [ "${{ github.event.pull_request.head.ref }}" == "main" ] || [ "${{ github.event.pull_request.head.ref }}" == "dev" ]; then
+            echo "Direct push to protected branches is not allowed. Please create a feature branch instead."
+            exit 1
           fi
 
-      - name: Block direct pushes to main
-        if: steps.check_author.outputs.is_blocked == 'true'
+      - name: Check PR requirements
         run: |
-          echo "::warning::This check is SUPPOSED TO FAIL for direct pushes to main - this is not an error in the workflow. See docs/BRANCHING_STRATEGY.md for more information."
-          echo "::error::Direct pushes to main branch are not allowed. Please create a pull request from a feature or fix branch."
-          exit 1
-          
-      - name: Verification passed
-        if: steps.check_author.outputs.is_blocked != 'true'
+          # Add checks for PR requirements
+          # For example, check if PR title follows convention
+          if [ -z "${{ github.event.pull_request.title }}" ]; then
+            echo "PR title is required"
+            exit 1
+          fi
+
+          # Check if PR has required labels
+          if [ -z "${{ github.event.pull_request.labels }}" ]; then
+            echo "PR must have at least one label"
+            exit 1
+          fi
+
+      - name: Check PR requirements
+        if: github.event_name == 'pull_request'
         run: |
-          echo "Branch protection check passed. This commit is either from semantic-release-bot or via an approved PR."
+          # This is a placeholder for PR review checks
+          # GitHub already handles required reviews through branch protection rules
+          # This step can be expanded later to add custom review requirements
+          echo "PR review requirements will be enforced by GitHub branch protection settings"

@@ -16,23 +16,27 @@ This document provides an overview of the utility scripts available in the proje
 A unified script for building, pushing, and deploying the application.
 
 **Usage:**
+
 ```bash
 ./scripts/deploy-app.sh [build|push|deploy|all]
 ```
 
 **Options:**
+
 - `build` - Build Docker images only
 - `push` - Build and push Docker images
 - `deploy` - Deploy application to Docker Swarm
 - `all` - Build, push, and deploy (default if no option provided)
 
 **Required Environment Variables:**
+
 - `TAG`: Docker image tag (required for all operations)
 - `DOMAIN`: Domain name (required for deploy operation)
 - `STACK_NAME`: Docker stack name (required for deploy operation)
 - `FRONTEND_ENV`: Frontend environment (defaults to 'production')
 
 **Example:**
+
 ```bash
 # Build and push images only
 TAG=v1.0.0 ./scripts/deploy-app.sh push
@@ -48,21 +52,25 @@ TAG=v1.0.0 DOMAIN=example.com STACK_NAME=myapp ./scripts/deploy-app.sh all
 A unified script for running tests locally or in CI environments.
 
 **Usage:**
+
 ```bash
 ./scripts/test-app.sh [local|ci] [test_args...]
 ```
 
 **Options:**
+
 - `local` - Run tests in local development environment (default)
 - `ci` - Run tests in CI environment
 
 Additional arguments are passed to pytest.
 
 **Environment Variables:**
+
 - `SKIP_CLEANUP`: Set to any value to skip cleanup after tests
 - `SKIP_BUILD`: Set to any value to skip Docker build step
 
 **Example:**
+
 ```bash
 # Run all tests locally
 ./scripts/test-app.sh local
@@ -81,14 +89,17 @@ Additional arguments are passed to pytest.
 Generates TypeScript client code from OpenAPI specification.
 
 **Usage:**
+
 ```bash
 ./scripts/dev-generate-client.sh
 ```
 
 **Environment Variables:**
+
 - `SKIP_FORMAT`: Set to any value to skip code formatting
 
 **Example:**
+
 ```bash
 # Generate client with formatting
 ./scripts/dev-generate-client.sh
@@ -102,11 +113,13 @@ SKIP_FORMAT=1 ./scripts/dev-generate-client.sh
 Helps create feature branches following the established branch strategy.
 
 **Usage:**
+
 ```bash
 ./scripts/feature.sh <feature-name>
 ```
 
 **Example:**
+
 ```bash
 ./scripts/feature.sh add-user-authentication
 ```
@@ -129,6 +142,7 @@ This script is typically run by the app-status container at the end of startup, 
 Verifies database initialization and migrations status.
 
 **Usage:**
+
 ```bash
 ./scripts/check-prestart-status.sh
 ```
@@ -138,11 +152,13 @@ Verifies database initialization and migrations status.
 Tests GitHub Actions workflows locally with act.
 
 **Usage:**
+
 ```bash
 ./scripts/test-workflow.sh <workflow-file> [event-type]
 ```
 
 **Example:**
+
 ```bash
 ./scripts/test-workflow.sh feature-branch-checks.yml push
 ```

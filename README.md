@@ -34,7 +34,7 @@ graph TD
 - **Database**: PostgreSQL
 - **Infrastructure**: Docker, Traefik, GitHub Container Registry (GHCR)
 - **CI/CD**: GitHub Actions
-- **Build Tools**: pnpm, Biome
+- **Build Tools**: pnpm, Biome, UV (Python package manager)
 
 ## 🛠️ Development Environment Setup
 
@@ -42,7 +42,7 @@ graph TD
 
 - [Docker](https://www.docker.com/) and Docker Compose
 - [Python](https://www.python.org/) (3.11+)
-- [uv](https://github.com/astral-sh/uv/) for Python package management
+- [UV](https://github.com/astral-sh/uv/) for Python package management
 - [Git](https://git-scm.com/)
 - [pnpm](https://pnpm.io/) for efficient package management and faster builds
 
@@ -115,7 +115,7 @@ make feat name=branch-name
 make fix name=branch-name
 
 # Create a new fix branch with automerge
-make fix-auto name=branch-name
+make fix-automerge name=branch-name
 ```
 
 ## 🗄️ Database Initialization
@@ -142,7 +142,7 @@ This project uses a modern, high-performance build system:
 
 - **pnpm**: For efficient package management with disk space optimization and faster builds
 - **Traefik**: For efficient reverse proxy and routing
-- **UV**: For optimized Python package management
+- **UV**: For optimized Python package management with dependency groups
 
 All build operations are handled through Docker and the Makefile for consistency.
 
@@ -193,20 +193,67 @@ docker compose logs -f backend
 docker compose up -d --build
 
 # Restart all services
-make docker-restart
+make restart
 ```
 
 ## 💻 Development Workflow
 
 **All development must be done using the Makefile commands** for consistency across environments. The Makefile abstracts away the complexity of individual tools and provides a standardized interface for all development tasks, ensuring that everyone follows the same processes regardless of their local setup.
 
-### Using pnpm for Faster Builds
+### 🌿 Branching Strategy
 
-This project uses pnpm for efficient package management and monorepo capabilities, significantly improving build times and reducing disk space usage. All operations are performed using Docker for consistent environments:
+This project follows a structured branching strategy to ensure code quality and streamline the development process:
+
+1. **Main Branch (`main`)**
+   - Production-ready code only
+   - Protected from direct pushes
+   - Changes only accepted through PRs from the `dev` branch
+   - Triggers production builds and deployments
+
+2. **Development Branch (`dev`)**
+   - Integration branch for features and fixes
+   - Protected from direct pushes
+   - Changes only accepted through PRs from feature/fix branches
+   - Triggers staging deployments for testing
+
+3. **Feature Branches (`feat/*`)**
+   - Created for new features or enhancements
+   - Branched from `dev`
+   - First push automatically opens a PR to `dev`
+   - Requires passing all tests and code reviews
+
+4. **Fix Branches (`fix/*`)**
+   - Created for bug fixes
+   - Branched from `dev`
+   - First push automatically opens a PR to `dev`
+   - Can be marked for auto-merge by adding `automerge` suffix
+
+5. **Workflow Automation**
+   - When a PR to `dev` is merged, a new PR to `main` is automatically created
+   - All branches are automatically deleted after successful merge
+
+**Creating Branches:**
+
+Always use the Makefile commands to create branches to ensure proper naming and setup:
+
+```bash
+# Create a feature branch
+make branch-create type=feat name=your-feature-name
+
+# Create a fix branch
+make branch-create type=fix name=your-fix-name
+
+# Create a fix branch with auto-merge enabled
+make branch-create type=fix name=your-fix-name automerge=true
+```
+
+### Using pnpm and UV for Faster Builds
+
+This project uses pnpm for frontend package management and UV for Python package management, significantly improving build times and reducing disk space usage:
 
 ```bash
 # Using Makefile (recommended)
-make up  # Starts all services with pnpm
+make up  # Starts all services with pnpm and UV
 
 # Run pnpm commands through Makefile
 make build  # Builds all workspaces (ensures containers are running)
@@ -220,7 +267,7 @@ make backend-lint  # Run backend linting
 make check-login  # Verify API login works correctly
 ```
 
-pnpm uses a content-addressable store for packages, making installations faster and more efficient. The node_modules are linked rather than copied, saving significant disk space.
+pnpm uses a content-addressable store for packages, making installations faster and more efficient. The node_modules are linked rather than copied, saving significant disk space. UV provides similar benefits for Python packages with its efficient dependency resolution and caching.
 
 ## 🔄 Development Workflow
 
@@ -231,8 +278,8 @@ pnpm uses a content-addressable store for packages, making installations faster 
    - Create for new features or bug fixes
    - Must pass pre-commit hooks before pushing
    - On push triggers:
-     - Style checks (black, flake8, eslint, prettier)
-     - Security checks (bandit, npm audit, pip-audit)
+     - Style checks (ruff, eslint, prettier)
+     - Security checks (bandit, npm audit)
      - Linting & formatting
      - Unit tests
    - Requires PR review to merge to `dev`

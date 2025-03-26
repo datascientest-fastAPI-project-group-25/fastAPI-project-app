@@ -39,9 +39,9 @@ The project appears to be a web application that includes user authentication, i
   - `/scripts/test.sh`
 
 ## Directories for Source Files
-- **Backend Source Files**: 
+- **Backend Source Files**:
   - `/backend/app`
-- **Frontend Source Files**: 
+- **Frontend Source Files**:
   - `/frontend/src`
 
 ## Documentation Files Location

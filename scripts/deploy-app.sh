@@ -54,7 +54,7 @@ check_docker() {
     echo "Please start Docker and try again"
     exit 1
   fi
-  
+
   echo -e "${GREEN}✓ Docker is available${NC}"
 }
 
@@ -62,58 +62,58 @@ check_docker() {
 check_env_vars() {
   local operation=$1
   local missing_vars=0
-  
+
   if [ -z "${TAG}" ]; then
     echo -e "${RED}Error: TAG environment variable is not set${NC}"
     missing_vars=1
   fi
-  
+
   if [[ "$operation" == "deploy" || "$operation" == "all" ]]; then
     if [ -z "${DOMAIN}" ]; then
       echo -e "${RED}Error: DOMAIN environment variable is not set${NC}"
       missing_vars=1
     fi
-    
+
     if [ -z "${STACK_NAME}" ]; then
       echo -e "${RED}Error: STACK_NAME environment variable is not set${NC}"
       missing_vars=1
     fi
   fi
-  
+
   # Set default for FRONTEND_ENV if not provided
   FRONTEND_ENV=${FRONTEND_ENV:-production}
-  
+
   if [ $missing_vars -eq 1 ]; then
     exit 1
   fi
-  
+
   echo -e "${GREEN}✓ All required environment variables are set${NC}"
 }
 
 # Function to build Docker images
 build_images() {
   echo -e "${BLUE}Building Docker images with tag: ${TAG}${NC}"
-  
+
   docker compose \
     -f docker-compose.yml \
     build
-    
+
   echo -e "${GREEN}✓ Docker images built successfully${NC}"
 }
 
 # Function to push Docker images
 push_images() {
   echo -e "${BLUE}Pushing Docker images with tag: ${TAG}${NC}"
-  
+
   docker compose -f docker-compose.yml push
-  
+
   echo -e "${GREEN}✓ Docker images pushed successfully${NC}"
 }
 
 # Function to deploy the application
 deploy_app() {
   echo -e "${BLUE}Deploying application to stack: ${STACK_NAME}${NC}"
-  
+
   # Check if docker-auto-labels is available
   if ! command -v docker-auto-labels &> /dev/null; then
     echo -e "${YELLOW}Warning: docker-auto-labels is not installed${NC}"
@@ -122,30 +122,30 @@ deploy_app() {
     echo -e "${BLUE}Generating Docker stack configuration with auto-labels${NC}"
     docker-auto-labels docker-stack.yml
   fi
-  
+
   # Generate stack configuration
   docker compose \
     -f docker-compose.yml \
     config > docker-stack.yml
-  
+
   # Deploy the stack
   docker stack deploy -c docker-stack.yml --with-registry-auth "${STACK_NAME}"
-  
+
   echo -e "${GREEN}✓ Application deployed successfully${NC}"
 }
 
 # Main execution
 main() {
   local operation=${1:-all}
-  
+
   echo -e "${BLUE}=== DevOps Demo Application - Deployment Script ===${NC}"
-  
+
   # Check Docker availability
   check_docker
-  
+
   # Check environment variables
   check_env_vars "$operation"
-  
+
   # Perform the requested operation
   case "$operation" in
     build)
@@ -169,7 +169,7 @@ main() {
       exit 1
       ;;
   esac
-  
+
   echo -e "${GREEN}=== Operation completed successfully ===${NC}"
 }
 

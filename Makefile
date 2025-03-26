@@ -4,267 +4,275 @@
 # Default target
 .DEFAULT_GOAL := help
 
-# Help target
+# Variables
+PYTHON_VERSION := 3.10
+BACKEND_DIR := backend
+FRONTEND_DIR := frontend
+
+#################################################
+# Help and Documentation                        #
+#################################################
 help:
-	@echo "DevOps Demo Application Makefile"
+	@echo "DevOps Demo Application Makefile "
 	@echo ""
-	@echo "Usage:"
-	@echo "  make setup              Setup the project (create .env, install dependencies)"
+	@echo "Setup Commands:"
+	@echo "  make setup              Setup the project (dependencies, env files)"
+	@echo "  make install            Install all dependencies"
 	@echo "  make env                Generate a secure .env file from .env.example"
 	@echo ""
-	@echo "Docker & pnpm:"
-	@echo "  make up                 Start Docker containers with pnpm and Traefik"
-	@echo "  make down               Stop Docker containers"
-	@echo "  make restart            Restart Docker containers"
+	@echo "Development Commands:"
+	@echo "  make run                Run the application locally"
+	@echo "  make lint               Run all linting checks"
+	@echo "  make format             Format all code"
+	@echo "  make clean              Remove build artifacts and cache files"
 	@echo ""
-	@echo "Testing & Validation:"
+	@echo "Testing Commands:"
 	@echo "  make test               Run all tests"
 	@echo "  make test-backend       Run backend tests"
-	@echo "  make test-frontend      Run frontend tests with improved reliability"
-	@echo "  make check-login        Test login functionality"
+	@echo "  make test-frontend      Run frontend tests"
+	@echo "  make test-integration   Run integration tests"
 	@echo ""
-	@echo "pnpm Monorepo Commands:"
-	@echo "  make build              Build all workspaces using pnpm"
-	@echo "  make lint               Run linting across all workspaces"
+	@echo "CI/CD Commands:"
+	@echo "  make ci                 Run full CI pipeline (lint, test, security)"
+	@echo "  make cd                 Run full CD pipeline (build, deploy)"
+	@echo "  make security-scan      Run security scanning and audits"
+	@echo "  make test-workflow       Test a GitHub workflow with Act (interactive)"
+	@echo "  make test-workflow-params category=CATEGORY event=EVENT [workflow=WORKFLOW]  Test a specific workflow"
 	@echo ""
-	@echo "Git Workflow:"
-	@echo "  make feat name=branch-name     Create a new feature branch"
-	@echo "  make fix name=branch-name      Create a new fix branch"
-	@echo "  make fix-automerge name=branch-name  Create a fix branch with automerge"
+	@echo "Git Hooks:"
+	@echo "  make setup-hooks        Setup git hooks with pre-commit"
+	@echo "  make run-hooks          Run pre-commit hooks manually"
 	@echo ""
-	@echo "GitHub Actions:"
-	@echo "  make act-test           Show available GitHub Actions workflow tests"
-	@echo "  make act-test-main      Test main-branch.yml workflow"
-	@echo "  make act-test-protection Test branch-protection.yml workflow"
-	@echo "  make act-test-all      Test all workflows"
-	@echo "  make act-test-dry-run  Dry run of workflows (no execution)"
-	@echo "  make act-test-job      Test specific job in a workflow (see usage in Makefile)"
-	@echo ""
-	@echo "Maintenance:"
-	@echo "  make clean              Clean up temporary files and directories"
+	@echo "Docker Commands:"
+	@echo "  make docker-build       Build all Docker images"
+	@echo "  make docker-up          Start all Docker containers"
+	@echo "  make docker-down        Stop all Docker containers"
 
-# Setup the project
-setup: env up
-	@echo "Project setup complete!"
+#################################################
+# Setup and Installation                        #
+#################################################
+setup: install env setup-hooks
+	@echo " Project setup complete!"
 
-# Generate a secure .env file from .env.example
+install: backend-install frontend-install
+	@echo " All dependencies installed!"
+
 env:
-	@echo "Generating secure .env file from .env.example..."
-	@if [ -f .env ]; then \
-		echo ".env file already exists. Skipping..."; \
-	else \
+	@echo " Generating .env file from .env.example..."
+	@if [ ! -f .env ] && [ -f .env.example ]; then \
 		cp .env.example .env; \
-		SECRET_KEY=$$(openssl rand -hex 32); \
-		sed -i '' "s/SECRET_KEY=.*/SECRET_KEY=$$SECRET_KEY/" .env; \
-		DB_PASSWORD=$$(openssl rand -base64 12); \
-		sed -i '' "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$$DB_PASSWORD/" .env; \
-		ADMIN_PASSWORD=$$(openssl rand -base64 12); \
-		sed -i '' "s/FIRST_SUPERUSER_PASSWORD=.*/FIRST_SUPERUSER_PASSWORD=$$ADMIN_PASSWORD/" .env; \
-		echo "Generated secure .env file with random credentials:"; \
-		echo "  - SECRET_KEY: $$SECRET_KEY"; \
-		echo "  - DB Password: $$DB_PASSWORD"; \
-		echo "  - Admin Password: $$ADMIN_PASSWORD"; \
-	fi
-
-# Start Docker containers with pnpm for faster builds
-up:
-	@echo "Starting Docker containers with pnpm..."
-	docker compose up -d
-	@echo "Docker containers started. You can access the application at:"
-	@echo "  - Frontend: http://dashboard.localhost"
-	@echo "  - Backend API: http://api.localhost"
-	@echo "  - API Docs: http://api.localhost/docs"
-	@echo "  - API ReDoc: http://api.localhost/redoc"
-	@echo "  - Traefik Dashboard: http://localhost:8080"
-	@echo ""
-	@echo "Default login credentials:"
-	@echo "  - Email: admin@example.com"
-	@echo "  - Password: Check your .env file for FIRST_SUPERUSER_PASSWORD"
-	@echo ""
-	@echo "Validating login functionality..."
-	@sleep 5
-	@if command -v python3 > /dev/null && python3 -c "import requests" 2>/dev/null; then \
-		$(MAKE) check-login; \
+		echo " .env file created from .env.example"; \
 	else \
-		echo "Skipping login check (python3 or requests module not available)"; \
+		echo "  .env file already exists or .env.example not found"; \
 	fi
 
-# Initialize the database (create tables and first superuser)
-init-db:
-	@echo "Initializing database..."
-	docker compose exec backend python /app/scripts/init_db.py
-	@echo "Database initialization complete."
+#################################################
+# Backend Commands                              #
+#################################################
+backend-install:
+	@echo " Installing backend dependencies..."
+	cd $(BACKEND_DIR) && python3 -m pip install uv && uv venv && . .venv/bin/activate && uv pip install -e ".[dev,lint,types,test]"
+	@echo " Backend dependencies installed!"
 
-# Stop Docker containers
-down:
-	@echo "Stopping Docker containers..."
-	docker compose down --remove-orphans
-
-# Restart Docker containers
-restart: down up
-
-# Run all tests
-test: test-backend test-frontend
-
-# Run backend tests
-test-backend:
-	@echo "Running backend tests..."
-	docker compose run --rm backend pytest
-
-# Run frontend tests locally using Docker
-test-frontend:
-	@echo "Running frontend tests..."
-	@echo "Setting up test environment..."
-	@docker compose up -d backend || (echo "Failed to start backend services" && exit 1)
-	@echo "Waiting for backend to be ready..."
-	@sleep 5
-	@echo "Running Playwright tests with debugging enabled..."
-	@docker compose run --rm frontend-test || \
-	(echo "\033[0;31mFrontend tests failed. Check the error messages above.\033[0m" && exit 1)
-	@echo "\033[0;32mFrontend tests completed successfully.\033[0m"
-	@docker compose down --remove-orphans
-
-
-
-# Create a new feature branch
-feat:
-	@if [ -z "$(name)" ]; then \
-		echo "Error: Branch name not specified. Use 'make feat name=branch-name'"; \
-		exit 1; \
-	fi
-	@echo "Creating feature branch: feat/$(name)"
-	@node ./scripts/create-branch.js --type feat --name $(name)
-
-# Create a new fix branch
-fix:
-	@if [ -z "$(name)" ]; then \
-		echo "Error: Branch name not specified. Use 'make fix name=branch-name'"; \
-		exit 1; \
-	fi
-	@echo "Creating fix branch: fix/$(name)"
-	@node ./scripts/create-branch.js --type fix --name $(name)
-
-# Create a new fix branch with automerge
-fix-automerge:
-	@if [ -z "$(name)" ]; then \
-		echo "Error: Branch name not specified. Use 'make fix-automerge name=branch-name'"; \
-		exit 1; \
-	fi
-	@echo "Creating fix branch with automerge: fix/$(name)-automerge"
-	@node ./scripts/create-branch.js --type fix --name $(name) --automerge
-
-# Clean up temporary files and directories
-clean:
-	@echo "Cleaning up temporary files and directories..."
-	@find . -name "*.pyc" -delete
-	@find . -name "__pycache__" -delete
-	@find . -name ".pytest_cache" -delete
-	@find . -name ".coverage" -delete
-	@find . -name "htmlcov" -delete
-	@find . -name "*.egg-info" -delete
-	@find . -name "dist" -delete
-	@find . -name "build" -delete
-	@echo "Cleanup complete!"
-
-# pnpm commands for monorepo management
-# ----------------------------------------
-
-# Build all workspaces
-build:
-	@echo "Building all workspaces using pnpm..."
-	@docker compose up -d frontend backend
-	@docker compose exec frontend sh -c "cd /app && pnpm -r build"
-	@docker compose exec backend sh -c "cd /app && pip install -e ."
-	@echo "All builds complete."
-
-# Run linting across all workspaces
-lint:
-	@echo "Running linting across all workspaces..."
-	@docker compose up -d frontend backend
-	@docker compose exec frontend sh -c "cd /app && pnpm install && cd frontend && pnpm run lint"
-	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff check app"
-	@echo "Linting complete."
-
-# Run backend linting
 backend-lint:
-	@echo "Running backend linting..."
-	@docker compose up -d backend
-	@docker compose exec backend bash -c "source /app/.venv/bin/activate && uv pip install -e '.[dev]' && ruff check app"
-	@echo "Backend linting complete."
+	@echo " Running backend linting..."
+	cd $(BACKEND_DIR) && source .venv/bin/activate && ruff check app && ruff format app --check
+	@echo " Backend linting complete!"
 
-# Setup Playwright for testing
-setup-playwright:
-	@echo "Setting up Playwright..."
-	@docker compose run --rm frontend sh /app/frontend/setup-playwright.sh
-	@echo "Playwright setup complete."
+backend-format:
+	@echo " Formatting backend code..."
+	cd $(BACKEND_DIR) && source .venv/bin/activate && ruff format app
+	@echo " Backend code formatted!"
 
-# Test login functionality
-check-login:
-	@echo "Testing login functionality..."
-	@python3 test_login.py http://api.localhost
-	@echo "Login test complete."
+backend-test:
+	@echo " Running backend tests..."
+	cd $(BACKEND_DIR) && source .venv/bin/activate && pytest --cov=app
+	@echo " Backend tests complete!"
 
-# Build frontend using Docker multi-stage build
-frontend-build-docker:
-	@echo "Building frontend via Docker multi-stage build..."
-	@docker build --target builder -f frontend/Dockerfile -t frontend-builder .
-	@echo "Extracting build artifacts..."
-	@docker create --name extract-container frontend-builder
-	@docker cp extract-container:/app/frontend/dist ./frontend/dist
-	@docker rm extract-container
-	@echo "Frontend build complete using Docker."
+backend-security:
+	@echo " Running backend security checks..."
+	cd $(BACKEND_DIR) && source .venv/bin/activate && bandit -r app/ && safety check
+	@echo " Backend security checks complete!"
 
-# Test GitHub Actions workflows locally
-act-test:
-	@echo "Testing GitHub Actions workflows locally..."
-	@echo "Available workflow tests:"
-	@echo "  make act-test-main         Test main-branch.yml workflow"
-	@echo "  make act-test-protection   Test branch-protection.yml workflow"
-	@echo "  make act-test-all          Test all workflows"
-	@echo "  make act-test-dry-run      Dry run of all workflows (no execution)"
+#################################################
+# Frontend Commands                             #
+#################################################
+frontend-install:
+	@echo " Installing frontend dependencies..."
+	cd $(FRONTEND_DIR) && pnpm install --frozen-lockfile
+	@echo " Frontend dependencies installed!"
 
-# Test main-branch.yml workflow
-act-test-main:
-	@echo "Testing main-branch.yml workflow..."
-	@timeout 60 ./scripts/test-workflow.sh main-branch.yml pull_request || echo "Test timed out after 60 seconds"
-	@echo "Main branch workflow test complete."
+frontend-lint:
+	@echo " Running frontend linting..."
+	cd $(FRONTEND_DIR) && pnpm run lint && pnpm run format:check
+	@echo " Frontend linting complete!"
 
-# Test branch-protection.yml workflow
-act-test-protection:
-	@echo "Testing branch-protection.yml workflow..."
-	@timeout 60 ./scripts/test-workflow.sh branch-protection.yml push || echo "Test timed out after 60 seconds"
-	@echo "Branch protection workflow test complete."
+frontend-format:
+	@echo " Formatting frontend code..."
+	cd $(FRONTEND_DIR) && pnpm run format
+	@echo " Frontend code formatted!"
 
-# Test all workflows
-act-test-all: act-test-main act-test-protection
-	@echo "All workflow tests complete."
+frontend-test:
+	@echo " Running frontend tests..."
+	cd $(FRONTEND_DIR) && pnpm run test
+	@echo " Frontend tests complete!"
 
-# Dry run of workflows (shows what would be executed without running)
-act-test-dry-run:
-	@echo "Performing dry run of workflows..."
-	@act -n \
-		--eventpath .github/workflows/test-event.json \
-		--env GITHUB_TOKEN=test-token
-	@echo "Dry run complete."
+frontend-security:
+	@echo " Running frontend security checks..."
+	cd $(FRONTEND_DIR) && pnpm audit
+	@echo " Frontend security checks complete!"
 
-# Test specific job in a workflow
-# Usage: make act-test-job workflow=main-branch.yml job=lint event=pull_request
-act-test-job:
+#################################################
+# Combined Commands                             #
+#################################################
+lint: backend-lint frontend-lint
+	@echo " All linting checks complete!"
+
+format: backend-format frontend-format
+	@echo " All code formatting complete!"
+
+test: test-backend test-frontend
+	@echo " All tests complete!"
+
+test-backend: backend-test
+test-frontend: frontend-test
+
+test-integration:
+	@echo " Running integration tests..."
+	@echo " Integration tests not yet implemented"
+
+security-scan: backend-security frontend-security
+	@echo " All security checks complete!"
+
+ci: lint test security-scan
+	@echo " CI pipeline complete!"
+
+cd: ci docker-build
+	@echo " CD pipeline complete!"
+
+#################################################
+# Docker Commands                               #
+#################################################
+docker-build:
+	@echo " Building Docker images..."
+	docker compose build
+	@echo " Docker images built!"
+
+docker-up:
+	@echo " Starting Docker containers..."
+	docker compose up -d
+	@echo " Docker containers started!"
+
+docker-down:
+	@echo " Stopping Docker containers..."
+	docker compose down
+	@echo " Docker containers stopped!"
+
+#################################################
+# Git Hooks                                     #
+#################################################
+setup-hooks:
+	@echo " Setting up git hooks with pre-commit..."
+	@node scripts/setup-precommit.js
+	@echo " Git hooks setup complete!"
+
+run-hooks:
+	@echo " Running pre-commit hooks..."
+	@pre-commit run --all-files
+	@echo " Pre-commit hooks check complete!"
+
+#################################################
+# GitHub Workflows                              #
+#################################################
+
+validate-workflows:
+	@echo " Validating GitHub Actions workflows..."
+	@for file in .github/workflows/**/*.yml; do \
+		echo "Validating $$file..."; \
+		yamlvalidator $$file || echo "  Validation issues in $$file"; \
+	done
+	@echo " Workflow validation complete!"
+
+test-workflow:
+	@echo " Testing GitHub workflow (interactive)..."
+	@node scripts/test-workflow-selector.js
+	@echo " Workflow testing complete!"
+
+test-workflow-params:
+	@echo " Testing GitHub workflow with parameters..."
+	@if [ -z "$(category)" ] || [ -z "$(event)" ]; then \
+		echo "Error: Required parameters missing. Usage: make test-workflow-params category=CATEGORY event=EVENT [workflow=WORKFLOW]"; \
+		exit 1; \
+	fi
 	@if [ -z "$(workflow)" ]; then \
-		echo "Error: Workflow not specified. Use 'make act-test-job workflow=<workflow-file> job=<job-id> [event=<event-type>]'"; \
-		exit 1; \
+		act $(event) -W .github/workflows/$(category)/ --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
+			--env-file .env \
+			--env PROJECT_NAME=FastAPI \
+			--env POSTGRES_SERVER=localhost \
+			--env POSTGRES_USER=postgres \
+			--env FIRST_SUPERUSER=admin@example.com \
+			--env FIRST_SUPERUSER_PASSWORD=password; \
+	else \
+		act $(event) -W .github/workflows/$(category)/$(workflow) --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
+			--env-file .env \
+			--env PROJECT_NAME=FastAPI \
+			--env POSTGRES_SERVER=localhost \
+			--env POSTGRES_USER=postgres \
+			--env FIRST_SUPERUSER=admin@example.com \
+			--env FIRST_SUPERUSER_PASSWORD=password; \
 	fi
-	@if [ -z "$(job)" ]; then \
-		echo "Error: Job not specified. Use 'make act-test-job workflow=<workflow-file> job=<job-id> [event=<event-type>]'"; \
-		exit 1; \
-	fi
-	@echo "Testing job '$(job)' in workflow '$(workflow)'..."
-	@EVENT="$(event)" || "pull_request"; \
-	echo "Using event: $$EVENT"; \
-	timeout 120 act $$EVENT -W .github/workflows/$(workflow) -j $(job) --verbose || echo "Test timed out after 120 seconds"
-	@echo "Job test complete."
+	@echo " Workflow testing complete!"
 
-.PHONY: help setup env up down restart init-db test test-backend test-frontend test-frontend-ci \
-        feat fix fix-automerge clean build lint setup-playwright check-login \
-        backend-lint frontend-build-docker act-test act-test-main act-test-protection \
-        act-test-all act-test-dry-run act-test-job
+test-all-workflows:
+	@echo " Testing all GitHub workflows..."
+	@echo " Testing feature workflows..."
+	@make test-workflow-params category=feature event=push workflow=feature-push.yml || echo "Feature workflow test failed"
+	@echo " Testing pre-commit workflows..."
+	@make test-workflow-params category=pre-commit event=push workflow=pre-commit.yml || echo "Pre-commit workflow test failed"
+	@echo " Testing dev workflows..."
+	@make test-workflow-params category=dev event=push workflow=merge-to-dev.yml || echo "Dev workflow test failed"
+	@make test-workflow-params category=dev event=pull_request workflow=pr-to-dev.yml || echo "Dev PR workflow test failed"
+	@echo " Testing main workflows..."
+	@make test-workflow-params category=main event=push workflow=merge-to-main.yml || echo "Main workflow test failed"
+	@make test-workflow-params category=main event=pull_request workflow=pr-to-main.yml || echo "Main PR workflow test failed"
+	@echo " All workflow tests complete!"
+
+#################################################
+# Cleanup                                       #
+#################################################
+clean:
+	@echo " Cleaning up project..."
+	rm -rf $(BACKEND_DIR)/.venv
+	rm -rf $(FRONTEND_DIR)/node_modules
+	rm -rf $(BACKEND_DIR)/__pycache__
+	rm -rf $(BACKEND_DIR)/app/__pycache__
+	rm -rf $(BACKEND_DIR)/.pytest_cache
+	rm -rf $(BACKEND_DIR)/.coverage
+	rm -rf $(BACKEND_DIR)/coverage.xml
+	rm -rf $(FRONTEND_DIR)/coverage
+	@echo " Cleanup complete!"
+
+#################################################
+# PHONY Targets                                 #
+#################################################
+.PHONY: help setup install env \
+        backend-install backend-lint backend-format backend-test backend-security \
+        frontend-install frontend-lint frontend-format frontend-test frontend-security \
+        lint format test test-backend test-frontend test-integration \
+        security-scan ci cd \
+        docker-build docker-up docker-down \
+        setup-hooks run-hooks \
+        test-workflow test-workflow-params validate-workflows \
+        clean test-app-local test-app-ci
+
+
+
+test-app-local:
+	@echo " Running tests in local mode..."
+	@node scripts/test-app.js local $(TEST_ARGS)
+	@echo " Tests completed successfully!"
+
+test-app-ci:
+	@echo " Running tests in CI mode..."
+	@node scripts/test-app.js ci $(TEST_ARGS)
+	@echo " Tests completed successfully!"

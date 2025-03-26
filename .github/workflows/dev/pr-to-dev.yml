@@ -1,0 +1,36 @@
+name: PR to Dev
+
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build staging image
+        run: |
+          docker build -t ${GITHUB_REPOSITORY}:staging -f Dockerfile --target staging .
+
+      - name: Run staging tests
+        run: |
+          docker-compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+          docker-compose -f docker-compose.yml -f docker-compose.staging.yml run --rm test
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push staging image
+        run: |
+          docker tag ${GITHUB_REPOSITORY}:staging ghcr.io/${GITHUB_REPOSITORY}:staging
+          docker push ghcr.io/${GITHUB_REPOSITORY}:staging

@@ -1,0 +1,39 @@
+name: Merge to Dev
+
+on:
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start staging environment
+        run: |
+          docker-compose -f docker-compose.yml -f docker-compose.staging.yml build
+          docker-compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+
+      - name: Run health check
+        run: |
+          # Wait for services to be ready
+          sleep 10
+          curl -f http://localhost:8000/api/health || exit 1
+
+      - name: Create PR to main
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: auto-pr-to-main
+          title: 'chore: Automatic PR from dev to main'
+          body: 'Automatically created PR to merge changes from dev to main'
+          labels: 'auto-pr'
+          draft: true

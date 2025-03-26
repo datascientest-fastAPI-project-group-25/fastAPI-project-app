@@ -40,17 +40,17 @@
         document.getElementById('testLogin').addEventListener('click', async () => {
             const responseElement = document.getElementById('response');
             responseElement.textContent = 'Testing login...';
-            
+
             try {
                 // Create form data
                 const formData = new URLSearchParams();
                 formData.append('username', 'admin@example.com');
                 formData.append('password', 'FastAPI_Secure_2025!');
                 formData.append('grant_type', 'password');
-                
+
                 // Log what we're sending
                 console.log('Form data:', formData.toString());
-                
+
                 // Make the request
                 const response = await fetch('http://api.localhost/api/v1/login/access-token', {
                     method: 'POST',
@@ -59,7 +59,7 @@
                     },
                     body: formData,
                 });
-                
+
                 // Get the response details
                 const status = response.status;
                 const statusText = response.statusText;
@@ -67,7 +67,7 @@
                 for (const [key, value] of response.headers.entries()) {
                     headers[key] = value;
                 }
-                
+
                 // Try to parse the response as JSON
                 let data;
                 try {
@@ -75,7 +75,7 @@
                 } catch (e) {
                     data = await response.text();
                 }
-                
+
                 // Display the response
                 responseElement.textContent = JSON.stringify({
                     status,
@@ -83,7 +83,7 @@
                     headers,
                     data
                 }, null, 2);
-                
+
             } catch (error) {
                 responseElement.textContent = 'Error: ' + error.message;
                 console.error('Login error:', error);
@@ -93,18 +93,18 @@
         document.getElementById('testDirectFetch').addEventListener('click', async () => {
             const responseElement = document.getElementById('response');
             responseElement.textContent = 'Testing direct fetch...';
-            
+
             try {
                 // Make a direct fetch request to test connectivity
                 const response = await fetch('http://api.localhost/api/v1/utils/health-check/');
                 const data = await response.json();
-                
+
                 responseElement.textContent = JSON.stringify({
                     status: response.status,
                     statusText: response.statusText,
                     data
                 }, null, 2);
-                
+
             } catch (error) {
                 responseElement.textContent = 'Error: ' + error.message;
                 console.error('Fetch error:', error);

@@ -4,7 +4,6 @@ This document describes how to set up and run the application for local developm
 
 ## Prerequisites
 
-
 ## Local Development with Docker Compose
 
 The easiest way to run the application locally is using Docker Compose:

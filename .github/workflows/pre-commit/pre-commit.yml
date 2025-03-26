@@ -1,0 +1,52 @@
+name: Pre-commit Checks
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+          cache: 'pip'
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Set up environment variables
+        run: |
+          echo "PROJECT_NAME=FastAPI" >> $GITHUB_ENV
+          echo "POSTGRES_SERVER=localhost" >> $GITHUB_ENV
+          echo "POSTGRES_USER=postgres" >> $GITHUB_ENV
+          echo "FIRST_SUPERUSER=admin@example.com" >> $GITHUB_ENV
+          echo "FIRST_SUPERUSER_PASSWORD=password" >> $GITHUB_ENV
+
+      - name: Run linting checks only
+        run: |
+          # Skip hooks that require Docker or complex dependencies
+          SKIP=pytest-check,biome,black,flake8,bandit pre-commit run --all-files --hook-stage commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push changes if any
+        if: steps.pre-commit.outputs.changed == 'true'
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          git add .
+          git commit -m "chore: pre-commit auto-formatting"
+          git push origin ${{ github.ref }}

@@ -51,6 +51,7 @@ docker compose up -d
 ```
 
 This will start:
+
 - Frontend at http://dashboard.localhost
 - Backend API at http://api.localhost
 - Database and other services
@@ -155,9 +156,9 @@ The frontend uses environment variables for configuration. In development, these
 
 Key environment variables:
 
-| Variable | Purpose | Example |
-|----------|---------|--------|
-| `VITE_API_URL` | Backend API URL | `https://api.example.com` |
-| `VITE_APP_ENV` | Application environment | `production` |
+| Variable       | Purpose                 | Example                   |
+| -------------- | ----------------------- | ------------------------- |
+| `VITE_API_URL` | Backend API URL         | `https://api.example.com` |
+| `VITE_APP_ENV` | Application environment | `production`              |
 
 For more information on the deployment process, see the CI/CD Pipeline section in the main README.
