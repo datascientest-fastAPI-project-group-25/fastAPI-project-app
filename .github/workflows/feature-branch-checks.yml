@@ -27,7 +27,7 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install -r requirements.txt
+          uv pip install -e .
           uv pip install pytest pytest-cov ruff bandit pip-audit
         working-directory: backend
 
@@ -70,7 +70,7 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install -r requirements.txt
+          uv pip install -e .
           uv pip install pytest pytest-cov
         working-directory: backend
 
