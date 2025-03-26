@@ -164,13 +164,13 @@ if (!branchType || !branchName) {
           rl.question("Enable automerge? (y/N): ", (answer) => {
             const enableAutomerge = answer.toLowerCase() === "y";
             rl.close();
-            updateDevBranch().then(() => 
+            updateDevBranch().then(() =>
               createBranchWithParams(type, name, enableAutomerge)
             );
           });
         } else {
           rl.close();
-          updateDevBranch().then(() => 
+          updateDevBranch().then(() =>
             createBranchWithParams(type, name, false)
           );
         }
@@ -189,7 +189,7 @@ if (!branchType || !branchName) {
     process.exit(1);
   }
 
-  updateDevBranch().then(() => 
+  updateDevBranch().then(() =>
     createBranchWithParams(branchType, branchName, automerge)
   );
 }

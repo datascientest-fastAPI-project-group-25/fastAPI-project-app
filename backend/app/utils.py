@@ -55,9 +55,7 @@ def send_email(
     if settings.SMTP_PASSWORD:
         smtp_options["password"] = settings.SMTP_PASSWORD
     response = message.send(to=email_to, smtp=smtp_options)
-    logger.info(
-        f"send email result: {response}"
-    )
+    logger.info(f"send email result: {response}")
 
 
 def generate_test_email(email_to: str) -> EmailData:
@@ -70,9 +68,7 @@ def generate_test_email(email_to: str) -> EmailData:
     return EmailData(html_content=html_content, subject=subject)
 
 
-def generate_reset_password_email(
-    email_to: str, email: str, token: str
-) -> EmailData:
+def generate_reset_password_email(email_to: str, email: str, token: str) -> EmailData:
     project_name = settings.PROJECT_NAME
     subject = f"{project_name} - Password recovery for user {email}"
     link = f"{settings.FRONTEND_HOST}/reset-password?token={token}"

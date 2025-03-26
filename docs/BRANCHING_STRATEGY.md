@@ -7,7 +7,7 @@ graph TD
     A[feat/*] -->|Auto-PR| B(dev)
     C[fix/*] -->|Auto-PR| B
     B -->|Manual PR| D[main]
-    
+
     D -->|Production| E[ghcr.io/org/repo:version]
     D -->|Latest| F[ghcr.io/org/repo:latest]
     B -->|Staging| G[ghcr.io/org/repo:version-stg]

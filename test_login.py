@@ -10,11 +10,7 @@ def test_login(base_url, username, password):
     print(f"Using API URL: {base_url}")
 
     # Prepare the form data
-    form_data = {
-        "username": username,
-        "password": password,
-        "grant_type": "password"
-    }
+    form_data = {"username": username, "password": password, "grant_type": "password"}
 
     # Set the proper content type for form data
     headers = {"Content-Type": "application/x-www-form-urlencoded"}

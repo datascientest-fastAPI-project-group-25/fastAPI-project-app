@@ -6,7 +6,7 @@ set -e
 
 # Default event type is push
 EVENT_TYPE=${2:-push}
-WORKFLOW_FILE=$1
+WORKFLOW_FILE=$(realpath "$1")
 
 if [ -z "$WORKFLOW_FILE" ]; then
   echo "Error: Workflow file not specified"
@@ -16,10 +16,13 @@ if [ -z "$WORKFLOW_FILE" ]; then
 fi
 
 # Check if the workflow file exists
-if [ ! -f ".github/workflows/$WORKFLOW_FILE" ]; then
-  echo "Error: Workflow file .github/workflows/$WORKFLOW_FILE not found"
+if [ ! -f "$WORKFLOW_FILE" ]; then
+  echo "Error: Workflow file not found: $WORKFLOW_FILE"
   exit 1
 fi
+
+# Get the relative path from .github/workflows/
+REL_PATH="${WORKFLOW_FILE#*.github/workflows/}"
 
 # Detect platform and set appropriate flags
 PLATFORM_FLAGS=""
@@ -44,15 +47,15 @@ if [ ! -f "frontend/pnpm-lock.yaml" ]; then
   (cd frontend && rm -f package-lock.json && pnpm install)
 fi
 
-echo "Testing workflow: $WORKFLOW_FILE with event: $EVENT_TYPE"
+echo "Testing workflow: $REL_PATH with event: $EVENT_TYPE"
 echo "=================================================="
 
 # Run the workflow with act
-echo "Running: act $EVENT_TYPE -W .github/workflows/$WORKFLOW_FILE $PLATFORM_FLAGS --verbose"
-act $EVENT_TYPE -W .github/workflows/$WORKFLOW_FILE $PLATFORM_FLAGS --verbose || {
+echo "Running: act $EVENT_TYPE -W .github/workflows/$REL_PATH $PLATFORM_FLAGS --verbose"
+act $EVENT_TYPE -W ".github/workflows/$REL_PATH" --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest --verbose || {
   echo "Error: act command failed or timed out"
   echo "You can try:"
-  echo "1. Running with specific jobs: act $EVENT_TYPE -W .github/workflows/$WORKFLOW_FILE -j <job_id>"
+  echo "1. Running with specific jobs: act $EVENT_TYPE -W .github/workflows/$REL_PATH -j <job_id>"
   echo "2. Running with --privileged flag if Docker permissions are needed"
   echo "3. Check if all required secrets are set in .secrets file"
   echo "4. Check if all required dependencies are installed"

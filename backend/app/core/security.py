@@ -19,9 +19,7 @@ try:
     test_hash = pwd_context.hash("test")
     logger.info("Successfully initialized bcrypt password hashing")
 except Exception as e:
-    logger.warning(
-        f"Error initializing bcrypt: {e}. Falling back to sha256_crypt"
-    )
+    logger.warning(f"Error initializing bcrypt: {e}. Falling back to sha256_crypt")
     # Fall back to sha256_crypt which has fewer dependencies
     pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
@@ -32,9 +30,7 @@ ALGORITHM = "HS256"
 def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode = {"exp": expire, "sub": str(subject)}
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=ALGORITHM
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 
