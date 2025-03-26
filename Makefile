@@ -182,25 +182,7 @@ run-hooks:
 
 #################################################
 # GitHub Workflows                              #
-							break; \
-						fi; \
-					done; \
-				fi; \
-				break; \
-			fi; \
-		done; \
-	else \
-		EVENT=$${EVENT:-push}; \
-		JOB=$${JOB:-""}; \
-		# Extract just the filename part if a path was provided
-		WORKFLOW_FILENAME="$${WORKFLOW##*/}"; \
-		if [ -n "$$JOB" ]; then \
-			./.github/workflows/utils/test-workflow.sh $$WORKFLOW_FILENAME $$EVENT $$JOB; \
-		else \
-			./.github/workflows/utils/test-workflow.sh $$WORKFLOW_FILENAME $$EVENT; \
-		fi; \
-	fi
-	@echo "✅ Workflow test complete!"
+#################################################
 
 validate-workflows:
 	@echo "🔍 Validating GitHub Actions workflows..."
