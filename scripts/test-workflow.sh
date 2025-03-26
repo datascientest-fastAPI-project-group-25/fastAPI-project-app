@@ -6,7 +6,7 @@ set -e
 
 # Default event type is push
 EVENT_TYPE=${2:-push}
-WORKFLOW_FILE=$1
+WORKFLOW_FILE=$(realpath "$1")
 
 if [ -z "$WORKFLOW_FILE" ]; then
   echo "Error: Workflow file not specified"
@@ -16,15 +16,32 @@ if [ -z "$WORKFLOW_FILE" ]; then
 fi
 
 # Check if the workflow file exists
-if [ ! -f ".github/workflows/$WORKFLOW_FILE" ]; then
-  echo "Error: Workflow file .github/workflows/$WORKFLOW_FILE not found"
+if [ ! -f "$WORKFLOW_FILE" ]; then
+  echo "Error: Workflow file not found: $WORKFLOW_FILE"
   exit 1
 fi
+
+# Get the relative path from .github/workflows/
+REL_PATH="${WORKFLOW_FILE#*.github/workflows/}"
+
+# Extract category from path
+CATEGORY=$(echo "$REL_PATH" | cut -d'/' -f1)
 
 # Detect platform and set appropriate flags
 PLATFORM_FLAGS=""
 if [[ "$(uname)" == "Darwin" ]]; then
   PLATFORM_FLAGS="--platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest"
+fi
+
+# Check if .env file exists, if not use .env.example
+ENV_FILE=".env"
+if [ ! -f "$ENV_FILE" ]; then
+  if [ -f ".env.example" ]; then
+    ENV_FILE=".env.example"
+    echo "Using .env.example for environment variables"
+  else
+    echo "Warning: No .env or .env.example file found"
+  fi
 fi
 
 # Check if .secrets file exists, if not create it with default values
@@ -38,24 +55,34 @@ GITHUB_TOKEN=test-token
 EOL
 fi
 
-# Check if pnpm-lock.yaml exists in frontend
-if [ ! -f "frontend/pnpm-lock.yaml" ]; then
-  echo "Warning: frontend/pnpm-lock.yaml not found. Converting from package-lock.json..."
-  (cd frontend && rm -f package-lock.json && pnpm install)
+# Set environment variables for FastAPI app
+ENV_VARS=""
+if [ -f "$ENV_FILE" ]; then
+  ENV_VARS="--env-file $ENV_FILE"
 fi
 
-echo "Testing workflow: $WORKFLOW_FILE with event: $EVENT_TYPE"
+# Add essential environment variables
+ENV_VARS="$ENV_VARS \
+  --env PROJECT_NAME=FastAPI \
+  --env POSTGRES_SERVER=localhost \
+  --env POSTGRES_USER=postgres \
+  --env FIRST_SUPERUSER=admin@example.com \
+  --env FIRST_SUPERUSER_PASSWORD=password"
+
+echo "Testing workflow: $REL_PATH with event: $EVENT_TYPE"
+echo "Category: $CATEGORY"
 echo "=================================================="
 
 # Run the workflow with act
-echo "Running: act $EVENT_TYPE -W .github/workflows/$WORKFLOW_FILE $PLATFORM_FLAGS --verbose"
-act $EVENT_TYPE -W .github/workflows/$WORKFLOW_FILE $PLATFORM_FLAGS --verbose || {
+echo "Running: act $EVENT_TYPE -W .github/workflows/$REL_PATH $PLATFORM_FLAGS $ENV_VARS --verbose"
+act $EVENT_TYPE -W ".github/workflows/$REL_PATH" $PLATFORM_FLAGS $ENV_VARS --verbose || {
   echo "Error: act command failed or timed out"
   echo "You can try:"
-  echo "1. Running with specific jobs: act $EVENT_TYPE -W .github/workflows/$WORKFLOW_FILE -j <job_id>"
+  echo "1. Running with specific jobs: act $EVENT_TYPE -W .github/workflows/$REL_PATH -j <job_id>"
   echo "2. Running with --privileged flag if Docker permissions are needed"
   echo "3. Check if all required secrets are set in .secrets file"
   echo "4. Check if all required dependencies are installed"
+  echo "5. Try using Makefile: make test-workflow-params category=$CATEGORY event=$EVENT_TYPE workflow=$(basename "$REL_PATH")"
   exit 1
 }
 

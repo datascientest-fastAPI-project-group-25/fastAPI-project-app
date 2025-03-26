@@ -18,7 +18,7 @@ echo "Waiting for database to be ready..."
 # Let the DB start with a timeout
 TIMEOUT=120  # Increased timeout for slower environments
 COUNTER=0
-until python app/backend_pre_start.py 2>/dev/null || [ $COUNTER -eq $TIMEOUT ]; do
+until uv run --app app --path app/backend_pre_start.py 2>/dev/null || [ $COUNTER -eq $TIMEOUT ]; do
   if [ $(($COUNTER % 5)) -eq 0 ]; then
     echo "Waiting for database connection... ($COUNTER/$TIMEOUT)"
   fi
@@ -47,9 +47,9 @@ MIGRATION_OUTPUT=$(alembic upgrade head 2>&1) || {
 
 echo "Creating initial data..."
 # Create initial data in DB with error handling
-if ! python app/initial_data.py; then
+if ! uv run --app app --path app/initial_data.py; then
   echo "ERROR: Failed to create initial data"
   exit 1
 fi
 
-echo "✅ Prestart completed successfully"
+echo " Prestart completed successfully"

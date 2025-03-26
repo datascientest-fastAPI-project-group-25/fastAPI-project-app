@@ -1,0 +1,19 @@
+name: Approve PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to approve'
+        required: true
+        default: '67'
+
+jobs:
+  approve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve PR
+        uses: hmarr/auto-approve-action@v3
+        with:
+          pull-request-number: ${{ github.event.inputs.pr_number }}
+          github-token: ${{ secrets.MACHINE_USER_TOKEN }}

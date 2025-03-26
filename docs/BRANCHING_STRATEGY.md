@@ -1,144 +1,101 @@
-# Branching Strategy Documentation
+# Updated Branching Strategy
 
-## Overview
+## Workflow Overview
 
-This project follows a structured branching strategy that enforces best practices through Git hooks and GitHub Actions. The strategy is designed to:
+```mermaid
+graph TD
+    A[feat/*] -->|Auto-PR| B(dev)
+    C[fix/*] -->|Auto-PR| B
+    B -->|Manual PR| D[main]
 
-- Protect the main branch from direct pushes
-- Standardize branch naming conventions
-- Automate versioning based on branch types
-- Streamline the development workflow
-
-## Branch Types
-
-### Main Branch (`main`)
-
-- The production-ready branch
-- Protected from direct pushes
-- Only accepts changes through pull requests
-- When code is merged to main, it triggers:
-  - Full test suite
-  - Semantic versioning
-  - Production deployment
-
-### Feature Branches (`feat/*`)
-
-- Used for new features and enhancements
-- Created from the main branch
-- Triggers:
-  - Fast tests
-  - Staging deployment
-- When merged to main:
-  - Increments the minor version (e.g., 1.0.0 → 1.1.0)
-
-### Fix Branches (`fix/*`)
-
-- Used for bug fixes and patches
-- Created from the main branch
-- Can include `-automerge` suffix for automatic merging
-- Triggers:
-  - Targeted tests
-- When merged to main:
-  - Increments the patch version (e.g., 1.0.0 → 1.0.1)
-
-## Development Workflow
-
-1. **Start from main**:
-
-   - When checking out the main branch, you'll be prompted to create a feature or fix branch
-   - Use the interactive CLI tool to create a properly named branch
-
-2. **Make changes**:
-
-   - Commit your changes with meaningful commit messages
-   - Push your branch to origin
-
-3. **Pull Request**:
-
-   - GitHub Actions will run tests on your branch
-   - Create a pull request to merge into main
-   - For fix branches with `-automerge` suffix, merging can be automatic after tests pass
-
-4. **Merge**:
-   - After approval and passing tests, your branch will be merged to main
-   - Semantic versioning will automatically increment based on branch type
-
-## Tools
-
-### Interactive Branch Creation
-
-We provide an interactive CLI tool to create branches following our naming convention:
-
-```bash
-# Run directly
-node scripts/create-branch.js
-
-# Or use the npm script
-npm run create-branch
+    D -->|Production| E[ghcr.io/org/repo:version]
+    D -->|Latest| F[ghcr.io/org/repo:latest]
+    B -->|Staging| G[ghcr.io/org/repo:version-stg]
+    B -->|Staging Latest| H[ghcr.io/org/repo:latest-stg]
+    A -->|Feature| I[ghcr.io/org/repo:commit-sha]
+    C -->|Fix| I
 ```
 
-The tool will:
+1. **Main Branch** (`main`):
+   - Production-ready code
+   - Protected - no direct pushes
+   - Only accepts PRs from `dev` branch
+   - Merge triggers:
+     - Production image build (ghcr.io/org/repo:version)
+     - Latest tag update (ghcr.io/org/repo:latest)
+     - Version tag (semver)
 
-- Ensure you're up to date with the main branch
-- Guide you through selecting a branch type (feature or fix)
-- Help you name your branch correctly
-- Offer the automerge option for fix branches
+2. **Development Branch** (`dev`):
+   - Staging environment
+   - Accepts PRs from `feat/*` and `fix/*` branches
+   - Merge triggers:
+     - Staging image build (ghcr.io/org/repo:version-stg)
+     - Auto-PR creation to `main`
 
-### Git Hooks
+3. **Feature Branches** (`feat/*`):
+   - Created from `dev` branch
+   - Push triggers:
+     - Auto-PR to `dev`
+     - CI tests
+   - Naming: `feat/description` (e.g., `feat/user-auth`)
 
-We use pre-commit to manage Git hooks:
+4. **Fix Branches** (`fix/*`):
+   - Created from `dev` branch
+   - Push triggers:
+     - Auto-PR to `dev`
+     - CI tests
+   - Can use `-automerge` suffix for critical fixes
+   - Naming: `fix/description` (e.g., `fix/login-bug`)
 
-1. **Post-Checkout Hook**:
+## Image Tagging Strategy
 
-   - Triggers when checking out the main branch
-   - Prompts you to create a feature or fix branch
-   - Launches the interactive branch creation tool
+| Branch Type | Image Tag Format          | Registry Location          |
+|-------------|---------------------------|----------------------------|
+| feat/fix    | :commit-sha               | ghcr.io/org/repo           |
+| dev         | :version-stg              | ghcr.io/org/repo           |
+| main        | :version + :latest        | ghcr.io/org/repo           |
 
-2. **Pre-Push Hook**:
+## Implementation Requirements
 
-   - Prevents direct pushes to the main branch
-   - Ensures all changes go through the proper workflow
+1. **GitHub Actions**:
+   - Auto-PR creation on push
+   - Image building/pushing
+   - Version tagging
+   - Status checks
 
-3. **Commit Message Hook**:
-   - Ensures commit messages are meaningful
-   - Requires a minimum length for commit messages
+2. **Branch Protection**:
+   - `main`: Require PR, status checks, review
+   - `dev`: Require PR, status checks
+   - `feat/fix`: Require status checks
 
-### Semantic Versioning
+3. **Scripts**:
+   - Updated `create-branch.js` to enforce naming
+   - Pre-push hooks to prevent direct pushes to protected branches
 
-Versioning is handled automatically based on branch types:
+4. **Version Management**:
+   - Semantic versioning
+   - Automated changelog generation
+   - Release notes
 
-- Feature branches increment the minor version (0.1.0 → 0.2.0)
-- Fix branches increment the patch version (0.1.0 → 0.1.1)
-
-## Setup
-
-To set up the branching strategy tools:
+## Setup Instructions
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
-# Install Git hooks
+# Setup Git hooks
 pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 ```
 
 ## Best Practices
 
-1. **Never work directly on main**:
+1. Always create branches using the interactive tool:
+   ```bash
+   node scripts/create-branch.js
+   ```
 
-   - Always create a feature or fix branch
-   - Use the interactive CLI tool to ensure proper naming
+2. Keep branches focused and short-lived
 
-2. **Use meaningful branch names**:
+3. Use meaningful, descriptive branch names
 
-   - Choose descriptive names that reflect the purpose of your changes
-   - Follow the naming convention: `feat/feature-name` or `fix/bug-name`
-
-3. **Write meaningful commit messages**:
-
-   - Clearly describe what your changes do
-   - Provide context for why the changes are needed
-
-4. **Use automerge judiciously**:
-   - Only enable automerge for simple, low-risk fixes
-   - Critical fixes should still be reviewed
+4. Regularly sync with upstream dev branch

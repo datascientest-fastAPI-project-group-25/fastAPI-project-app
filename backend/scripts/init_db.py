@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Database initialization script for CI/CD pipelines.
-This script creates all database tables and initializes the database with test data.
+This script creates all database tables and initializes the database with
+test data.
 
 Note: This script requires all backend dependencies to be installed.
 If running locally, make sure to install dependencies with:

@@ -2,10 +2,10 @@
 
 /**
  * Interactive branch creation CLI
- * Uses Inquirer for a modern, interactive command-line interface
+ * Updated for new workflow (feat/fix → dev → main)
  */
 
-// Try to load dependencies, but provide fallbacks if they're not available
+// Try to load dependencies
 let inquirer;
 try {
   inquirer = require("inquirer");
@@ -15,7 +15,7 @@ try {
 const { execSync } = require("child_process");
 const readline = require("readline");
 
-// ANSI color codes as fallback if chalk is not available
+// ANSI color codes
 const colors = {
   reset: "\x1b[0m",
   green: "\x1b[32m",
@@ -26,7 +26,6 @@ const colors = {
   cyan: "\x1b[36m",
 };
 
-// Try to load chalk, but use fallback colors if not available
 let chalk;
 try {
   chalk = require("chalk");
@@ -62,33 +61,17 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-// Create readline interface
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
 
-// Branch types
-const branchTypes = [
-  "feat",
-  "fix",
-  "docs",
-  "style",
-  "refactor",
-  "perf",
-  "test",
-  "build",
-  "ci",
-  "chore",
-  "revert",
-];
+const branchTypes = ["feat", "fix"];
 
-// Function to validate branch name
 function isValidBranchName(name) {
   return /^[a-z0-9-]+$/.test(name);
 }
 
-// Helper function to run git commands
 function runGitCommand(command) {
   try {
     return execSync(command, { encoding: "utf8" }).trim();
@@ -101,46 +84,51 @@ function runGitCommand(command) {
   }
 }
 
-// Create branch with the given parameters
+async function updateDevBranch() {
+  console.log(`${colors.blue}Updating dev branch...${colors.reset}`);
+  try {
+    runGitCommand("git fetch origin");
+    runGitCommand("git checkout dev");
+    runGitCommand("git pull origin dev");
+    return true;
+  } catch (error) {
+    console.error(
+      `${colors.red}Failed to update dev branch:${colors.reset}`,
+      error.message,
+    );
+    console.log(
+      `${colors.yellow}Continuing with branch creation anyway...${colors.reset}`,
+    );
+    return false;
+  }
+}
+
 function createBranchWithParams(branchType, branchName, automerge) {
-  // Format the branch name
   let fullBranchName = `${branchType}/${branchName}`;
   if (branchType === "fix" && automerge) {
     fullBranchName += "-automerge";
   }
 
-  // Create the branch
   try {
     runGitCommand(`git checkout -b ${fullBranchName}`);
     console.log(
       `\n${colors.green}✅ Successfully created branch: ${colors.reset}${fullBranchName}`,
     );
 
-    // Show helpful information
-    console.log(`\n${colors.cyan}Next steps:${colors.reset}`);
+    console.log(`\n${colors.cyan}Workflow:${colors.reset}`);
     console.log(`1. Make your changes`);
-    console.log(`2. Commit your changes with a meaningful message`);
+    console.log(`2. Commit with meaningful messages`);
     console.log(
-      `3. Push your branch with: ${colors.yellow}git push -u origin ${fullBranchName}${colors.reset}`,
+      `3. Push: ${colors.yellow}git push -u origin ${fullBranchName}${colors.reset}`,
+    );
+    console.log(
+      `4. PR will be auto-created to ${colors.magenta}dev${colors.reset} branch`,
     );
 
-    if (branchType === "feat") {
+    if (branchType === "fix" && automerge) {
       console.log(
-        `\n${colors.magenta}Note: ${colors.reset}Feature branches will increment the minor version (0.1.0 → 0.2.0)`,
+        `\n${colors.magenta}Automerge:${colors.reset} Will merge to dev after tests pass`,
       );
-    } else {
-      console.log(
-        `\n${colors.magenta}Note: ${colors.reset}Fix branches will increment the patch version (0.1.0 → 0.1.1)`,
-      );
-      if (automerge) {
-        console.log(
-          `${colors.magenta}Automerge: ${colors.reset}This branch will automatically merge after tests pass`,
-        );
-      } else {
-        console.log(
-          `${colors.magenta}Manual approval: ${colors.reset}This branch will require approval before merging`,
-        );
-      }
     }
     return true;
   } catch (error) {
@@ -152,31 +140,10 @@ function createBranchWithParams(branchType, branchName, automerge) {
   }
 }
 
-// Ensure we're up to date with main
-async function updateMainBranch() {
-  console.log(`${colors.blue}Updating main branch...${colors.reset}`);
-  try {
-    runGitCommand("git fetch origin");
-    runGitCommand("git checkout main");
-    runGitCommand("git pull origin main");
-    return true;
-  } catch (error) {
-    console.error(
-      `${colors.red}Failed to update main branch:${colors.reset}`,
-      error.message,
-    );
-    console.log(
-      `${colors.yellow}Continuing with branch creation anyway...${colors.reset}`,
-    );
-    return false;
-  }
-}
-
-// Interactive branch creation if no arguments provided
+// Interactive mode
 if (!branchType || !branchName) {
   console.log("Interactive Branch Creation\n");
 
-  // Ask for branch type
   rl.question(`Branch type (${branchTypes.join(", ")}): `, (type) => {
     if (!branchTypes.includes(type)) {
       console.error("Invalid branch type");
@@ -184,7 +151,6 @@ if (!branchType || !branchName) {
       process.exit(1);
     }
 
-    // Ask for branch name
     rl.question(
       "Branch name (lowercase letters, numbers, and hyphens only): ",
       (name) => {
@@ -194,17 +160,25 @@ if (!branchType || !branchName) {
           process.exit(1);
         }
 
-        // Ask for automerge
-        rl.question("Enable automerge? (y/N): ", (answer) => {
-          const enableAutomerge = answer.toLowerCase() === "y";
+        if (type === "fix") {
+          rl.question("Enable automerge? (y/N): ", (answer) => {
+            const enableAutomerge = answer.toLowerCase() === "y";
+            rl.close();
+            updateDevBranch().then(() =>
+              createBranchWithParams(type, name, enableAutomerge)
+            );
+          });
+        } else {
           rl.close();
-          createBranchWithParams(type, name, enableAutomerge);
-        });
+          updateDevBranch().then(() =>
+            createBranchWithParams(type, name, false)
+          );
+        }
       },
     );
   });
 } else {
-  // Non-interactive branch creation
+  // Non-interactive mode
   if (!branchTypes.includes(branchType)) {
     console.error("Invalid branch type");
     process.exit(1);
@@ -215,50 +189,7 @@ if (!branchType || !branchName) {
     process.exit(1);
   }
 
-  createBranchWithParams(branchType, branchName, automerge);
+  updateDevBranch().then(() =>
+    createBranchWithParams(branchType, branchName, automerge)
+  );
 }
-
-// Main function
-async function main() {
-  const args = parseArgs();
-
-  // Update main branch first
-  await updateMainBranch();
-
-  // If we have all required parameters or non-interactive mode is forced, use them
-  if ((args.branchType && args.branchName) || args.nonInteractive) {
-    if (!args.branchType || !args.branchName) {
-      console.error(
-        chalk.red(
-          "Error: Both branch type and name are required in non-interactive mode",
-        ),
-      );
-      console.log(
-        chalk.yellow(
-          "Example: node create-branch.js --type fix --name my-fix-name --automerge",
-        ),
-      );
-      process.exit(1);
-    }
-    return createBranchWithParams(
-      args.branchType,
-      args.branchName,
-      args.automerge,
-    );
-  }
-
-  // Otherwise use interactive mode
-  return interactiveBranchCreation();
-}
-
-// Run the main function
-main()
-  .then((success) => {
-    if (!success) {
-      process.exit(1);
-    }
-  })
-  .catch((error) => {
-    console.error(chalk.red("An unexpected error occurred:"), error);
-    process.exit(1);
-  });

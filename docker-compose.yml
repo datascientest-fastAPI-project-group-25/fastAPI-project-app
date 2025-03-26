@@ -72,6 +72,7 @@ services:
 
   # Backend with improved caching using uv
   backend:
+    working_dir: /app/backend
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -94,7 +95,7 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - db
-    command: sh -c "python -m pip install uv && uv venv && source .venv/bin/activate && uv pip install -e '.[dev,lint,types,test]' && bash /app/scripts/prestart.sh && fastapi run --reload app/main.py"
+    command: sh -c "bash /app/scripts/prestart.sh && uv run --app app --path app/main.py --reload"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.localhost`)"
