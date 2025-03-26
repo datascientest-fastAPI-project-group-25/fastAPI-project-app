@@ -187,11 +187,55 @@ run-hooks:
 
 validate-workflows:
 	@echo " Validating GitHub Actions workflows..."
-	@for file in .github/workflows/*.yml; do \
+	@for file in .github/workflows/**/*.yml; do \
 		echo "Validating $$file..."; \
 		yamlvalidator $$file || echo "  Validation issues in $$file"; \
 	done
 	@echo " Workflow validation complete!"
+
+test-workflow:
+	@echo " Testing GitHub workflow (interactive)..."
+	@node scripts/test-workflow-selector.js
+	@echo " Workflow testing complete!"
+
+test-workflow-params:
+	@echo " Testing GitHub workflow with parameters..."
+	@if [ -z "$(category)" ] || [ -z "$(event)" ]; then \
+		echo "Error: Required parameters missing. Usage: make test-workflow-params category=CATEGORY event=EVENT [workflow=WORKFLOW]"; \
+		exit 1; \
+	fi
+	@if [ -z "$(workflow)" ]; then \
+		act $(event) -W .github/workflows/$(category)/ --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
+			--env-file .env \
+			--env PROJECT_NAME=FastAPI \
+			--env POSTGRES_SERVER=localhost \
+			--env POSTGRES_USER=postgres \
+			--env FIRST_SUPERUSER=admin@example.com \
+			--env FIRST_SUPERUSER_PASSWORD=password; \
+	else \
+		act $(event) -W .github/workflows/$(category)/$(workflow) --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
+			--env-file .env \
+			--env PROJECT_NAME=FastAPI \
+			--env POSTGRES_SERVER=localhost \
+			--env POSTGRES_USER=postgres \
+			--env FIRST_SUPERUSER=admin@example.com \
+			--env FIRST_SUPERUSER_PASSWORD=password; \
+	fi
+	@echo " Workflow testing complete!"
+
+test-all-workflows: 
+	@echo " Testing all GitHub workflows..."
+	@echo " Testing feature workflows..."
+	@make test-workflow-params category=feature event=push workflow=feature-push.yml || echo "Feature workflow test failed"
+	@echo " Testing pre-commit workflows..."
+	@make test-workflow-params category=pre-commit event=push workflow=pre-commit.yml || echo "Pre-commit workflow test failed"
+	@echo " Testing dev workflows..."
+	@make test-workflow-params category=dev event=push workflow=merge-to-dev.yml || echo "Dev workflow test failed"
+	@make test-workflow-params category=dev event=pull_request workflow=pr-to-dev.yml || echo "Dev PR workflow test failed"
+	@echo " Testing main workflows..."
+	@make test-workflow-params category=main event=push workflow=merge-to-main.yml || echo "Main workflow test failed"
+	@make test-workflow-params category=main event=pull_request workflow=pr-to-main.yml || echo "Main PR workflow test failed"
+	@echo " All workflow tests complete!"
 
 #################################################
 # Cleanup                                       #
