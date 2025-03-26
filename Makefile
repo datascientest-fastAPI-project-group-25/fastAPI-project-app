@@ -223,7 +223,7 @@ test-workflow-params:
 	fi
 	@echo " Workflow testing complete!"
 
-test-all-workflows: 
+test-all-workflows:
 	@echo " Testing all GitHub workflows..."
 	@echo " Testing feature workflows..."
 	@make test-workflow-params category=feature event=push workflow=feature-push.yml || echo "Feature workflow test failed"
