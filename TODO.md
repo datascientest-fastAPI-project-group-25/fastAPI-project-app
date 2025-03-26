@@ -4,6 +4,7 @@
 
 ### Makefile Modularization
 
+- [ ] make dev and other useful commands
 - [ ] Create a proper modular Makefile system with clear separation of concerns
 - [ ] Move targets to appropriate module files:
   - [ ] variables.mk (common variables and settings)
@@ -13,6 +14,8 @@
   - [ ] maintenance.mk (cleanup and maintenance targets)
   - [ ] development.mk (development workflow targets)
   - [ ] ci.mk (CI/CD related targets)
+  - [ ] workflows.mk (GitHub workflow testing targets)
+- [ ] Add test-workflow target for testing GitHub workflows locally with appropriate environment variables
 - [ ] Ensure proper dependency management between modules
 - [ ] Add documentation for each module
 - [ ] Add validation to ensure all required variables are set
@@ -45,10 +48,12 @@
 
 ### CI/CD
 
-- [ ] Set up GitHub Actions workflows
-- [ ] Add automated testing in CI
+- [x] Set up GitHub Actions workflows
+- [x] Add automated testing in CI
 - [ ] Add automated deployment
 - [ ] Add automated documentation generation
+- [ ] Improve local workflow testing with Docker-compatible alternatives
+- [ ] Create environment-specific workflow configurations for dev, staging, and production
 
 ### Security
 
@@ -160,6 +165,67 @@
    - [ ] Test MachineUser access with GH Action Secrets
    - [ ] Verify staging deployment workflow
    - [ ] Validate production build process
+
+## Workflow Testing Results (2025-03-26)
+
+### Next Steps for Workflow Testing
+- [ ] Create a Makefile target for testing workflows with appropriate environment variables
+- [ ] Create simplified versions of workflows for local testing that don't rely on Docker services
+- [ ] Add documentation on how to test workflows locally
+
+### Feature Branch Workflow
+- [ ] feature/feature-push.yml
+  - Issue: Database connection fails due to missing PostgreSQL service
+  - Status: ❌ Failing
+  - Notes: Added PostgreSQL service configuration and environment variables
+  - Fix: Added PostgreSQL service with health checks, environment variables, and wait script
+  - Additional Issue: Still failing in local testing with act due to Docker-in-Docker limitations
+
+### Development Workflows
+- [ ] dev/merge-to-dev.yml
+  - Issue: Docker Buildx integration causing issues with act local testing
+  - Status: ❌ Failing
+  - Notes: Added Docker Buildx setup and health check
+  - Fix: Updated workflow with proper Docker setup and health check
+- [ ] dev/pr-to-dev.yml
+  - Issue: Incorrect Docker build command and missing step for image push
+  - Status: ❌ Failing
+  - Notes: Fixed Docker build command and separated login and push steps
+  - Fix: Updated workflow with correct Docker build command and proper step separation
+
+### Main Branch Workflows
+- [ ] main/merge-to-main.yml
+  - Issue: Incorrect Docker build command and missing step for image push
+  - Status: ❌ Failing
+  - Notes: Fixed Docker build command and separated login and push steps
+  - Fix: Added Docker Buildx setup, fixed build command, separated login and push steps, added health check
+- [ ] main/pr-to-main.yml
+  - Issue: Using pip instead of uv and missing PostgreSQL service
+  - Status: ❌ Failing
+  - Notes: Updated to use uv for dependency management and added PostgreSQL service
+  - Fix: Added PostgreSQL service with health checks, environment variables, and wait script
+
+### Pre-commit Workflow
+- [ ] pre-commit/pre-commit.yml
+  - Issue: Docker integration causing issues with act local testing
+  - Status: ❌ Failing
+  - Notes: Updated to use simplified approach with environment variables and skipping Docker-dependent hooks
+  - Fix: Removed uv dependency and Docker requirements, added environment variables for testing
+
+### Shared Workflows
+- [ ] shared/shared-build.yml
+  - Issue: Incorrect Docker build command and missing step for image push
+  - Status: ❌ Failing
+  - Notes: Fixed Docker build command and separated login and push steps
+  - Fix: Added Docker Buildx setup, fixed build command, separated login and push steps
+- [ ] shared/shared-release.yml
+  - Status: ✅ Looks Good
+  - Notes: No issues identified, workflow structure is correct
+- [ ] shared/shared-tests.yml
+  - Issue: Using pip instead of uv and missing PostgreSQL service
+  - Status: ❌ Failing
+  - Notes: Updated to use uv for dependency management and added PostgreSQL service
+  - Fix: Added PostgreSQL service with health checks, environment variables, and wait script
 
 ## Notes
 
