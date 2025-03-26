@@ -1,18 +1,14 @@
 name: Branch Protection
 
-# This workflow protects the main branch from direct pushes
-# It will intentionally fail if someone tries to push directly to main
+# This workflow protects the main and dev branches from direct pushes
+# Only PR merges are allowed into these branches
 # This is expected behavior and part of our branching strategy
-#
-# Note: PR merge commits are allowed as they represent approved changes
-# The workflow detects PR merges by checking both the commit message pattern
-# and the commit structure (merge commits have multiple parents)
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
   branch-protection:
@@ -22,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check commit author
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
         id: check_author
         env:
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}
@@ -49,49 +45,41 @@ jobs:
                 IS_MERGE_COMMIT="true"
               fi
             else
-              # Fallback: check if commit message starts with 'Merge'
-              COMMIT_MSG=$(echo "$HEAD_COMMIT_JSON" | grep -o '"message":"[^"]*"' | head -1 | cut -d':' -f2 | tr -d '"')
-              if [[ "$COMMIT_MSG" == Merge* ]]; then
+              echo "jq not found, using commit message check"
+              if [ "$PR_MERGE_MESSAGE" = "true" ]; then
                 IS_MERGE_COMMIT="true"
               fi
             fi
           fi
 
-          echo "PR merge message: $PR_MERGE_MESSAGE, Is merge commit: $IS_MERGE_COMMIT"
-
-          if [ "$PR_MERGE_MESSAGE" == "true" ] || [ "$IS_MERGE_COMMIT" == "true" ]; then
-            echo "Detected PR merge commit (message pattern or merge structure), allowing it"
-            echo "is_blocked=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Check if commits array exists and is not empty
-          if [ "$COMMITS_JSON" != "null" ] && [ "$COMMITS_JSON" != "[]" ]; then
-            # Use jq to safely extract the author name if it exists
-            if command -v jq >/dev/null 2>&1; then
-              AUTHOR_NAME=$(jq -r '.[0].author.name // "unknown"' commits.json)
-            else
-              # Fallback if jq is not available
-              AUTHOR_NAME=$(grep -o '"name":"[^"]*"' commits.json | head -1 | cut -d':' -f2 | tr -d '"')
-            fi
-
-            if [ "$AUTHOR_NAME" != "semantic-release-bot" ] && [ "$AUTHOR_NAME" != "null" ] && [ "$AUTHOR_NAME" != "unknown" ]; then
-              echo "is_blocked=true" >> $GITHUB_OUTPUT
-            else
-              echo "is_blocked=false" >> $GITHUB_OUTPUT
-            fi
+          # Only allow PR merges
+          if [ "$IS_MERGE_COMMIT" = "false" ]; then
+            echo "::error::Direct push to protected branch not allowed. Please create a PR instead."
+            exit 1
           else
-            echo "is_blocked=false" >> $GITHUB_OUTPUT
+            echo "PR merge detected. Allowing commit."
           fi
 
-      - name: Block direct pushes to main
-        if: steps.check_author.outputs.is_blocked == 'true'
+      - name: Verify PR source
+        if: github.event_name == 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
         run: |
-          echo "::warning::This check is SUPPOSED TO FAIL for direct pushes to main - this is not an error in the workflow. See docs/BRANCHING_STRATEGY.md for more information."
-          echo "::error::Direct pushes to main branch are not allowed. Please create a pull request from a feature or fix branch."
-          exit 1
+          # For PRs to main, ensure they come from dev
+          if [ "$GITHUB_REF" == "refs/heads/main" ]; then
+            if [ "$GITHUB_HEAD_REF" != "dev" ]; then
+              echo "::error::PRs to main must come from dev branch"
+              exit 1
+            fi
+          fi
 
-      - name: Verification passed
-        if: steps.check_author.outputs.is_blocked != 'true'
+      - name: Verify PR state
+        if: github.event_name == 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
         run: |
-          echo "Branch protection check passed. This commit is either from semantic-release-bot or via an approved PR."
+          # For PRs to main, ensure they are approved
+          if [ "$GITHUB_REF" == "refs/heads/main" ]; then
+            if [ "$GITHUB_EVENT_NAME" == "pull_request" ] && [ "$GITHUB_EVENT_ACTION" == "closed" ]; then
+              if [ "$GITHUB_EVENT_PULL_REQUEST_MERGED" != "true" ]; then
+                echo "::error::PR must be approved before merging to main"
+                exit 1
+              fi
+            fi
+          fi
