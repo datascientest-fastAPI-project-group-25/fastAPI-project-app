@@ -40,18 +40,17 @@ jobs:
           cache: 'pip'
 
       - name: Install uv
-        run: python -m pip install uv
+        run: pip install uv
 
       - name: Install dependencies
         run: |
           cd backend
-          uv venv && . .venv/bin/activate && uv pip install -e ".[dev,lint,types,test]"
+          uv run pip install -e ".[dev,lint,types,test]"
 
       - name: Wait for PostgreSQL
         run: |
           cd backend
-          . .venv/bin/activate
-          python -c "import time, psycopg; \
+          uv run python -c "import time, psycopg; \
           while True: \
               try: \
                   conn = psycopg.connect('postgresql://postgres:postgres@localhost:5432/test_db'); \
@@ -64,11 +63,32 @@ jobs:
       - name: Run tests
         run: |
           cd backend
-          . .venv/bin/activate
-          pytest --cov=app
+          uv run pytest --cov=app
 
       - name: Security scan
         run: |
           cd backend
-          . .venv/bin/activate
-          bandit -r app/
+          uv run bandit -r app/
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run Biome check
+        run: pnpm biome check
+
+      - name: Run tests
+        run: pnpm test
