@@ -75,7 +75,7 @@ repos:
 
       - id: pytest-check
         name: Run Python tests
-        entry: docker compose exec backend pytest
+        entry: bash -c 'cd backend && python -m pytest -xvs'
         language: system
         pass_filenames: false
-        stages: [push]
+        stages: [pre-commit, pre-push]
