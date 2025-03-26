@@ -40,10 +40,12 @@ setup:
 	# Add setup commands here
 
 # Linting targets
+lint: lint-and-format
+	@echo "Running linting..."
+
 lint-and-format:
 	@echo "Running linting and formatting..."
-	@docker compose exec backend bash -c "source /app/.venv/bin/activate && black $(BACKEND_DIR) --line-length 88"
-	@docker compose exec backend bash -c "source /app/.venv/bin/activate && flake8 $(BACKEND_DIR) --max-line-length=88"
+	@docker compose exec -w /app/backend backend bash -c "source /app/.venv/bin/activate && ruff check . && ruff format ."
 	@echo "✅ Backend linting and formatting complete."
 	@echo "Running frontend linting and formatting..."
 	cd frontend && pnpm run lint && pnpm run format:check

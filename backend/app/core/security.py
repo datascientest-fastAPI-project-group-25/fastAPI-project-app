@@ -11,7 +11,7 @@ from app.core.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Try to create a CryptContext with bcrypt, but fall back to a simpler scheme 
+# Try to create a CryptContext with bcrypt, but fall back to a simpler scheme
 # if there's an issue
 try:
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
