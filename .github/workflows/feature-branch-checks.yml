@@ -1,0 +1,166 @@
+name: Feature Branch Checks
+
+on:
+  push:
+    branches:
+      - 'feat/*'
+  workflow_dispatch:
+
+jobs:
+  style-checks:
+    name: Style and Linting
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.5.11"
+          enable-cache: true
+
+      - name: Install Python dependencies
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -r requirements.txt
+          uv pip install pytest pytest-cov ruff bandit pip-audit
+        working-directory: backend
+
+      - name: Run ruff
+        run: |
+          source .venv/bin/activate
+          ruff check .
+        working-directory: backend
+
+      - name: Run bandit
+        run: |
+          source .venv/bin/activate
+          bandit -r .
+        working-directory: backend
+
+      - name: Run pip-audit
+        run: |
+          source .venv/bin/activate
+          pip-audit
+        working-directory: backend
+
+  test-backend:
+    needs: style-checks
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.5.11"
+          enable-cache: true
+
+      - name: Install test dependencies
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -r requirements.txt
+          uv pip install pytest pytest-cov
+        working-directory: backend
+
+      - name: Run tests
+        run: |
+          source .venv/bin/activate
+          pytest --cov=app
+        working-directory: backend
+
+  test-frontend:
+    needs: style-checks
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+        working-directory: frontend
+
+      - name: Run Biome check
+        run: npx biome check --no-errors-on-unmatched --files-ignore-unknown=true ./
+        working-directory: frontend
+
+      - name: Run tests
+        run: pnpm test
+        working-directory: frontend
+
+  security-checks:
+    needs: [test-backend, test-frontend]
+    name: Security Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Run npm audit
+        run: npm audit
+        working-directory: frontend
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.5.11"
+          enable-cache: true
+
+      - name: Install security tools
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install safety bandit
+        working-directory: backend
+
+      - name: Run safety check
+        run: |
+          source .venv/bin/activate
+          safety check
+        working-directory: backend
+
+  create-pr:
+    needs: security-checks
+    name: Create PR to dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "feat: ${GITHUB_REF_NAME}"
+          body: "Automatically created PR from feature branch"
+          base: dev
+          branch: ${{ github.event.pull_request.head.ref }}
+          labels: feature
+          assignees: ${{ github.actor }}
