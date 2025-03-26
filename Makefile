@@ -12,8 +12,9 @@ FRONTEND_DIR := frontend
 #################################################
 # Help and Documentation                        #
 #################################################
+# Display help message with available commands
 help:
-	@echo "DevOps Demo Application Makefile "
+	@echo "DevOps Demo Application Makefile"
 	@echo ""
 	@echo "Setup Commands:"
 	@echo "  make setup              Setup the project (dependencies, env files)"
@@ -51,12 +52,15 @@ help:
 #################################################
 # Setup and Installation                        #
 #################################################
+# Setup the complete project environment
 setup: install env setup-hooks
 	@echo " Project setup complete!"
 
+# Install all project dependencies
 install: backend-install frontend-install
 	@echo " All dependencies installed!"
 
+# Generate a secure .env file from .env.example
 env:
 	@echo " Generating .env file from .env.example..."
 	@if [ ! -f .env ] && [ -f .env.example ]; then \
@@ -69,26 +73,31 @@ env:
 #################################################
 # Backend Commands                              #
 #################################################
+# Install backend dependencies
 backend-install:
 	@echo " Installing backend dependencies..."
 	cd $(BACKEND_DIR) && python3 -m pip install uv && uv venv && . .venv/bin/activate && uv pip install -e ".[dev,lint,types,test]"
 	@echo " Backend dependencies installed!"
 
+# Run backend linting
 backend-lint:
 	@echo " Running backend linting..."
 	cd $(BACKEND_DIR) && source .venv/bin/activate && ruff check app && ruff format app --check
 	@echo " Backend linting complete!"
 
+# Format backend code
 backend-format:
 	@echo " Formatting backend code..."
 	cd $(BACKEND_DIR) && source .venv/bin/activate && ruff format app
 	@echo " Backend code formatted!"
 
+# Run backend tests
 backend-test:
 	@echo " Running backend tests..."
 	cd $(BACKEND_DIR) && source .venv/bin/activate && pytest --cov=app
 	@echo " Backend tests complete!"
 
+# Run backend security checks
 backend-security:
 	@echo " Running backend security checks..."
 	cd $(BACKEND_DIR) && source .venv/bin/activate && bandit -r app/ && safety check
@@ -97,26 +106,31 @@ backend-security:
 #################################################
 # Frontend Commands                             #
 #################################################
+# Install frontend dependencies
 frontend-install:
 	@echo " Installing frontend dependencies..."
 	cd $(FRONTEND_DIR) && pnpm install --frozen-lockfile
 	@echo " Frontend dependencies installed!"
 
+# Run frontend linting
 frontend-lint:
 	@echo " Running frontend linting..."
 	cd $(FRONTEND_DIR) && pnpm run lint && pnpm run format:check
 	@echo " Frontend linting complete!"
 
+# Format frontend code
 frontend-format:
 	@echo " Formatting frontend code..."
 	cd $(FRONTEND_DIR) && pnpm run format
 	@echo " Frontend code formatted!"
 
+# Run frontend tests
 frontend-test:
 	@echo " Running frontend tests..."
 	cd $(FRONTEND_DIR) && pnpm run test
 	@echo " Frontend tests complete!"
 
+# Run frontend security checks
 frontend-security:
 	@echo " Running frontend security checks..."
 	cd $(FRONTEND_DIR) && pnpm audit
@@ -125,44 +139,57 @@ frontend-security:
 #################################################
 # Combined Commands                             #
 #################################################
+# Run all linting checks
 lint: backend-lint frontend-lint
 	@echo " All linting checks complete!"
 
+# Format all code
 format: backend-format frontend-format
 	@echo " All code formatting complete!"
 
-test: test-backend test-frontend
+# Run all tests
+test: test-backend test-frontend test-integration
 	@echo " All tests complete!"
 
+# Run backend tests
 test-backend: backend-test
+
+# Run frontend tests
 test-frontend: frontend-test
 
+# Run integration tests
 test-integration:
 	@echo " Running integration tests..."
 	@echo " Integration tests not yet implemented"
 
+# Run security scanning and audits
 security-scan: backend-security frontend-security
 	@echo " All security checks complete!"
 
+# Run full CI pipeline
 ci: lint test security-scan
 	@echo " CI pipeline complete!"
 
+# Run full CD pipeline
 cd: ci docker-build
 	@echo " CD pipeline complete!"
 
 #################################################
 # Docker Commands                               #
 #################################################
+# Build all Docker images
 docker-build:
 	@echo " Building Docker images..."
 	docker compose build
 	@echo " Docker images built!"
 
+# Start all Docker containers
 docker-up:
 	@echo " Starting Docker containers..."
 	docker compose up -d
 	@echo " Docker containers started!"
 
+# Stop all Docker containers
 docker-down:
 	@echo " Stopping Docker containers..."
 	docker compose down
@@ -171,11 +198,13 @@ docker-down:
 #################################################
 # Git Hooks                                     #
 #################################################
+# Setup git hooks with pre-commit
 setup-hooks:
 	@echo " Setting up git hooks with pre-commit..."
 	@node scripts/setup-precommit.js
 	@echo " Git hooks setup complete!"
 
+# Run pre-commit hooks manually
 run-hooks:
 	@echo " Running pre-commit hooks..."
 	@pre-commit run --all-files
@@ -185,6 +214,7 @@ run-hooks:
 # GitHub Workflows                              #
 #################################################
 
+# Validate GitHub Actions workflows
 validate-workflows:
 	@echo " Validating GitHub Actions workflows..."
 	@for file in .github/workflows/**/*.yml; do \
@@ -193,11 +223,13 @@ validate-workflows:
 	done
 	@echo " Workflow validation complete!"
 
+# Test a GitHub workflow with Act
 test-workflow:
 	@echo " Testing GitHub workflow (interactive)..."
 	@node scripts/test-workflow-selector.js
 	@echo " Workflow testing complete!"
 
+# Test a specific workflow
 test-workflow-params:
 	@echo " Testing GitHub workflow with parameters..."
 	@if [ -z "$(category)" ] || [ -z "$(event)" ]; then \
@@ -223,6 +255,7 @@ test-workflow-params:
 	fi
 	@echo " Workflow testing complete!"
 
+# Test all GitHub workflows
 test-all-workflows:
 	@echo " Testing all GitHub workflows..."
 	@echo " Testing feature workflows..."
@@ -240,6 +273,7 @@ test-all-workflows:
 #################################################
 # Cleanup                                       #
 #################################################
+# Clean up project artifacts and cache files
 clean:
 	@echo " Cleaning up project..."
 	rm -rf $(BACKEND_DIR)/.venv
@@ -265,13 +299,13 @@ clean:
         test-workflow test-workflow-params validate-workflows \
         clean test-app-local test-app-ci
 
-
-
+# Run tests in local mode
 test-app-local:
 	@echo " Running tests in local mode..."
 	@node scripts/test-app.js local $(TEST_ARGS)
 	@echo " Tests completed successfully!"
 
+# Run tests in CI mode
 test-app-ci:
 	@echo " Running tests in CI mode..."
 	@node scripts/test-app.js ci $(TEST_ARGS)
