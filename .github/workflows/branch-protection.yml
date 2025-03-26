@@ -1,0 +1,45 @@
+name: Branch Protection
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  protect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch protection
+        run: |
+          if [ "${{ github.event.pull_request.head.ref }}" == "main" ] || [ "${{ github.event.pull_request.head.ref }}" == "dev" ]; then
+            echo "Direct push to protected branches is not allowed. Please create a feature branch instead."
+            exit 1
+          fi
+
+      - name: Check PR requirements
+        run: |
+          # Add checks for PR requirements
+          # For example, check if PR title follows convention
+          if [ -z "${{ github.event.pull_request.title }}" ]; then
+            echo "PR title is required"
+            exit 1
+          fi
+
+          # Check if PR has required labels
+          if [ -z "${{ github.event.pull_request.labels }}" ]; then
+            echo "PR must have at least one label"
+            exit 1
+          fi
+
+      - name: Check PR requirements
+        if: github.event_name == 'pull_request'
+        run: |
+          # This is a placeholder for PR review checks
+          # GitHub already handles required reviews through branch protection rules
+          # This step can be expanded later to add custom review requirements
+          echo "PR review requirements will be enforced by GitHub branch protection settings"

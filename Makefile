@@ -265,15 +265,7 @@ clean:
         test-workflow test-workflow-params validate-workflows \
         clean test-app-local test-app-ci
 
-test-workflow:
-	@echo " Testing GitHub workflow with Act..."
-	@node scripts/test-workflow-selector.js
-	@echo " Workflow test complete!"
 
-test-workflow-params:
-	@echo " Testing GitHub workflow with Act using parameters..."
-	@node scripts/test-workflow-selector.js --category "$(category)" --event "$(event)" $(if $(workflow),--workflow "$(workflow)",)
-	@echo " Workflow test complete!"
 
 test-app-local:
 	@echo " Running tests in local mode..."
