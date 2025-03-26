@@ -31,7 +31,8 @@ COPY scripts/ ./scripts/
 # Install all dependencies including dev dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv && \
-    uv pip install --system -e . && \
+    . .venv/bin/activate && \
+    uv pip install --system -e .[dev,lint,types,test] && \
     uv pip install sqlalchemy sqlmodel psycopg[binary] alembic tenacity "fastapi[standard]" pydantic pydantic-settings emails jinja2 httpx PyJWT passlib python-multipart bcrypt email-validator sentry-sdk
 
 # Make scripts executable
@@ -49,17 +50,3 @@ FROM base as production
 
 # Copy dependency files and project structure
 COPY pyproject.toml uv.lock alembic.ini ./
-COPY app/ ./app/
-COPY scripts/ ./scripts/
-
-# Install only production dependencies
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv venv && \
-    uv pip install --system -e . && \
-    uv pip install sqlalchemy sqlmodel psycopg[binary] alembic tenacity "fastapi[standard]" pydantic pydantic-settings emails jinja2 httpx PyJWT passlib python-multipart bcrypt email-validator sentry-sdk
-
-# Make scripts executable
-RUN chmod +x /app/scripts/*
-
-# Default command
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

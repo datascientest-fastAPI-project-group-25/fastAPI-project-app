@@ -25,8 +25,12 @@ class UserRegister(SQLModel):
 
 # Properties to receive via API on update, all are optional
 class UserUpdate(UserBase):
-    email: EmailStr | None = Field(default=None, max_length=255)  # type: ignore
-    password: str | None = Field(default=None, min_length=8, max_length=40)
+    email: EmailStr | None = Field(
+        default=None, max_length=255
+    )  # type: ignore
+    password: str | None = Field(
+        default=None, min_length=8, max_length=40
+    )
 
 
 class UserUpdateMe(SQLModel):
@@ -43,7 +47,9 @@ class UpdatePassword(SQLModel):
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
-    items: list["Item"] = Relationship(back_populates="owner", cascade_delete=True)
+    items: list["Item"] = Relationship(
+        back_populates="owner", cascade_delete=True
+    )
 
 
 # Properties to return via API, id is always required
@@ -69,7 +75,9 @@ class ItemCreate(ItemBase):
 
 # Properties to receive on item update
 class ItemUpdate(ItemBase):
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+    title: str | None = Field(
+        default=None, min_length=1, max_length=255
+    )  # type: ignore
 
 
 # Database model, database table inferred from class name

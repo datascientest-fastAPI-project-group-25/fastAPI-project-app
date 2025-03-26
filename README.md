@@ -200,6 +200,53 @@ make restart
 
 **All development must be done using the Makefile commands** for consistency across environments. The Makefile abstracts away the complexity of individual tools and provides a standardized interface for all development tasks, ensuring that everyone follows the same processes regardless of their local setup.
 
+### 🌿 Branching Strategy
+
+This project follows a structured branching strategy to ensure code quality and streamline the development process:
+
+1. **Main Branch (`main`)**
+   - Production-ready code only
+   - Protected from direct pushes
+   - Changes only accepted through PRs from the `dev` branch
+   - Triggers production builds and deployments
+
+2. **Development Branch (`dev`)**
+   - Integration branch for features and fixes
+   - Protected from direct pushes
+   - Changes only accepted through PRs from feature/fix branches
+   - Triggers staging deployments for testing
+
+3. **Feature Branches (`feat/*`)**
+   - Created for new features or enhancements
+   - Branched from `dev`
+   - First push automatically opens a PR to `dev`
+   - Requires passing all tests and code reviews
+
+4. **Fix Branches (`fix/*`)**
+   - Created for bug fixes
+   - Branched from `dev`
+   - First push automatically opens a PR to `dev`
+   - Can be marked for auto-merge by adding `automerge` suffix
+
+5. **Workflow Automation**
+   - When a PR to `dev` is merged, a new PR to `main` is automatically created
+   - All branches are automatically deleted after successful merge
+
+**Creating Branches:**
+
+Always use the Makefile commands to create branches to ensure proper naming and setup:
+
+```bash
+# Create a feature branch
+make branch-create type=feat name=your-feature-name
+
+# Create a fix branch
+make branch-create type=fix name=your-fix-name
+
+# Create a fix branch with auto-merge enabled
+make branch-create type=fix name=your-fix-name automerge=true
+```
+
 ### Using pnpm and UV for Faster Builds
 
 This project uses pnpm for frontend package management and UV for Python package management, significantly improving build times and reducing disk space usage:

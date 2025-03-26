@@ -75,11 +75,15 @@ def validate_environment() -> bool:
         logger.info("Environment validation successful!")
 
         # Additional checks
-        if settings.ENVIRONMENT not in ["development", "staging", "production", "test"]:
+        if settings.ENVIRONMENT not in [
+            "development", "staging", "production", "test"
+        ]:
             logger.error(f"Invalid ENVIRONMENT value: {settings.ENVIRONMENT}")
             return False
 
-        if settings.LOG_LEVEL not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+        if settings.LOG_LEVEL not in [
+            "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+        ]:
             logger.error(f"Invalid LOG_LEVEL value: {settings.LOG_LEVEL}")
             return False
 

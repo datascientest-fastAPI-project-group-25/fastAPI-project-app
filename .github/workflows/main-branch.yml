@@ -1,39 +1,34 @@
-name: Main Branch Workflow
+name: Main Branch Production Workflow
 
 on:
   pull_request:
     branches:
       - main
-    types: [opened, synchronize, reopened, closed]
+    types: [closed]
 
 permissions:
   contents: write
   packages: write
+  pull-requests: write
 
 jobs:
-  check-conditions:
+  check-merge:
     runs-on: ubuntu-latest
     outputs:
-      should_deploy: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
-      should_run_tests: true
+      is_merged: ${{ github.event.pull_request.merged }}
     steps:
-      - name: Check workflow conditions
+      - name: Check if PR was merged
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.merged }}" == "true" ]]; then
-            echo "PR was merged to main, proceeding with deployment"
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "opened" || \
-                 "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" || \
-                 "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "reopened" ]]; then
-            echo "PR was created or updated, running tests"
-            echo "should_run_tests=true" >> $GITHUB_OUTPUT
+          if [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            echo "PR was merged to main, proceeding with release"
           else
-            echo "Not a merged PR to main, skipping deployment"
+            echo "PR was not merged, skipping release"
           fi
 
   lint:
     runs-on: ubuntu-latest
-    needs: check-conditions
-    if: needs.check-conditions.outputs.should_run_tests == 'true'
+    needs: check-merge
+    if: needs.check-merge.outputs.is_merged == 'true'
     container:
       image: ubuntu:22.04
     steps:
@@ -83,7 +78,8 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
-    needs: check-conditions
+    needs: check-merge
+    if: needs.check-merge.outputs.is_merged == 'true'
     container:
       image: ubuntu:22.04
     steps:
@@ -132,8 +128,8 @@ jobs:
         run: make security-scan
 
   test:
-    needs: [lint, security-scan, check-conditions]
-    if: needs.check-conditions.outputs.should_run_tests == 'true'
+    needs: [lint, security-scan, check-merge]
+    if: needs.check-merge.outputs.is_merged == 'true'
     runs-on: ubuntu-latest
     env:
       PROJECT_NAME: "FastAPI Project"
@@ -205,118 +201,34 @@ jobs:
       - name: Run tests
         run: make test
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        with:
-          files: |
-            ./backend/coverage.xml
-            ./frontend/coverage/coverage-final.json
-          flags: |
-            backend
-            frontend
-          name: coverage-report
-
-  semantic-release:
-    needs: [test, security-scan, check-conditions]
-    if: needs.check-conditions.outputs.should_deploy == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.6.4
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "pnpm"
-          cache-dependency-path: "pnpm-lock.yaml"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Semantic Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm exec semantic-release
-
-  publish-images:
-    needs: [semantic-release, check-conditions]
-    if: needs.check-conditions.outputs.should_deploy == 'true'
+  release:
+    needs: [test, check-merge]
+    if: needs.check-merge.outputs.is_merged == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          version: 10.6.4
-          run_install: false
+          python-version: "3.10"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Cache UV packages
+        uses: actions/cache@v4
         with:
-          node-version: "18"
-          cache: "pnpm"
-          cache-dependency-path: "pnpm-lock.yaml"
+          path: |
+            ~/.cache/uv
+            backend/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml', 'pnpm-lock.yaml', 'backend/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: make install
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Build and push Docker images
+        run: make build-push
 
-      - name: Log in to GitHub Container Registry (GHCR)
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get version
-        id: get_version
-        run: |
-          VERSION=$(pnpm exec node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Build and push backend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ghcr.io/datascientest-fastapi-project-group-25/backend:${{ steps.get_version.outputs.version || 'latest' }}
-            ghcr.io/datascientest-fastapi-project-group-25/backend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          push: true
-          tags: |
-            ghcr.io/datascientest-fastapi-project-group-25/frontend:${{ steps.get_version.outputs.version || 'latest' }}
-            ghcr.io/datascientest-fastapi-project-group-25/frontend:latest
-          build-args: |
-            VITE_API_URL=http://localhost:8000
-            NODE_ENV=production
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Notify image publication
-        run: |
-          echo "Published Docker images to GHCR: \
-            ghcr.io/datascientest-fastapi-project-group-25/backend:${{ steps.get_version.outputs.version || 'latest' }} \
-            ghcr.io/datascientest-fastapi-project-group-25/frontend:${{ steps.get_version.outputs.version || 'latest' }}"
-          echo "These images are now available for deployment by the infrastructure repository."
+      - name: Update production deployment
+        run: make deploy-production

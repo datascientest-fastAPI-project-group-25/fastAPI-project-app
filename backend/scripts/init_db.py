@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Database initialization script for CI/CD pipelines.
-This script creates all database tables and initializes the database with test data.
+This script creates all database tables and initializes the database with 
+test data.
 
 Note: This script requires all backend dependencies to be installed.
 If running locally, make sure to install dependencies with:
@@ -60,7 +61,9 @@ def initialize_database():
         logger.info("Initializing database with test data...")
         # Get connection timeout from environment variable or use default
         connection_timeout = int(os.getenv("DB_CONNECTION_TIMEOUT", "10"))
-        logger.info(f"Using database connection timeout: {connection_timeout} seconds")
+        logger.info(
+            f"Using database connection timeout: {connection_timeout} seconds"
+        )
         # Create session with connection timeout for more robust database connections
         session = Session(
             bind=engine.execution_options(

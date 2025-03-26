@@ -1,9 +1,9 @@
-name: Feature Branch Workflow
+name: Fix Branch Workflow
 
 on:
   push:
     branches:
-      - 'feat/*'
+      - 'fix/*'
   workflow_dispatch:
 
 jobs:
@@ -150,7 +150,7 @@ jobs:
 
   build-image:
     needs: security-checks
-    name: Build Feature Image
+    name: Build Fix Image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -185,13 +185,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Create PR
+      - name: Check for automerge
+        id: check-automerge
+        run: |
+          if [[ "$GITHUB_REF" == *"-automerge"* ]]; then
+            echo "AUTOMERGE=1" >> $GITHUB_ENV
+          fi
+
+      - name: Create PR (standard)
+        if: env.AUTOMERGE != '1'
         uses: peter-evans/create-pull-request@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: "feat: ${GITHUB_REF_NAME}"
-          body: "Automatically created PR from feature branch\n\nImage built: ${{ steps.meta.outputs.tags }}"
+          title: "fix: ${GITHUB_REF_NAME}"
+          body: "Automatically created PR from fix branch\n\nImage built: ${{ steps.meta.outputs.tags }}"
           base: dev
           branch: ${{ github.event.pull_request.head.ref }}
-          labels: feature
+          labels: fix
+          assignees: ${{ github.actor }}
+
+      - name: Create PR (automerge)
+        if: env.AUTOMERGE == '1'
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "fix: ${GITHUB_REF_NAME} [AUTOMERGE]"
+          body: "Automatically created PR from fix branch\n\nImage built: ${{ steps.meta.outputs.tags }}"
+          base: dev
+          branch: ${{ github.event.pull_request.head.ref }}
+          labels: fix,automated
           assignees: ${{ github.actor }}
