@@ -1,4 +1,4 @@
-name: Feature Branch Workflow
+name: Feature Branch Checks
 
 on:
   push:
@@ -27,7 +27,8 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install -e ".[dev,lint,types,test]"
+          uv pip install -r requirements.txt
+          uv pip install pytest pytest-cov ruff bandit pip-audit
         working-directory: backend
 
       - name: Run ruff
@@ -69,7 +70,8 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install -e ".[test]"
+          uv pip install -r requirements.txt
+          uv pip install pytest pytest-cov
         working-directory: backend
 
       - name: Run tests
@@ -146,39 +148,8 @@ jobs:
           safety check
         working-directory: backend
 
-  build-image:
-    needs: security-checks
-    name: Build Feature Image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=sha
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
   create-pr:
-    needs: [security-checks, build-image]
+    needs: security-checks
     name: Create PR to dev
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -188,7 +159,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: "feat: ${GITHUB_REF_NAME}"
-          body: "Automatically created PR from feature branch\n\nImage built: ${{ steps.meta.outputs.tags }}"
+          body: "Automatically created PR from feature branch"
           base: dev
           branch: ${{ github.event.pull_request.head.ref }}
           labels: feature
