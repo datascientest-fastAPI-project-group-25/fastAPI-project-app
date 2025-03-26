@@ -130,7 +130,7 @@ async function installPreCommit() {
 async function installGitHooks() {
   try {
     // Check if hooksPath is set
-    const hooksPath = runCommand("git config --get core.hooksPath", { 
+    const hooksPath = runCommand("git config --get core.hooksPath", {
       stdio: ["pipe", "pipe", "ignore"],
       encoding: "utf8"
     }).trim();

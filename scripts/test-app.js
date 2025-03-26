@@ -146,7 +146,7 @@ async function runTests() {
   try {
     const testCommand = `docker compose exec backend pytest ${testArgs.join(" ")}`;
     console.log(chalk.cyan(`Running command: ${testCommand}`));
-    
+
     // Run the tests with live output
     const { spawn } = require('child_process');
     const testProcess = spawn('docker', ['compose', 'exec', 'backend', 'pytest', ...testArgs], {

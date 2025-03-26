@@ -113,7 +113,7 @@ const runTestScript = async (workflowFile, eventType) => {
     const testScript = path.join(__dirname, 'test-workflow.sh');
     const workflowPath = path.join(__dirname, "..", ".github", "workflows", workflowFile);
     const testCommand = `${testScript} "${workflowPath}" "${eventType}"`;
-    
+
     // Run the test script with live output
     const { spawn } = require('child_process');
     const testProcess = spawn('bash', ['-c', testCommand], {
@@ -147,7 +147,7 @@ const runTestScript = async (workflowFile, eventType) => {
  */
 async function selectWorkflowCategory() {
   const categories = Object.keys(WORKFLOW_CATEGORIES);
-  
+
   // If there's only one category, return it immediately
   if (categories.length === 1) {
     console.log(chalk.cyan(`\nAuto-selected category: ${categories[0]}`));
@@ -174,7 +174,7 @@ async function selectWorkflowCategory() {
  */
 async function selectWorkflowFile(category) {
   const workflows = WORKFLOW_CATEGORIES[category];
-  
+
   // If there's only one workflow, return it immediately
   if (workflows.length === 1) {
     console.log(chalk.cyan(`\nAuto-selected workflow: ${workflows[0].file}`));
@@ -202,14 +202,14 @@ async function selectWorkflowFile(category) {
 async function selectEventType(workflow) {
   const workflows = Object.values(WORKFLOW_CATEGORIES).flat();
   const workflowConfig = workflows.find(w => w.file === workflow);
-  
+
   if (!workflowConfig) {
     console.error(chalk.red('Error: Workflow not found in configuration'));
     process.exit(1);
   }
 
   const events = workflowConfig.events;
-  
+
   // If there's only one event type, return it immediately
   if (events.length === 1) {
     console.log(chalk.cyan(`\nAuto-selected event: ${events[0]}`));
@@ -235,13 +235,13 @@ async function selectEventType(workflow) {
     // Check if we're in interactive mode
     if (process.stdin.isTTY) {
       console.log(chalk.blue('\n📚 GitHub Workflow Tester'));
-      
+
       // Get category
       const category = await selectWorkflowCategory();
-      
+
       // Get workflow file
       const workflow = await selectWorkflowFile(category);
-      
+
       // Get event type
       const event = await selectEventType(workflow);
 
