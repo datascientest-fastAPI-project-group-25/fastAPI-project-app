@@ -80,14 +80,13 @@ When testing GitHub Actions workflows locally:
 
 ## Automerge Workflow
 
-The automerge workflow (`automerge.yml`) automatically merges pull requests from branches with the `-automerge` suffix to the `dev` branch after all status checks pass. This is particularly useful for critical fixes that need to be merged quickly.
+The automerge workflow (`automerge.yml`) automatically merges pull requests from branches with the `-automerge` suffix to the `dev` branch after other workflows complete successfully. This is particularly useful for critical fixes that need to be merged quickly.
 
 ### How It Works
 
-1. The workflow is triggered on pull request events (opened, synchronize, reopened, ready_for_review) to the `dev` branch.
-2. It checks if the branch name contains `-automerge` and if the PR is not in draft state.
-3. It waits for all status checks to pass before proceeding.
-4. Once all checks pass, it automatically approves and merges the PR using a squash merge strategy.
+1. The workflow is triggered after the "Branch Protection" or "Feature Branch Push" workflows complete successfully.
+2. It only runs for branches that match the pattern `fix/*-automerge`.
+3. It finds the open PR for the branch, approves it, and merges it using a squash merge strategy.
 
 ### Usage
 
