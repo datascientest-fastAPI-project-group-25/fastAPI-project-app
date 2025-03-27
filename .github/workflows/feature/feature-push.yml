@@ -20,9 +20,15 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: test_db
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        options: >-
+          --health-cmd "pg_isready -U postgres -d test_db"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+          --health-start-period 5s
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
       PROJECT_NAME: FastAPI
@@ -36,39 +42,48 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.11
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Cache uv directory
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            backend/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/requirements*.txt', 'backend/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Install uv
         run: pip install uv
 
       - name: Install dependencies
-        run: |
-          cd backend
-          uv run pip install -e ".[dev,lint,types,test]"
+        working-directory: backend
+        run: uv venv --system-site-packages && uv pip install -e ".[dev,lint,types,test]"
 
       - name: Wait for PostgreSQL
+        working-directory: backend
         run: |
-          cd backend
           uv run python -c "import time, psycopg; \
-          while True: \
+          for i in range(30): \
               try: \
                   conn = psycopg.connect('postgresql://postgres:postgres@localhost:5432/test_db'); \
                   conn.close(); \
+                  print('PostgreSQL is ready!'); \
                   break; \
               except Exception as e: \
+                  if i == 29: raise e; \
                   print(f'Waiting for PostgreSQL: {e}'); \
                   time.sleep(1);"
 
       - name: Run tests
-        run: |
-          cd backend
-          uv run pytest --cov=app
+        working-directory: backend
+        run: uv run pytest --cov=app --cov-report=xml
 
       - name: Security scan
-        run: |
-          cd backend
-          uv run bandit -r app/
+        working-directory: backend
+        run: uv run bandit -r app/ -c bandit.yaml
 
   frontend-tests:
     runs-on: ubuntu-latest
@@ -78,17 +93,32 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm install
 
       - name: Run Biome check
-        run: pnpm biome check
+        run: pnpm run biome check
 
       - name: Run tests
-        run: pnpm test
+        run: pnpm --filter frontend test
