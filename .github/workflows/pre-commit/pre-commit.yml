@@ -7,7 +7,7 @@ on:
     branches: [main, dev]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
@@ -21,8 +21,43 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.11
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pre-commit-
+
+      - name: Install pnpm dependencies
+        run: pnpm install
 
       - name: Install pre-commit
         run: pip install pre-commit
@@ -35,18 +70,23 @@ jobs:
           echo "FIRST_SUPERUSER=admin@example.com" >> $GITHUB_ENV
           echo "FIRST_SUPERUSER_PASSWORD=password" >> $GITHUB_ENV
 
-      - name: Run linting checks only
+      - name: Run formatting checks
+        id: pre-commit
         run: |
-          # Skip hooks that require Docker or complex dependencies
-          SKIP=pytest-check,biome,black,flake8,bandit pre-commit run --all-files --hook-stage commit
+          # Run only formatting and linting hooks that don't require Docker
+          SKIP=pytest-check,bandit pre-commit run --all-files --show-diff-on-failure
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push changes if any
-        if: steps.pre-commit.outputs.changed == 'true'
+      - name: Push fixes if needed
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
         run: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
-          git add .
-          git commit -m "chore: pre-commit auto-formatting"
-          git push origin ${{ github.ref }}
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git config --global user.name "github-actions[bot]"
+            git add -A
+            git commit -m "style: auto-fixes from pre-commit hooks"
+            git push
+          fi
