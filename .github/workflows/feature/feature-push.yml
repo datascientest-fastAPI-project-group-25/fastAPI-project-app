@@ -5,6 +5,7 @@ on:
     branches:
       - feat/**
       - fix/**
+      - fix/workflow-fixes-automerge
 
 permissions:
   contents: read
