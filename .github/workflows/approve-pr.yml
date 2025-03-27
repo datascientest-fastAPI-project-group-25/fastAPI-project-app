@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Approve PR
-        uses: hmarr/auto-approve-action@v3
+        uses: hmarr/auto-approve-action@v4
         with:
           pull-request-number: ${{ github.event.inputs.pr_number }}
           github-token: ${{ secrets.MACHINE_USER_TOKEN }}
