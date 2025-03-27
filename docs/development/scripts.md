@@ -147,20 +147,49 @@ Verifies database initialization and migrations status.
 ./scripts/check-prestart-status.sh
 ```
 
-### `test-workflow.sh`
+### `test-workflow-selector.js`
 
-Tests GitHub Actions workflows locally with act.
+Tests GitHub Actions workflows locally with act using an interactive CLI.
 
 **Usage:**
-
 ```bash
-./scripts/test-workflow.sh <workflow-file> [event-type]
+node scripts/test-workflow-selector.js
 ```
 
-**Example:**
+**Interactive Mode:**
+- Select workflow category (e.g., feature, ci)
+- Choose specific workflow file
+- Select event type (e.g., push, pull_request)
+
+**Non-Interactive Mode:**
+```bash
+# Test specific workflow
+node scripts/test-workflow-selector.js --category=feature --event=push --workflow=feature-branch-checks.yml
+
+# Test all workflows
+node scripts/test-workflow-selector.js --all
+```
+
+**Prerequisites:**
+Before running workflow tests, you need to build the custom Docker image used for testing:
 
 ```bash
-./scripts/test-workflow.sh feature-branch-checks.yml push
+# Build the workflow test Docker image
+docker build -t local/workflow-test:latest -f .github/workflows/utils/Dockerfile.workflow-test .
+```
+
+This image contains the necessary tools and dependencies for running GitHub Action workflows locally.
+
+**Example:**
+```bash
+# Interactive mode
+node scripts/test-workflow-selector.js
+
+# Non-interactive mode - specific workflow
+node scripts/test-workflow-selector.js --category=feature --event=push --workflow=feature-branch-checks.yml
+
+# Non-interactive mode - all workflows
+node scripts/test-workflow-selector.js --all
 ```
 
 ## Best Practices
