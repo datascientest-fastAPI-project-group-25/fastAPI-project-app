@@ -1,0 +1,73 @@
+name: Automerge
+
+on:
+  workflow_run:
+    workflows: ["Branch Protection", "Feature Branch Push"]
+    types:
+      - completed
+    branches:
+      - 'fix/*-automerge'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find PR for branch
+        id: find-pr
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          echo "Processing branch: $BRANCH"
+
+          # Find open PRs for this branch
+          PR_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:$BRANCH&state=open")
+
+          PR_NUMBER=$(echo "$PR_DATA" | jq -r '.[0].number')
+
+          if [ "$PR_NUMBER" = "null" ] || [ -z "$PR_NUMBER" ]; then
+            echo "No open PR found for branch $BRANCH"
+            exit 1
+          fi
+
+          echo "Found PR #$PR_NUMBER for branch $BRANCH"
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Auto-merge PR
+        run: |
+          PR_NUMBER=${{ steps.find-pr.outputs.pr_number }}
+
+          echo "Attempting to merge PR #$PR_NUMBER without approval..."
+
+          # Check if PR is mergeable
+          PR_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+          MERGEABLE=$(echo "$PR_INFO" | jq -r '.mergeable')
+          MERGEABLE_STATE=$(echo "$PR_INFO" | jq -r '.mergeable_state')
+
+          echo "PR mergeable: $MERGEABLE, state: $MERGEABLE_STATE"
+
+          # Merge the PR
+          MERGE_RESPONSE=$(curl -s -X PUT \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER/merge" \
+            -d '{"merge_method":"squash"}')
+
+          MERGE_STATUS=$(echo "$MERGE_RESPONSE" | jq -r '.merged // false')
+
+          if [ "$MERGE_STATUS" = "true" ]; then
+            echo "PR #$PR_NUMBER has been auto-merged successfully."
+          else
+            MERGE_ERROR=$(echo "$MERGE_RESPONSE" | jq -r '.message')
+            echo "Failed to merge PR #$PR_NUMBER: $MERGE_ERROR"
+            exit 1
+          fi
