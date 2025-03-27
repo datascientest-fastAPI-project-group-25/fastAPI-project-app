@@ -110,7 +110,7 @@ function runGitCommand(command) {
 const runTestScript = async (workflowFile, eventType) => {
   try {
     console.log(`\nTesting workflow: ${workflowFile} with event: ${eventType}`);
-    const testScript = path.join(__dirname, 'test-workflow.sh');
+    const testScript = path.join(__dirname, '../.github/workflows/utils/test-workflow.sh');
     const workflowPath = path.join(__dirname, "..", ".github", "workflows", workflowFile);
     const testCommand = `${testScript} "${workflowPath}" "${eventType}"`;
 
@@ -229,9 +229,38 @@ async function selectEventType(workflow) {
   return event;
 }
 
+// Test all workflows in all categories
+const testAllWorkflows = async () => {
+  try {
+    console.log(chalk.blue('\n📚 Testing All GitHub Workflows'));
+
+    for (const category of Object.keys(WORKFLOW_CATEGORIES)) {
+      console.log(chalk.cyan(`\n🔍 Testing category: ${category}`));
+
+      for (const workflowObj of WORKFLOW_CATEGORIES[category]) {
+        for (const event of workflowObj.events) {
+          console.log(chalk.yellow(`\n⚡ Testing workflow: ${workflowObj.file} with event: ${event}`));
+          await runTestScript(workflowObj.file, event);
+        }
+      }
+    }
+
+    console.log(chalk.green('\n✅ All workflows tested!'));
+  } catch (error) {
+    console.error(chalk.red(`\n❌ Error testing all workflows: ${error.message}`));
+    throw error;
+  }
+};
+
 // Main execution
 (async () => {
   try {
+    // Check for --all flag
+    if (args.includes('--all')) {
+      await testAllWorkflows();
+      return;
+    }
+
     // Check if we're in interactive mode
     if (process.stdin.isTTY) {
       console.log(chalk.blue('\n📚 GitHub Workflow Tester'));

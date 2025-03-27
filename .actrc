@@ -1,9 +1,10 @@
 --container-architecture linux/amd64
---env-file .env
+--env-file .env.test
 --env CI=true
--P ubuntu-latest=node:18-bullseye
--P ubuntu-22.04=node:18-bullseye
--P ubuntu-20.04=node:16-bullseye
+-P ubuntu-latest=local/workflow-test:latest
+-P ubuntu-22.04=local/workflow-test:latest
+-P ubuntu-20.04=local/workflow-test:latest
+--pull=false
 --secret GITHUB_TOKEN=
 --secret CR_PAT=
 --bind

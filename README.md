@@ -322,7 +322,21 @@ git commit -m "feat: your feature description"
 You can test GitHub Actions workflows locally using the provided script:
 
 ```bash
-./scripts/test-workflow.sh feature-branch-checks.yml push
+# Interactive mode - guides you through workflow selection
+node scripts/test-workflow-selector.js
+
+# Test all workflows at once
+node scripts/test-workflow-selector.js --all
+```
+
+In interactive mode, the script will guide you through selecting the workflow category, specific workflow file, and event type to test. Using the `--all` flag will test all workflows in all categories.
+
+**Prerequisites:**
+Before running workflow tests, you need to build the custom Docker image used for testing:
+
+```bash
+# Build the workflow test Docker image
+docker build -t local/workflow-test:latest -f .github/workflows/utils/Dockerfile.workflow-test .
 ```
 
 ## 🔄 CI/CD Pipeline

@@ -75,7 +75,7 @@ echo "=================================================="
 
 # Run the workflow with act
 echo "Running: act $EVENT_TYPE -W .github/workflows/$REL_PATH $PLATFORM_FLAGS $ENV_VARS --verbose"
-act $EVENT_TYPE -W ".github/workflows/$REL_PATH" $PLATFORM_FLAGS $ENV_VARS --verbose || {
+act $EVENT_TYPE -W ".github/workflows/$REL_PATH" $PLATFORM_FLAGS $ENV_VARS --container-options '--privileged' --verbose || {
   echo "Error: act command failed or timed out"
   echo "You can try:"
   echo "1. Running with specific jobs: act $EVENT_TYPE -W .github/workflows/$REL_PATH -j <job_id>"
