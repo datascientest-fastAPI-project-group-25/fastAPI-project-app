@@ -140,17 +140,21 @@ function createBranchWithParams(branchType, branchName, automerge) {
   }
 }
 
-// Interactive mode
-if (!branchType || !branchName) {
-  console.log("Interactive Branch Creation\n");
+async function askBranchType() {
+  return new Promise((resolve) => {
+    rl.question(`Branch type (${branchTypes.join(", ")}): `, (type) => {
+      if (!branchTypes.includes(type)) {
+        console.error("Invalid branch type");
+        rl.close();
+        process.exit(1);
+      }
+      resolve(type);
+    });
+  });
+}
 
-  rl.question(`Branch type (${branchTypes.join(", ")}): `, (type) => {
-    if (!branchTypes.includes(type)) {
-      console.error("Invalid branch type");
-      rl.close();
-      process.exit(1);
-    }
-
+async function askBranchName() {
+  return new Promise((resolve) => {
     rl.question(
       "Branch name (lowercase letters, numbers, and hyphens only): ",
       (name) => {
@@ -159,37 +163,62 @@ if (!branchType || !branchName) {
           rl.close();
           process.exit(1);
         }
-
-        if (type === "fix") {
-          rl.question("Enable automerge? (y/N): ", (answer) => {
-            const enableAutomerge = answer.toLowerCase() === "y";
-            rl.close();
-            updateDevBranch().then(() =>
-              createBranchWithParams(type, name, enableAutomerge)
-            );
-          });
-        } else {
-          rl.close();
-          updateDevBranch().then(() =>
-            createBranchWithParams(type, name, false)
-          );
-        }
-      },
+        resolve(name);
+      }
     );
   });
-} else {
-  // Non-interactive mode
-  if (!branchTypes.includes(branchType)) {
-    console.error("Invalid branch type");
-    process.exit(1);
-  }
-
-  if (!isValidBranchName(branchName)) {
-    console.error("Invalid branch name");
-    process.exit(1);
-  }
-
-  updateDevBranch().then(() =>
-    createBranchWithParams(branchType, branchName, automerge)
-  );
 }
+
+async function askAutomerge() {
+  return new Promise((resolve) => {
+    rl.question("Enable automerge? (y/N): ", (answer) => {
+      resolve(answer.toLowerCase() === "y");
+    });
+  });
+}
+
+async function main() {
+  let success = false;
+  try {
+    // Non-interactive mode
+    if (branchType && branchName) {
+      if (!branchTypes.includes(branchType)) {
+        console.error("Invalid branch type");
+        return false;
+      }
+      if (!isValidBranchName(branchName)) {
+        console.error("Invalid branch name");
+        return false;
+      }
+
+      await updateDevBranch();
+      success = createBranchWithParams(branchType, branchName, automerge);
+      return success;
+    }
+
+    // Interactive mode
+    console.log("Interactive Branch Creation\n");
+    branchType = await askBranchType();
+    branchName = await askBranchName();
+
+    if (branchType === "fix") {
+      automerge = await askAutomerge();
+    }
+
+    await updateDevBranch();
+    success = createBranchWithParams(branchType, branchName, automerge);
+    return success;
+  } catch (error) {
+    console.error("An error occurred:", error);
+    return false;
+  } finally {
+    rl.close();
+    process.exit(success ? 0 : 1);
+  }
+}
+
+// Run the main function
+main().catch(error => {
+  console.error("Fatal error:", error);
+  process.exit(1);
+});
