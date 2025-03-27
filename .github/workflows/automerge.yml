@@ -1,9 +1,12 @@
 name: Automerge
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    branches: [dev]
+  workflow_run:
+    workflows: ["Branch Protection", "Feature Branch Push"]
+    types:
+      - completed
+    branches:
+      - 'fix/*-automerge'
 
 permissions:
   contents: write
@@ -12,60 +15,40 @@ permissions:
 jobs:
   automerge:
     runs-on: ubuntu-latest
-    if: |
-      github.event.pull_request.draft == false &&
-      contains(github.head_ref, '-automerge')
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Wait for status checks
-        id: wait-for-status
+      - name: Find PR for branch
+        id: find-pr
         run: |
-          # Get the SHA of the PR head
-          PR_SHA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
-            | jq -r '.head.sha')
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          echo "Processing branch: $BRANCH"
 
-          echo "Waiting for status checks on commit $PR_SHA..."
+          # Find open PRs for this branch
+          PR_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:$BRANCH&state=open")
 
-          # Loop until all checks are complete
-          for i in {1..30}; do
-            # Get the combined status
-            STATUS_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              "https://api.github.com/repos/${{ github.repository }}/commits/$PR_SHA/status")
+          PR_NUMBER=$(echo "$PR_DATA" | jq -r '.[0].number')
 
-            STATUS=$(echo "$STATUS_RESPONSE" | jq -r '.state')
-            TOTAL_COUNT=$(echo "$STATUS_RESPONSE" | jq -r '.total_count')
+          if [ "$PR_NUMBER" = "null" ] || [ -z "$PR_NUMBER" ]; then
+            echo "No open PR found for branch $BRANCH"
+            exit 1
+          fi
 
-            echo "Current status: $STATUS (total checks: $TOTAL_COUNT)"
-
-            if [ "$STATUS" = "success" ]; then
-              echo "All status checks passed!"
-              exit 0
-            elif [ "$STATUS" = "failure" ]; then
-              echo "Some status checks failed. Not auto-merging."
-              exit 1
-            elif [ "$STATUS" = "null" ] || [ "$STATUS" = "pending" ] && [ "$TOTAL_COUNT" = "0" ]; then
-              echo "No status checks found. Proceeding with merge."
-              exit 0
-            fi
-
-            echo "Waiting for status checks to complete... ($i/30)"
-            sleep 10
-          done
-
-          echo "Timed out waiting for status checks. Proceeding with merge anyway."
-          exit 0
+          echo "Found PR #$PR_NUMBER for branch $BRANCH"
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
       - name: Auto-approve PR
         uses: hmarr/auto-approve-action@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.find-pr.outputs.pr_number }}
 
       - name: Auto-merge PR
         run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_NUMBER=${{ steps.find-pr.outputs.pr_number }}
 
           # Enable auto-merge
           curl -X PUT \
