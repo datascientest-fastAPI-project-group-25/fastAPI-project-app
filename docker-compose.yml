@@ -91,11 +91,13 @@ services:
       - SMTP_PORT=1025
       - SMTP_TLS=false
       - FRONTEND_HOST=http://dashboard.localhost
+      - VIRTUAL_ENV=/app/backend/.venv
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      - "ghcr.io:140.82.121.33"
     depends_on:
       - db
-    command: sh -c "bash /app/scripts/prestart.sh && uv run --app app --path app/main.py --reload"
+    command: sh -c "sleep 10 && bash /app/scripts/prestart.sh && uv run --app app --path app/main.py --reload"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.localhost`)"

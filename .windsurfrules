@@ -1,0 +1,71 @@
+Here's the updated ruleset with the additional guidelines regarding Docker, pnpm, uv, and the Makefile:
+
+## AI Assistant Ruleset & Interaction Guidelines
+
+These rules outline the desired workflow and interaction style.
+
+1.  **Pre-Action Notes:**
+    *   Before your actions, add a short note to me why you are planning to do so.
+
+2.  **Prompt Repetition and Planning:**
+    *   Repeat what I got from your prompt and what I plan to do in short concise bullet points.
+    *   Let me know if I understand your prompt correctly before taking any action.
+
+3.  **Step-by-Step Execution & Communication:**
+    *   After each step of the plan is done, let me know what is done and what is next (and still to do).
+    *   If there are things you need me to handle (e.g., merge a PR manually), give me a note.
+    *   If it turns out you have a bigger task to do, give me a step-by-step guide after asking me if you need this.
+    *   If you give me this guide, give me only a super brief overview, then the next step only. Once you are done with the current task, let me know and I can give you the next step.
+
+4.  **Documentation & Scope:**
+    *   Always check the docs to know our scope and strategies.
+    *   Always update the docs.
+    *   Always check and update the todo file in root.
+
+5.  **Development Workflow:**
+    *   Always go in small steps.
+    *   Commit after each small step.
+    *   Validate by running local tests.
+    *   Validate local workflows.
+    *   Push changes.
+    *   Validate using MCP server.
+    *   Validate using `gh cli` on GitHub.
+    *   Ensure the Makefile is the single source of control for setup, development, git management (branches), and CI/CD processes.
+
+6.  **Branching Strategy:**
+    *   We use a `main` branch for production-ready code and a `dev` branch for integration.
+    *   Development happens on short-lived feature (`feat/*`) or fix (`fix/*`) branches, branched from `dev`.
+    *   Pushing to a `feat/*` or `fix/*` branch should automatically open a Pull Request (currently non-functional).
+    *   All Pull Requests require review before merging.
+    *   Merging a PR to `dev` triggers a new PR to `main`.
+    *   `fix/*automerge` branches are automatically merged to `dev` after review; otherwise, they require approval.
+    *   Short-lived branches are deleted after merge.
+
+7.  **Git Branch Management:**
+    *   Keep the local git branches clean.
+    *   Remove local branches after merging.
+
+8.  **Staying Up-to-Date:**
+    *   Before you start working on a new feature or fix, make sure you have the latest changes from the `main` branch.
+
+9.  **File Management - Avoiding Duplicates:**
+    *   Before you create a new file, make sure something similar does not exist that could be adjusted to your needs.
+
+10. **Temporary Files:**
+    *   When you create a script for temporary use, remember to remove it after use.
+
+11. **File Replacement:**
+    *   When you create a new file to replace an existing file, remember to remove the old file after use.
+    *   When you see your expectations are outdated - like looking for a tool we removed, make sure the docs, readmes and other files are updated.
+
+12. **AI Assistance Workarounds:**
+    *   For branch creation, AI agents should use the non-interactive mode of the create-branch.js script.
+    *   Use the following format: `node ./scripts/create-branch.js --type <feat|fix> --name <branch-name> [--automerge]`
+    *   Example for feature branch: `node ./scripts/create-branch.js --type feat --name new-feature`
+    *   Example for fix branch with automerge: `node ./scripts/create-branch.js --type fix --name critical-fix --automerge`
+    *   This bypasses the interactive prompts that may not work well with AI agents.
+
+13. **Technology Stack:**
+    *   Our workflow is strictly Dockerized.
+    *   We strictly use `pnpm` and `uv`.
+    *   Strive to have our Makefile as the central control point for all operations.

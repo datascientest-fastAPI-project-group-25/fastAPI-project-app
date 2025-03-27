@@ -84,7 +84,7 @@ temp/
 # AI Assistant
 # ----------------------------------------
 .github/copiilot-configuration.md
-.windsurfrules
+!.windsurfrules
 .windsurfconfig
 .codebuddy
 .aider.*

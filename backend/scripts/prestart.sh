@@ -18,7 +18,17 @@ echo "Waiting for database to be ready..."
 # Let the DB start with a timeout
 TIMEOUT=120  # Increased timeout for slower environments
 COUNTER=0
-until uv run --app app --path app/backend_pre_start.py 2>/dev/null || [ $COUNTER -eq $TIMEOUT ]; do
+
+# Print environment variables for debugging
+echo "Database connection settings:"
+echo "POSTGRES_SERVER: $POSTGRES_SERVER"
+echo "POSTGRES_USER: $POSTGRES_USER"
+echo "POSTGRES_DB: $POSTGRES_DB"
+
+# Try a direct connection with psycopg
+python -c "import psycopg; print('Testing direct connection...'); conn = psycopg.connect('host=$POSTGRES_SERVER user=$POSTGRES_USER password=$POSTGRES_PASSWORD dbname=$POSTGRES_DB'); print('Direct connection successful!')" || echo "Direct connection failed"
+
+until uv run --app app --path app/backend_pre_start.py 2>&1 || [ $COUNTER -eq $TIMEOUT ]; do
   if [ $(($COUNTER % 5)) -eq 0 ]; then
     echo "Waiting for database connection... ($COUNTER/$TIMEOUT)"
   fi
