@@ -12,6 +12,7 @@ The project uses several GitHub Actions workflows to automate testing, building,
 4. **Feature Branch Checks** - Runs tests on feature branches
 5. **Deploy to Staging** - Deploys to the staging environment
 6. **Deploy to Production** - Deploys to the production environment
+7. **Automerge** - Automatically merges fix branches with the `-automerge` suffix to the dev branch after tests pass
 
 ## Local Testing with Act
 
@@ -76,6 +77,37 @@ When testing GitHub Actions workflows locally:
 4. **Vulnerabilities in Frontend Dependencies**:
    - pnpm audit may report vulnerabilities
    - Use `--skip-audit` to bypass this check during local testing
+
+## Automerge Workflow
+
+The automerge workflow (`automerge.yml`) automatically merges pull requests from branches with the `-automerge` suffix to the `dev` branch after all status checks pass. This is particularly useful for critical fixes that need to be merged quickly.
+
+### How It Works
+
+1. The workflow is triggered on pull request events (opened, synchronize, reopened, ready_for_review) to the `dev` branch.
+2. It checks if the branch name contains `-automerge` and if the PR is not in draft state.
+3. It waits for all status checks to pass before proceeding.
+4. Once all checks pass, it automatically approves and merges the PR using a squash merge strategy.
+
+### Usage
+
+To use the automerge functionality:
+
+1. Create a fix branch with the `-automerge` suffix using the `create-branch.js` script:
+   ```bash
+   node scripts/create-branch.js --type fix --name critical-fix --automerge
+   ```
+
+   Or interactively:
+   ```bash
+   node scripts/create-branch.js
+   # Select "fix" as the branch type
+   # Enter the branch name
+   # Answer "y" to the automerge question
+   ```
+
+2. Make your changes, commit, and push to the branch.
+3. A PR will be automatically created and, once all checks pass, automatically merged to the `dev` branch.
 
 ## Workflow Improvements
 

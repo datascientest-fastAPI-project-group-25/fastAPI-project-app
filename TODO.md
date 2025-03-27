@@ -152,9 +152,10 @@
    - [ ] Implement branch type validation (feat/fix)
 
 4. **Automated PR Workflow**
-   - [ ] Fix/Complete auto-PR creation for feat/fix branches
-   - [ ] Configure required checks for PRs
-   - [ ] Set up automatic staging builds on PR merge
+    - [ ] Fix/Complete auto-PR creation for feat/fix branches
+    - [ ] Configure required checks for PRs
+    - [ ] Set up automatic staging builds on PR merge
+    - [x] Implement automerge functionality for fix/*-automerge branches
 
 5. **Main Branch Integration**
    - [ ] Add auto-PR creation from dev to main
