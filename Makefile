@@ -76,31 +76,53 @@ env:
 # Install backend dependencies
 backend-install:
 	@echo " Installing backend dependencies..."
-	cd $(BACKEND_DIR) && python3 -m pip install uv && uv venv && . .venv/bin/activate && uv pip install -e ".[dev,lint,types,test]"
+	@if ! docker compose ps -q | grep -q .; then \
+		echo "Error: Docker containers are not running. Please run 'make docker-up' to start the containers."; \
+		exit 1; \
+	fi
+	@echo " Backend dependencies are already installed in the Docker container."
+	@echo " If you need to install dependencies locally, run:"
+	@echo " cd $(BACKEND_DIR) && python3 -m venv .venv && . .venv/bin/activate && pip install -U pip && pip install uv && uv pip install -e \".[dev,lint,types,test]\""
 	@echo " Backend dependencies installed!"
 
 # Run backend linting
 backend-lint:
 	@echo " Running backend linting..."
-	cd $(BACKEND_DIR) && source .venv/bin/activate && ruff check app && ruff format app --check
+	@if ! docker compose ps -q | grep -q .; then \
+		echo "Error: Docker containers are not running. Please run 'make docker-up' to start the containers."; \
+		exit 1; \
+	fi
+	docker compose exec backend bash -c "cd /app && ruff check app && ruff format app --check"
 	@echo " Backend linting complete!"
 
 # Format backend code
 backend-format:
 	@echo " Formatting backend code..."
-	cd $(BACKEND_DIR) && source .venv/bin/activate && ruff format app
+	@if ! docker compose ps -q | grep -q .; then \
+		echo "Error: Docker containers are not running. Please run 'make docker-up' to start the containers."; \
+		exit 1; \
+	fi
+	docker compose exec backend bash -c "cd /app && ruff format app"
 	@echo " Backend code formatted!"
 
 # Run backend tests
 backend-test:
 	@echo " Running backend tests..."
-	cd $(BACKEND_DIR) && source .venv/bin/activate && pytest --cov=app
+	@if ! docker compose ps -q | grep -q .; then \
+		echo "Error: Docker containers are not running. Please run 'make docker-up' to start the containers."; \
+		exit 1; \
+	fi
+	docker compose exec backend bash -c "cd /app && pytest --cov=app"
 	@echo " Backend tests complete!"
 
 # Run backend security checks
 backend-security:
 	@echo " Running backend security checks..."
-	cd $(BACKEND_DIR) && source .venv/bin/activate && bandit -r app/ && safety check
+	@if ! docker compose ps -q | grep -q .; then \
+		echo "Error: Docker containers are not running. Please run 'make docker-up' to start the containers."; \
+		exit 1; \
+	fi
+	docker compose exec backend bash -c "cd /app && bandit -r app/ && safety check"
 	@echo " Backend security checks complete!"
 
 #################################################
@@ -223,40 +245,26 @@ validate-workflows:
 	done
 	@echo " Workflow validation complete!"
 
-# Test a GitHub workflow with Act
-test-workflow:
-	@echo " Testing GitHub workflow (interactive)..."
-	@node scripts/test-workflow-selector.js
+# Test GitHub Actions workflows locally
+workflow-test-image:
+	@echo " Building workflow test Docker image..."
+	docker build -t local/workflow-test:latest -f .github/workflows/utils/Dockerfile.workflow-test .
+	@echo " Workflow test Docker image built successfully!"
+
+# Test a GitHub workflow with Act (interactive)
+test-workflow: workflow-test-image
+	@echo " Testing GitHub workflow..."
+	node scripts/test-workflow-selector.js
 	@echo " Workflow testing complete!"
 
-# Test a specific workflow
-test-workflow-params:
-	@echo " Testing GitHub workflow with parameters..."
-	@if [ -z "$(category)" ] || [ -z "$(event)" ]; then \
-		echo "Error: Required parameters missing. Usage: make test-workflow-params category=CATEGORY event=EVENT [workflow=WORKFLOW]"; \
-		exit 1; \
-	fi
-	@if [ -z "$(workflow)" ]; then \
-		act $(event) -W .github/workflows/$(category)/ --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
-			--env-file .env \
-			--env PROJECT_NAME=FastAPI \
-			--env POSTGRES_SERVER=localhost \
-			--env POSTGRES_USER=postgres \
-			--env FIRST_SUPERUSER=admin@example.com \
-			--env FIRST_SUPERUSER_PASSWORD=password; \
-	else \
-		act $(event) -W .github/workflows/$(category)/$(workflow) --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
-			--env-file .env \
-			--env PROJECT_NAME=FastAPI \
-			--env POSTGRES_SERVER=localhost \
-			--env POSTGRES_USER=postgres \
-			--env FIRST_SUPERUSER=admin@example.com \
-			--env FIRST_SUPERUSER_PASSWORD=password; \
-	fi
-	@echo " Workflow testing complete!"
+# Test a specific workflow with Act
+test-workflow-params: workflow-test-image
+	@echo " Testing specific GitHub workflow..."
+	./scripts/test-workflow.sh .github/workflows/$(category)/$(workflow) $(event)
+	@echo " Specific workflow testing complete!"
 
 # Test all GitHub workflows
-test-all-workflows:
+test-all-workflows: workflow-test-image
 	@echo " Testing all GitHub workflows..."
 	@echo " Testing feature workflows..."
 	@make test-workflow-params category=feature event=push workflow=feature-push.yml || echo "Feature workflow test failed"

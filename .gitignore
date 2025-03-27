@@ -84,8 +84,10 @@ temp/
 # AI Assistant
 # ----------------------------------------
 .github/copiilot-configuration.md
-.windsurfrules
+!.windsurfrules
 .windsurfconfig
+.codebuddy
+.aider.*
 
 # Ignore GitHub Copilot instructions symlink
 .github/copilot-instructions.md
