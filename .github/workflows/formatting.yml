@@ -34,16 +34,19 @@ jobs:
           cache-dependency-glob: "backend/pyproject.toml"
 
       - name: Install ruff directly
+        working-directory: backend
         run: pip install ruff
 
       - name: Create and activate virtual environment
         working-directory: backend
+        shell: bash
         run: |
           python -m venv .venv
           source .venv/bin/activate
 
       - name: Format Python code
         working-directory: backend
+        shell: bash
         run: |
           python -m venv .venv
           source .venv/bin/activate
@@ -52,6 +55,7 @@ jobs:
         working-directory: backend
         run: |
           echo "Formatting Python code..."
+          source .venv/bin/activate
           ruff format .
           echo "Checking Python code..."
           ruff check --fix .

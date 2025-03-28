@@ -12,7 +12,8 @@
     "generate-client": "openapi-ts",
     "test": "playwright test",
     "test:e2e": "playwright test",
-    "clean": "rm -rf node_modules/.cache dist"
+    "clean": "rm -rf node_modules/.cache dist",
+    "biome": "biome check --apply-unsafe src/ tests/"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.8.0",
