@@ -41,6 +41,7 @@ jobs:
       PROJECT_NAME: FastAPI
       POSTGRES_SERVER: localhost
       POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       FIRST_SUPERUSER: admin@example.com
       FIRST_SUPERUSER_PASSWORD: password
       PYTHONUNBUFFERED: "1"
@@ -136,6 +137,7 @@ jobs:
       PROJECT_NAME: FastAPI
       POSTGRES_SERVER: localhost
       POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       FIRST_SUPERUSER: admin@example.com
       FIRST_SUPERUSER_PASSWORD: password
       PYTHONUNBUFFERED: "1"
