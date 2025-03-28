@@ -3,9 +3,8 @@ name: Feature Branch Push (v2)
 on:
   push:
     branches:
-      - feat/**
-      - fix/**
-      - fix/workflow-fixes-automerge
+            - feat/**
+            - fix/**
 
 permissions:
   contents: read
