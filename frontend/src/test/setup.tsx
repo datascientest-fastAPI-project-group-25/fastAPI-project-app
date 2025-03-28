@@ -19,6 +19,9 @@ vi.mock("@tanstack/react-router", () => {
     Link: vi.fn(),
     useNavigate: vi.fn(),
     useParams: vi.fn(),
+    Image: ({ alt, src, ...props }: any) => (
+      <img alt={alt || "Descriptive alt text"} src={src} {...props} />
+    ),
   }
 })
 
