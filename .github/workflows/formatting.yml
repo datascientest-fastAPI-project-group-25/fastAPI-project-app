@@ -36,12 +36,15 @@ jobs:
       - name: Install ruff directly
         run: pip install ruff
 
-      - name: Activate virtual environment and Format Python code
+      - name: Create and activate virtual environment
         working-directory: backend
-        shell: bash
         run: |
-          echo "Activating virtual environment..."
+          python -m venv .venv
           source .venv/bin/activate
+
+      - name: Format Python code
+        working-directory: backend
+        run: |
           echo "Formatting Python code..."
           ruff format .
           echo "Checking Python code..."
