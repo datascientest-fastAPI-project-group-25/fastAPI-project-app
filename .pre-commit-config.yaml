@@ -35,7 +35,7 @@ repos:
     hooks:
       - id: bandit
         args: [-r, backend]
-        exclude: ^backend/tests/
+        exclude: ^backend/tests/|^backend/app/tests/|^backend/venv/|^backend/env/|^backend/virtualenv/|^backend/lib/python*/site-packages/
 
   # Shell script checking
   - repo: https://github.com/shellcheck-py/shellcheck-py
