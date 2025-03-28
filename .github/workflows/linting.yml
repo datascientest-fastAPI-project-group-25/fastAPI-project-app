@@ -43,6 +43,7 @@ jobs:
         working-directory: backend
         run: |
           echo "Running ruff checks..."
+          source .venv/bin/activate
           ruff check --fix .
           ruff format .
 
@@ -50,6 +51,7 @@ jobs:
         working-directory: backend
         run: |
           echo "Running security checks..."
+          source .venv/bin/activate
           bandit -r app/ -c bandit.yaml
 
   frontend-lint:
