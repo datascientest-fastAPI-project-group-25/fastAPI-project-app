@@ -1,0 +1,126 @@
+name: Development Branch Checks
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+  pull_request:
+    branches: [stg]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  format:
+    uses: ./.github/workflows/formatting.yml
+    with:
+      target: all
+
+  lint:
+    needs: format
+    uses: ./.github/workflows/linting.yml
+    with:
+      target: all
+
+  backend-tests:
+    needs: [format, lint]
+    strategy:
+      matrix:
+        test-type: [backend-unit, backend-integration, backend-e2e]
+    uses: ./.github/workflows/tests.yml
+    with:
+      test_type: ${{ matrix.test-type }}
+
+  frontend-tests:
+    needs: [format, lint]
+    strategy:
+      matrix:
+        test-type: [frontend-unit, frontend-integration, frontend-e2e]
+    uses: ./.github/workflows/tests.yml
+    with:
+      test_type: ${{ matrix.test-type }}
+
+  check-pr-exists:
+    needs: [backend-tests, frontend-tests]
+    # Only run on push events, not on PR events
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      pr_exists: ${{ steps.check-pr.outputs.pr_exists }}
+    steps:
+      - name: Check for existing PR
+        id: check-pr
+        run: |
+          PR_COUNT=$(gh pr list --head "${{ github.ref_name }}" --base stg --json number --jq 'length')
+          if [ "$PR_COUNT" -gt "0" ]; then
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  trigger-pr-creation:
+    needs: check-pr-exists
+    # Only run on push events and if no PR exists
+    if: github.event_name == 'push' && needs.check-pr-exists.outputs.pr_exists == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger PR Creation Workflow
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: create-pr-to-stg
+          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "branch": "${{ github.ref_name }}", "commit_message": "${{ github.event.head_commit.message }}"}'
+
+  build-staging:
+    needs: [backend-tests, frontend-tests]
+    # Only run on pull request events to staging
+    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'stg'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64
+          buildkitd-flags: --debug
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push staging image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}:staging-pr-${{ github.event.pull_request.number }}
+          target: staging
+          cache-from: type=gha,scope=staging
+          cache-to: type=gha,mode=max,scope=staging
+
+      - name: Deploy and test staging environment
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.staging.yml pull
+          docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+          docker compose -f docker-compose.yml -f docker-compose.staging.yml run --rm test
+
+      - name: Health check
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/api/health; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
