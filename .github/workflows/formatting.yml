@@ -44,7 +44,10 @@ jobs:
 
       - name: Format Python code
         working-directory: backend
+        shell: bash
         run: |
+          echo "Activating virtual environment..."
+          source .venv/bin/activate
           echo "Formatting Python code..."
           ruff format .
           echo "Checking Python code..."
