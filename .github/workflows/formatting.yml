@@ -33,16 +33,13 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "backend/pyproject.toml"
 
-      - name: Install ruff directly
-        working-directory: backend
-        run: pip install ruff
-
       - name: Create and activate virtual environment
         working-directory: backend
         shell: bash
         run: |
           python -m venv .venv
           source .venv/bin/activate
+          uv pip install ruff
 
       - name: Format Python code
         working-directory: backend
@@ -101,13 +98,12 @@ jobs:
         working-directory: frontend
         run: |
           pnpm install
-          pnpm install -g @biomejs/biome
 
       - name: Format frontend code
         working-directory: frontend
         run: |
           echo "Formatting frontend code..."
-          biome check --apply-unsafe src/ tests/
+          pnpm run biome
           echo "Formatting complete."
 
       - name: Commit changes
