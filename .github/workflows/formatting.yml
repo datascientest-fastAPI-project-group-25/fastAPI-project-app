@@ -37,8 +37,11 @@ jobs:
       - name: Format Python code
         working-directory: backend
         run: |
-          uv run ruff format .
-          uv run ruff check --fix .
+          uv venv .venv
+          . .venv/bin/activate
+          uv pip install --upgrade ruff
+          ruff format .
+          ruff check --fix .
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -81,7 +84,9 @@ jobs:
 
       - name: Format frontend code
         working-directory: frontend
-        run: pnpm run biome check --apply-unsafe
+        run: |
+          pnpm install
+          pnpm biome check --apply-unsafe
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
