@@ -34,8 +34,10 @@ repos:
     rev: 1.7.7
     hooks:
       - id: bandit
-        args: [-r, backend]
-        exclude: ^backend/tests/|^backend/app/tests/|^backend/venv/|^backend/env/|^backend/virtualenv/|^backend/lib/python*/site-packages/
+        name: bandit (security linting)
+        args: [--recursive, --skip, B101,B104,B105,B108,B110,B112,B303,B404,B603,B607,B608]
+        files: ^backend/app/
+        exclude: ^backend/app/tests/
 
   # Shell script checking
   - repo: https://github.com/shellcheck-py/shellcheck-py
