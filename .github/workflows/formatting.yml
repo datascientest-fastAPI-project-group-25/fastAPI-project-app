@@ -100,7 +100,7 @@ jobs:
         working-directory: frontend
         run: |
           echo "Checking frontend code..."
-          pnpm exec biome check .
+          pnpm exec biome check --no-errors-on-unmatched --files-ignore-unknown=true .
           echo "Checking complete."
 
       - name: Commit changes
