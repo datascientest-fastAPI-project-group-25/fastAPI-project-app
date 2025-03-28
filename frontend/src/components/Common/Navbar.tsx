@@ -1,20 +1,20 @@
-import { Box, Flex, Link, Image } from "@chakra-ui/react";
-import UserMenu from "./UserMenu";
+import { Box, Flex, Image, Link } from "@chakra-ui/react"
+import UserMenu from "./UserMenu"
 
 // Simple function to determine display value based on screen size
 // This is used instead of useBreakpointValue to avoid Chakra context issues in tests
 function getDisplayValue(): string {
   // For tests, we'll always return 'flex'
-  if (process.env.NODE_ENV === 'test') {
-    return 'flex';
+  if (process.env.NODE_ENV === "test") {
+    return "flex"
   }
 
   // For real usage, we'll check the window width
-  return window.innerWidth >= 768 ? 'flex' : 'none';
+  return window.innerWidth >= 768 ? "flex" : "none"
 }
 
 function Navbar() {
-  const display = getDisplayValue();
+  const display = getDisplayValue()
 
   return (
     <Box bg="gray.100" borderBottom="1px" borderColor="gray.200">
@@ -42,7 +42,7 @@ function Navbar() {
         </Flex>
       </Flex>
     </Box>
-  );
+  )
 }
 
-export default Navbar;
+export default Navbar

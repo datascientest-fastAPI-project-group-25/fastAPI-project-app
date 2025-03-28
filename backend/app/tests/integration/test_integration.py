@@ -2,7 +2,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app import crud
 from app.core.config import settings
 from app.models import UserCreate
 from app.tests.utils.utils import random_email, random_lower_string
@@ -20,8 +19,10 @@ def test_data(client: TestClient, db: Session):
     )
 
     # Create users in database
-    test_user_db = crud.user.create(db, obj_in=test_user)
-    superuser_db = crud.user.create(db, obj_in=superuser)
+    from app import crud
+
+    test_user_db = crud.create_user(session=db, user_create=test_user)
+    superuser_db = crud.create_user(session=db, user_create=superuser)
 
     # Get tokens
     test_user_token = client.post(
@@ -107,10 +108,10 @@ def test_complete_user_flow(client: TestClient, test_data):
 @pytest.mark.parametrize(
     "endpoint,method",
     [
-        ("/users/me", "GET"),
-        ("/users/me", "PUT"),
-        ("/users/me/password", "PUT"),
-        ("/users/me", "DELETE"),
+        (f"{settings.API_V1_STR}/users/me", "GET"),
+        (f"{settings.API_V1_STR}/users/me", "PUT"),
+        (f"{settings.API_V1_STR}/users/me/password", "PUT"),
+        (f"{settings.API_V1_STR}/users/me", "DELETE"),
     ],
 )
 def test_endpoints_with_invalid_token(client: TestClient, endpoint: str, method: str):

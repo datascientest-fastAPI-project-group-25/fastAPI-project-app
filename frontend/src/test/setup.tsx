@@ -1,10 +1,10 @@
-import '@testing-library/jest-dom';
-import { vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import { server } from './mocks/server';
+import "@testing-library/jest-dom"
+import { cleanup } from "@testing-library/react"
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest"
+import { server } from "./mocks/server"
 
 // Mock @tanstack/react-router
-vi.mock('@tanstack/react-router', () => {
+vi.mock("@tanstack/react-router", () => {
   return {
     // Keep the original exports
     RouterProvider: vi.fn(),
@@ -19,18 +19,18 @@ vi.mock('@tanstack/react-router', () => {
     Link: vi.fn(),
     useNavigate: vi.fn(),
     useParams: vi.fn(),
-  };
-});
+  }
+})
 
 // Mock our custom hooks if needed
-vi.mock('../hooks/useNavbarDisplay', () => ({
-  useNavbarDisplay: () => 'flex'
-}));
+vi.mock("../hooks/useNavbarDisplay", () => ({
+  useNavbarDisplay: () => "flex",
+}))
 
 // Setup before all tests
 beforeAll(() => {
-  server.listen();
-});
+  server.listen()
+})
 
 // Setup before each test
 beforeEach(() => {
@@ -40,25 +40,25 @@ beforeEach(() => {
     setItem: vi.fn(),
     removeItem: vi.fn(),
     clear: vi.fn(),
-  };
-  global.localStorage = localStorageMock as any;
+  }
+  global.localStorage = localStorageMock as any
 
   // Mock window.innerWidth
-  Object.defineProperty(window, 'innerWidth', {
+  Object.defineProperty(window, "innerWidth", {
     writable: true,
     configurable: true,
-    value: 1024
-  });
-});
+    value: 1024,
+  })
+})
 
 // Cleanup after each test
 afterEach(() => {
-  cleanup();
-  server.resetHandlers();
-});
+  cleanup()
+  server.resetHandlers()
+})
 
 // Cleanup after all tests
-afterAll(() => server.close());
+afterAll(() => server.close())
 
 // Re-export everything from testing-library
-export * from '@testing-library/react';
+export * from "@testing-library/react"

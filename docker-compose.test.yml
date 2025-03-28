@@ -56,17 +56,16 @@ services:
     environment:
       - VITE_API_URL=http://backend:8000
       - PLAYWRIGHT_TIMEOUT=60000
+      - NODE_ENV=test
       - DEBUG=pw:api
       - CI=true
-    entrypoint: ["/bin/bash", "-c"]
     command: |
       cd frontend && \
       npm install -g pnpm && \
       pnpm install --frozen-lockfile && \
-      pnpm add @mui/material @emotion/styled && \
-      mkdir -p /app/frontend/playwright/.auth && \
+      pnpm exec playwright install-deps && \
       pnpm exec playwright install --with-deps chromium && \
-      NODE_ENV=test pnpm exec playwright test --project=chromium --timeout=60000 --retries=1
+      NODE_ENV=test pnpm exec playwright test --project=chromium
 
   # Backend with improved caching and health check
   backend:

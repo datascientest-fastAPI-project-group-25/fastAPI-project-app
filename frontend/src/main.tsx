@@ -42,12 +42,42 @@ declare module "@tanstack/react-router" {
   }
 }
 
+function InnerApp() {
+  return <RouterProvider router={router} />
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <CustomProvider>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <InnerApp />
       </QueryClientProvider>
     </CustomProvider>
   </StrictMode>,
 )
+
+// Custom error handling for API errors
+ApiError.prototype.toString = function () {
+  let message = `API Error: ${this.status} ${this.statusText} - ${this.url}\n`
+  if (this.body && typeof this.body === "object") {
+    // Safely check for detail property using a type guard
+    let detailMessage = JSON.stringify(this.body) // Default
+    if ("detail" in this.body && typeof this.body.detail === "string") {
+      detailMessage = this.body.detail
+    } else if ("detail" in this.body && Array.isArray(this.body.detail)) {
+      // Handle cases like HTTPValidationError where detail is an array of objects
+      try {
+        detailMessage = this.body.detail
+          .map((err: any) => `${err.loc?.join(".") || "error"}: ${err.msg}`)
+          .join(", ")
+      } catch (e) {
+        // Fallback if mapping fails
+        detailMessage = JSON.stringify(this.body.detail)
+      }
+    }
+    message += `Detail: ${detailMessage}`
+  } else if (this.body) {
+    message += `Body: ${this.body}`
+  }
+  return message
+}
