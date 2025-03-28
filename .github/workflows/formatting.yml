@@ -31,31 +31,21 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          cache-dependency-glob: "backend/pyproject.toml"
 
-      - name: Create and activate virtual environment
+      - name: Install dependencies
         working-directory: backend
-        shell: bash
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
+          echo "Installing dependencies..."
           uv pip install ruff
-
-      - name: Format Python code
-        working-directory: backend
-        shell: bash
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
+          echo "Dependencies installed."
 
       - name: Format Python code
         working-directory: backend
         run: |
           echo "Formatting Python code..."
-          source .venv/bin/activate
-          ruff format . || echo "Ruff format failed"
+          ruff format .
           echo "Checking Python code..."
-          ruff check --fix . || echo "Ruff check failed"
+          ruff check --fix .
           echo "Formatting complete."
 
       - name: Commit changes
@@ -103,7 +93,8 @@ jobs:
         working-directory: frontend
         run: |
           echo "Formatting frontend code..."
-          pnpm run biome || echo "Biome failed"
+          pnpm exec biome format --write .
+          pnpm exec biome check .
           echo "Formatting complete."
 
       - name: Commit changes

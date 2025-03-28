@@ -26,23 +26,29 @@ jobs:
           cache: "pip"
 
       - name: Install uv
-        run: pip install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Install dependencies
         working-directory: backend
         run: |
-          uv venv --system-site-packages
-          uv pip install ruff
+          echo "Installing dependencies..."
+          uv pip install ruff bandit
+          echo "Dependencies installed."
 
       - name: Run ruff (lint and format)
         working-directory: backend
         run: |
-          uv run ruff check --fix .
-          uv run ruff format .
+          echo "Running ruff checks..."
+          ruff check --fix .
+          ruff format .
 
       - name: Run bandit
         working-directory: backend
-        run: uv run bandit -r app/ -c bandit.yaml
+        run: |
+          echo "Running security checks..."
+          bandit -r app/ -c bandit.yaml
 
   frontend-lint:
     if: inputs.target == 'frontend' || inputs.target == 'all'
