@@ -39,8 +39,11 @@ jobs:
       - name: Format Python code
         working-directory: backend
         run: |
+          echo "Formatting Python code..."
           ruff format .
+          echo "Checking Python code..."
           ruff check --fix .
+          echo "Formatting complete."
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -86,7 +89,10 @@ jobs:
 
       - name: Format frontend code
         working-directory: frontend
-        run: biome check --apply-unsafe src/ tests/
+        run: |
+          echo "Formatting frontend code..."
+          biome check --apply-unsafe src/ tests/
+          echo "Formatting complete."
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
