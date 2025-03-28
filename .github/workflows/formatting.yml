@@ -94,7 +94,7 @@ jobs:
         run: |
           echo "Formatting frontend code..."
           pnpm exec biome format --write .
-          pnpm exec biome check .
+          pnpm exec biome check --write .
           echo "Formatting complete."
 
       - name: Commit changes
