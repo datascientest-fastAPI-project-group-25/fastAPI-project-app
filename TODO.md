@@ -173,6 +173,7 @@
 - [ ] Create a Makefile target for testing workflows with appropriate environment variables
 - [ ] Create simplified versions of workflows for local testing that don't rely on Docker services
 - [ ] Add documentation on how to test workflows locally
+- [ ] Fix local act setup to handle newer GitHub Actions features and Docker-in-Docker requirements
 
 ### Feature Branch Workflow
 - [ ] feature/feature-push.yml
