@@ -69,7 +69,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: backend
-        run: uv venv --system-site-packages && uv pip install -e ".[dev,lint,types,test]"
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e ".[dev,lint,types,test]"
 
       - name: Wait for PostgreSQL
         working-directory: backend
@@ -133,11 +136,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
+      - name: Install dependencies and setup
+        run: |
+          echo "Installing dependencies..."
+          pnpm install
+          echo "Installing Playwright..."
+          pnpm dlx playwright@latest install --with-deps
+          echo "Setup complete."
 
       - name: Run frontend unit tests
         if: inputs.test_type == 'frontend-unit'
