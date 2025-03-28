@@ -1,3 +1,3 @@
 [bandit]
-exclude: /tests/,/app/tests/
+exclude: /tests/,/app/tests/,/venv/,/env/,/virtualenv/,/lib/python*/site-packages/
 skips: B101
