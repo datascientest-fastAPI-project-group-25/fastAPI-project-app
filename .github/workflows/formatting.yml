@@ -16,6 +16,8 @@ jobs:
   backend-format:
     if: inputs.target == 'backend' || inputs.target == 'all'
     runs-on: ubuntu-latest
+    env:
+      UV_SYSTEM_PYTHON: 1
     steps:
       - uses: actions/checkout@v4
 
@@ -26,20 +28,18 @@ jobs:
           cache: "pip"
 
       - name: Install uv
-        run: pip install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/requirements**.txt"
 
-      - name: Install dependencies
+      - name: Install ruff
         working-directory: backend
-        run: |
-          uv venv --system-site-packages
-          uv pip install ruff
+        run: uv pip install --upgrade ruff
 
       - name: Format Python code
         working-directory: backend
         run: |
-          uv venv .venv
-          . .venv/bin/activate
-          uv pip install --upgrade ruff
           ruff format .
           ruff check --fix .
 
@@ -86,7 +86,7 @@ jobs:
         working-directory: frontend
         run: |
           pnpm install
-          pnpm biome check --apply-unsafe
+          pnpm biome check --apply-unsafe src/ tests/
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
