@@ -74,7 +74,7 @@ jobs:
           source .venv/bin/activate
           uv pip install -e ".[dev,lint,types,test]"
 
-      - name: Wait for PostgreSQL
+      - name: Wait for PostgreSQL and initialize database
         working-directory: backend
         run: |
           cat > wait-for-postgres.py << 'EOL'
@@ -93,6 +93,8 @@ jobs:
                   time.sleep(1)
           EOL
           uv run python wait-for-postgres.py
+          echo "Running database migrations..."
+          uv run alembic upgrade head
 
       - name: Run backend unit tests
         if: inputs.test_type == 'backend-unit'
@@ -198,6 +200,8 @@ jobs:
           source .venv/bin/activate
           echo "Initializing database..."
           uv run python app/backend_pre_start.py
+          echo "Running database migrations..."
+          uv run alembic upgrade head
           uv run python app/initial_data.py
           echo "Starting backend service..."
           uv run uvicorn app.main:app --port 8000 --host 0.0.0.0 &
