@@ -6,6 +6,7 @@ on:
             - feat/**
             - fix/**
   workflow_dispatch:
+  # This workflow runs on pushes to feature branches
 
 permissions:
   contents: read
