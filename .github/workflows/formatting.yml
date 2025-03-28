@@ -31,11 +31,10 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          cache-dependency-glob: "backend/requirements**.txt"
+          cache-dependency-glob: "backend/pyproject.toml"
 
-      - name: Install ruff
-        working-directory: backend
-        run: uv pip install --upgrade ruff
+      - name: Install ruff directly
+        run: pip install ruff
 
       - name: Format Python code
         working-directory: backend
@@ -80,13 +79,14 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install
-
-      - name: Format frontend code
         working-directory: frontend
         run: |
           pnpm install
-          pnpm biome check --apply-unsafe src/ tests/
+          pnpm install -g @biomejs/biome
+
+      - name: Format frontend code
+        working-directory: frontend
+        run: biome check --apply-unsafe src/ tests/
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
