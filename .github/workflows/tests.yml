@@ -104,7 +104,10 @@ jobs:
       - name: Run backend unit tests
         if: inputs.test_type == 'backend-unit'
         working-directory: backend
-        run: uv run pytest --cov=app --cov-report=xml
+        run: |
+          echo "Running backend unit tests..."
+          uv run pytest app/tests/unit/ --cov=app --cov-report=xml
+          echo "Backend unit tests completed."
 
       - name: Run backend integration tests
         if: inputs.test_type == 'backend-integration'
@@ -221,7 +224,12 @@ jobs:
           FIRST_SUPERUSER: admin@example.com
           FIRST_SUPERUSER_PASSWORD: password
           VITE_API_BASE_URL: http://localhost:8000
-        run: pnpm --filter frontend test
+          NODE_ENV: test
+        run: |
+          echo "Running frontend unit tests with Vitest..."
+          cd frontend
+          pnpm test
+          echo "Frontend unit tests completed."
 
       - name: Run frontend E2E tests
         if: inputs.test_type == 'frontend-e2e'
