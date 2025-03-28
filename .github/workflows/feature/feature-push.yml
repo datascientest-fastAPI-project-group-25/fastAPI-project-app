@@ -1,4 +1,4 @@
-name: Feature Branch Push
+name: Feature Branch Push (v2)
 
 on:
   push:
