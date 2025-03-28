@@ -1,0 +1,82 @@
+name: Linting
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: 'Target to lint (backend, frontend, or all)'
+        required: true
+        type: string
+        default: 'all'
+
+permissions:
+  contents: read
+
+jobs:
+  backend-lint:
+    if: inputs.target == 'backend' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          uv venv --system-site-packages
+          uv pip install ruff
+
+      - name: Run ruff (lint and format)
+        working-directory: backend
+        run: |
+          uv run ruff check --fix .
+          uv run ruff format .
+
+      - name: Run bandit
+        working-directory: backend
+        run: uv run bandit -r app/ -c bandit.yaml
+
+  frontend-lint:
+    if: inputs.target == 'frontend' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run Biome lint
+        working-directory: frontend
+        run: pnpm run biome check --log-level=error

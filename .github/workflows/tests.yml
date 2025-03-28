@@ -1,19 +1,24 @@
-name: Shared Tests
+name: Tests
 
 on:
   workflow_call:
     inputs:
       test_type:
-        description: 'Type of tests to run'
+        description: 'Type of tests to run (backend-unit, backend-integration, backend-e2e, frontend-unit, frontend-integration, frontend-e2e)'
         required: true
         type: string
-        default: 'unit'
+      cache_dependencies:
+        description: 'Whether to cache dependencies'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  backend-tests:
+    if: startsWith(inputs.test_type, 'backend-')
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -49,6 +54,7 @@ jobs:
           cache: "pip"
 
       - name: Cache uv directory
+        if: inputs.cache_dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -80,34 +86,60 @@ jobs:
                   print(f'Waiting for PostgreSQL: {e}'); \
                   time.sleep(1);"
 
-      - name: Run tests
+      - name: Run backend unit tests
+        if: inputs.test_type == 'backend-unit'
         working-directory: backend
-        run: |
-          case "${{ inputs.test_type }}" in
-            "unit")
-              uv run pytest --cov=app --cov-report=xml
-              ;;
-            "integration")
-              uv run pytest -m integration --cov=app --cov-report=xml
-              ;;
-            "e2e")
-              uv run pytest -m e2e --cov=app --cov-report=xml
-              ;;
-            "security")
-              uv run bandit -r app/ -c bandit.yaml
-              ;;
-            "performance")
-              uv run pytest --benchmark-only
-              ;;
-            *)
-              echo "Unknown test type: ${{ inputs.test_type }}"
-              exit 1
-              ;;
-          esac
+        run: uv run pytest --cov=app --cov-report=xml
+
+      - name: Run backend integration tests
+        if: inputs.test_type == 'backend-integration'
+        working-directory: backend
+        run: uv run pytest -m integration --cov=app --cov-report=xml
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
-        if: ${{ inputs.test_type != 'security' && inputs.test_type != 'performance' }}
         with:
-          name: coverage-report
+          name: backend-coverage-report
           path: backend/coverage.xml
+
+  frontend-tests:
+    if: startsWith(inputs.test_type, 'frontend-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        if: inputs.cache_dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run frontend unit tests
+        if: inputs.test_type == 'frontend-unit'
+        run: pnpm --filter frontend test
+
+      - name: Run frontend E2E tests
+        if: inputs.test_type == 'frontend-e2e'
+        run: pnpm --filter frontend playwright test
