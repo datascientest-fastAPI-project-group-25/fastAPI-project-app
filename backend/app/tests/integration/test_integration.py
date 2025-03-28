@@ -42,6 +42,7 @@ def test_data(client: TestClient, db: Session):
     }
 
 
+@pytest.mark.integration
 def test_complete_user_flow(client: TestClient, test_data):
     # Test user creation
     new_user = UserCreate(email=random_email(), password=random_lower_string())
@@ -102,6 +103,7 @@ def test_complete_user_flow(client: TestClient, test_data):
     assert response.status_code == 200
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize(
     "endpoint,method",
     [
