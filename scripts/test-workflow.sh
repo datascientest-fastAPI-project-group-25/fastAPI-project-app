@@ -21,12 +21,6 @@ if [ ! -f "$WORKFLOW_FILE" ]; then
   exit 1
 fi
 
-# Get the relative path from .github/workflows/
-REL_PATH="${WORKFLOW_FILE#*.github/workflows/}"
-
-# Extract category from path
-CATEGORY=$(echo "$REL_PATH" | cut -d'/' -f1)
-
 # Detect platform and set appropriate flags
 PLATFORM_FLAGS=""
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -69,20 +63,19 @@ ENV_VARS="$ENV_VARS \
   --env FIRST_SUPERUSER=admin@example.com \
   --env FIRST_SUPERUSER_PASSWORD=password"
 
-echo "Testing workflow: $REL_PATH with event: $EVENT_TYPE"
-echo "Category: $CATEGORY"
+echo "Testing workflow: $1 with event: $EVENT_TYPE"
 echo "=================================================="
 
 # Run the workflow with act
-echo "Running: act $EVENT_TYPE -W .github/workflows/$REL_PATH $PLATFORM_FLAGS $ENV_VARS --verbose"
-act $EVENT_TYPE -W ".github/workflows/$REL_PATH" $PLATFORM_FLAGS $ENV_VARS --container-options '--privileged' --verbose || {
+echo "Running: act $EVENT_TYPE -W .github/workflows/$(basename "$1") $PLATFORM_FLAGS $ENV_VARS --verbose"
+act $EVENT_TYPE -W ".github/workflows/$(basename "$1")" $PLATFORM_FLAGS $ENV_VARS --container-options '--privileged' --verbose || {
   echo "Error: act command failed or timed out"
   echo "You can try:"
-  echo "1. Running with specific jobs: act $EVENT_TYPE -W .github/workflows/$REL_PATH -j <job_id>"
+  echo "1. Running with specific jobs: act $EVENT_TYPE -W .github/workflows/$(basename "$1") -j <job_id>"
   echo "2. Running with --privileged flag if Docker permissions are needed"
   echo "3. Check if all required secrets are set in .secrets file"
   echo "4. Check if all required dependencies are installed"
-  echo "5. Try using Makefile: make test-workflow-params category=$CATEGORY event=$EVENT_TYPE workflow=$(basename "$REL_PATH")"
+  echo "5. Try using Makefile: make test-workflow-params event=$EVENT_TYPE workflow=$(basename "$1")"
   exit 1
 }
 

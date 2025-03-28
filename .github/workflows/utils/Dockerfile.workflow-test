@@ -47,5 +47,9 @@ RUN /etc/init.d/postgresql start && \
 USER root
 WORKDIR /workspace
 
-# Keep container running for act
-CMD ["tail", "-f", "/dev/null"]
+# Copy the entrypoint script
+COPY .github/workflows/utils/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Set the entrypoint to start PostgreSQL and keep the container running
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh", "tail", "-f", "/dev/null"]

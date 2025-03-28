@@ -38,7 +38,7 @@ help:
 	@echo "  make cd                 Run full CD pipeline (build, deploy)"
 	@echo "  make security-scan      Run security scanning and audits"
 	@echo "  make test-workflow       Test a GitHub workflow with Act (interactive)"
-	@echo "  make test-workflow-params category=CATEGORY event=EVENT [workflow=WORKFLOW]  Test a specific workflow"
+	@echo "  make test-workflow-params event=EVENT workflow=WORKFLOW  Test a specific workflow"
 	@echo ""
 	@echo "Git Hooks:"
 	@echo "  make setup-hooks        Setup git hooks with pre-commit"
@@ -260,7 +260,7 @@ test-workflow: workflow-test-image
 # Test a specific workflow with Act
 test-workflow-params: workflow-test-image
 	@echo " Testing specific GitHub workflow..."
-	./scripts/test-workflow.sh .github/workflows/$(category)/$(workflow) $(event)
+	./scripts/test-workflow.sh .github/workflows/$(workflow) $(event)
 	@echo " Specific workflow testing complete!"
 
 # Test all GitHub workflows
