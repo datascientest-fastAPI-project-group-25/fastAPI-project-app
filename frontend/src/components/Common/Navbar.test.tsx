@@ -1,6 +1,5 @@
 import "@testing-library/jest-dom"
-import { screen } from "@testing-library/react"
-import { render } from "@testing-library/react"
+import { screen, render } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 
 // Mock Chakra UI components
