@@ -18,12 +18,8 @@ export default function UserApi() {
   >({
     queryKey: ["users"],
     queryFn: async () => {
-      try {
-        const response = await UsersService.readUsers()
-        return response
-      } catch (err) {
-        throw err
-      }
+      const response = await UsersService.readUsers()
+      return response
     },
   })
 
