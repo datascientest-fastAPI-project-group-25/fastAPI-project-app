@@ -96,6 +96,10 @@ jobs:
           uv run python wait-for-postgres.py
           echo "Running database migrations..."
           uv run alembic upgrade head
+          echo "Running database initialization..."
+          uv run python app/backend_pre_start.py
+          uv run python app/initial_data.py
+          echo "Database setup complete."
 
       - name: Run backend unit tests
         if: inputs.test_type == 'backend-unit'
