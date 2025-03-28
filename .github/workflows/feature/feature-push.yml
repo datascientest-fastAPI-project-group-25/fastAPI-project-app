@@ -1,12 +1,11 @@
 name: Feature Branch Push (v2)
 
 on:
-  push:
-    branches:
-            - feat/**
-            - fix/**
   workflow_dispatch:
-  # This workflow runs on pushes to feature branches
+    push:
+      branches:
+              - feat/**
+              - fix/**
 
 permissions:
   contents: read
