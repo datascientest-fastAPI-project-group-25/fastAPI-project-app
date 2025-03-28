@@ -89,13 +89,19 @@ jobs:
         run: |
           pnpm install
 
-      - name: Format frontend code
+      - name: Format frontend code with Biome
         working-directory: frontend
         run: |
           echo "Formatting frontend code..."
           pnpm exec biome format --write .
-          pnpm exec biome check .
           echo "Formatting complete."
+
+      - name: Check frontend code with Biome
+        working-directory: frontend
+        run: |
+          echo "Checking frontend code..."
+          pnpm exec biome check .
+          echo "Checking complete."
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
