@@ -1,9 +1,5 @@
 FROM node:18-bullseye
 
-# Add PostgreSQL repository
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
-    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-
 # Install required system packages
 RUN apt-get update && \
     apt-get install -y \
@@ -11,10 +7,7 @@ RUN apt-get update && \
     python3-pip \
     python3-dev \
     build-essential \
-    lsb-release \
     git \
-    postgresql-15 \
-    postgresql-contrib \
     # Playwright dependencies
     libnss3 \
     libnspr4 \
@@ -38,18 +31,20 @@ RUN apt-get update && \
 # Install Python tools including UV
 RUN pip3 install --no-cache-dir pre-commit virtualenv uv
 
-# Initialize PostgreSQL
-USER postgres
-RUN /etc/init.d/postgresql start && \
-    psql --command "CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';" && \
-    createdb -O postgres test_db
+# Setup pnpm
+ENV SHELL=/bin/bash
+ENV PNPM_HOME=/usr/local/pnpm
+ENV PATH="${PNPM_HOME}:${PATH}"
+RUN npm install -g pnpm && \
+    mkdir -p ${PNPM_HOME} && \
+    SHELL=/bin/bash pnpm setup && \
+    pnpm install -g js-yaml inquirer chalk
 
-USER root
 WORKDIR /workspace
 
 # Copy the entrypoint script
 COPY .github/workflows/utils/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Set the entrypoint to start PostgreSQL and keep the container running
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh", "tail", "-f", "/dev/null"]
+# Set the entrypoint
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
