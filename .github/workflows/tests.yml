@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  backend:
     if: inputs.test_type == 'all' || startsWith(inputs.test_type, 'backend-')
     runs-on: ubuntu-latest
     services:
@@ -91,7 +91,7 @@ jobs:
           source .venv/bin/activate
           pytest tests/e2e
 
-  frontend-tests:
+  frontend:
     if: inputs.test_type == 'all' || startsWith(inputs.test_type, 'frontend-')
     runs-on: ubuntu-latest
     services:

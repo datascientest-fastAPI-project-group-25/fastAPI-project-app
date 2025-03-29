@@ -11,7 +11,10 @@
     "commit": "git-cz",
     "release": "semantic-release",
     "create-branch": "node scripts/create-branch.js",
-    "backend:install": "pip install -r backend/requirements.txt"
+    "backend:install": "pip install -r backend/requirements.txt",
+    "test": "pnpm run -r test",
+    "test:unit": "pnpm run -r test:unit",
+    "test:e2e": "pnpm run -r test:e2e"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
