@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   test:
-    if: inputs.test_type == 'all' || startsWith(inputs.test_type, 'backend-') || startsWith(inputs.test_type, 'frontend-')
+    if: inputs.test_type == 'all' || startsWith(inputs.test_type, 'backend-')
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -59,6 +59,7 @@ jobs:
           enable-cache: true
 
       - name: Create virtual environment and install dependencies
+        working-directory: backend
         run: |
           echo "Creating virtual environment..."
           uv venv
@@ -68,6 +69,7 @@ jobs:
 
       - name: Run backend unit tests
         if: inputs.test_type == 'all' || inputs.test_type == 'backend-unit'
+        working-directory: backend
         run: |
           echo "Running backend unit tests..."
           source .venv/bin/activate
@@ -75,6 +77,7 @@ jobs:
 
       - name: Run backend integration tests
         if: inputs.test_type == 'all' || inputs.test_type == 'backend-integration'
+        working-directory: backend
         run: |
           echo "Running backend integration tests..."
           source .venv/bin/activate
@@ -82,10 +85,33 @@ jobs:
 
       - name: Run backend e2e tests
         if: inputs.test_type == 'all' || inputs.test_type == 'backend-e2e'
+        working-directory: backend
         run: |
           echo "Running backend e2e tests..."
           source .venv/bin/activate
           pytest tests/e2e
+
+  frontend-tests:
+    if: inputs.test_type == 'all' || startsWith(inputs.test_type, 'frontend-')
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d test_db"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+          --health-start-period 5s
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
