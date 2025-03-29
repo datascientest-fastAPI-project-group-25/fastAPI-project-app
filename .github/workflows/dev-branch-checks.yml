@@ -1,10 +1,6 @@
 name: Development Branch Checks
 
 on:
-  push:
-    branches:
-      - 'feat/**'
-      - 'fix/**'
   pull_request:
     branches: [stg]
   workflow_dispatch: {}
@@ -24,57 +20,38 @@ jobs:
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Check if should run
         id: check
         run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            # Check if there's an open PR for this branch targeting staging
-            PR_COUNT=$(gh pr list --head "${{ github.ref_name }}" --base stg --state open --json number --jq 'length')
-            if [ "$PR_COUNT" -gt "0" ]; then
-              echo "Found existing PR from ${{ github.ref_name }} to stg, skipping push workflow"
-              echo "should_run=false" >> "$GITHUB_OUTPUT"
-            else
-              echo "No PR exists from ${{ github.ref_name }} to stg, running workflow"
-              echo "should_run=true" >> "$GITHUB_OUTPUT"
-            fi
-          else
-            # For pull_request events, always run
-            echo "This is a pull_request event, running workflow"
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Always run for pull requests to staging
+          echo "Running workflow for pull request to staging"
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
 
-  main-workflow:
+  format:
     needs: [check-skip]
+    if: needs.check-skip.outputs.should_run == 'true'
+    uses: ./.github/workflows/formatting.yml
+    with:
+      target: all
+    permissions:
+      contents: write
+
+  lint:
+    needs: [check-skip]
+    if: needs.check-skip.outputs.should_run == 'true'
+    uses: ./.github/workflows/linting.yml
+    with:
+      target: all
+
+  tests:
+    needs: [check-skip, format, lint]
     if: needs.check-skip.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Format
-        run: |
-          echo "Running formatting checks..."
-          cd backend
-          python -m pip install ruff
-          ruff format .
-          ruff check --fix .
-          cd ../frontend
-          pnpm install
-          pnpm exec biome format --write .
-          pnpm exec biome check --no-errors-on-unmatched --files-ignore-unknown=true .
-          echo "Formatting complete."
-
-      - name: Lint
-        uses: ./.github/workflows/linting.yml
-        with:
-          target: all
-
-      - name: Backend tests
+      - name: Backend unit tests
         uses: ./.github/workflows/tests.yml
         with:
           test_type: backend-unit
@@ -89,7 +66,7 @@ jobs:
         with:
           test_type: backend-e2e
 
-      - name: Frontend tests
+      - name: Frontend unit tests
         uses: ./.github/workflows/tests.yml
         with:
           test_type: frontend-unit
@@ -104,14 +81,11 @@ jobs:
         with:
           test_type: frontend-e2e
 
-      - name: Trigger PR Creation
-        if: github.event_name == 'push'
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          event-type: create-pr-to-stg
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "branch": "${{ github.ref_name }}", "commit_message": "${{ github.event.head_commit.message }}"}'
-
+  deploy:
+    needs: [check-skip, tests]
+    if: needs.check-skip.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
       - name: Build and push staging image
         if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'stg'
         uses: docker/build-push-action@v5
