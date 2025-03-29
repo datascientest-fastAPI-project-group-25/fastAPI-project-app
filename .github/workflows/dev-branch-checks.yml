@@ -9,13 +9,36 @@ on:
     branches: [stg]
   workflow_dispatch: {}
 
+# Skip the whole workflow if it's a push and there's an open PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: write
   pull-requests: write
   packages: write
 
 jobs:
+  check-pr-status:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    outputs:
+      skip_ci: ${{ steps.check.outputs.skip }}
+    steps:
+      - name: Check if PR exists
+        id: check
+        run: |
+          PR_EXISTS=$(gh pr list --head "${{ github.ref_name }}" --json number --jq 'length > 0')
+          echo "skip=$PR_EXISTS" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
   format:
+    needs: [check-pr-status]
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && needs.check-pr-status.outputs.skip != 'true')
     uses: ./.github/workflows/formatting.yml
     with:
       target: all
