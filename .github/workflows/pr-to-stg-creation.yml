@@ -1,0 +1,68 @@
+name: PR to Staging Creation
+
+on:
+  repository_dispatch:
+    types: [create-pr-to-stg]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to create PR from'
+        required: true
+        type: string
+      commit_message:
+        description: 'Commit message for PR title'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.client_payload.ref || format('refs/heads/{0}', github.event.inputs.branch) }}
+
+      - name: Extract branch name
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "BRANCH_NAME=${{ github.event.client_payload.branch }}" >> $GITHUB_ENV
+            echo "COMMIT_MESSAGE=${{ github.event.client_payload.commit_message }}" >> $GITHUB_ENV
+          else
+            echo "BRANCH_NAME=${{ github.event.inputs.branch }}" >> $GITHUB_ENV
+            echo "COMMIT_MESSAGE=${{ github.event.inputs.commit_message }}" >> $GITHUB_ENV
+          fi
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: stg
+          title: "${{ github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.event.inputs.branch }}: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.commit_message || github.event.inputs.commit_message }}"
+          body: |
+            ## Changes
+
+            This PR was automatically created after all checks passed on the development branch.
+
+            ### Checks
+            - [x] Code is formatted
+            - [x] Linting passes
+            - [x] Tests pass
+            - [ ] Documentation is updated
+
+            ### Test Results
+            - ✅ Backend Unit Tests
+            - ✅ Backend Integration Tests
+            - ✅ Backend E2E Tests
+            - ✅ Frontend Unit Tests
+            - ✅ Frontend Integration Tests
+            - ✅ Frontend E2E Tests
+          labels: |
+            automated-pr
+            ${{ contains(github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.event.inputs.branch, 'feat/') && 'feature' || 'fix' }}
+          draft: false

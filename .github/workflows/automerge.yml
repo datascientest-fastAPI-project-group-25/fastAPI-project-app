@@ -2,7 +2,7 @@ name: Automerge
 
 on:
   workflow_run:
-    workflows: ["Branch Protection", "Feature Branch Push"]
+    workflows: ["Branch Protection", "Development Branch Push"]
     types:
       - completed
     branches:
@@ -40,7 +40,7 @@ jobs:
           echo "Found PR #$PR_NUMBER for branch $BRANCH"
           echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
-      - name: Auto-merge PR
+      - name: Auto-merge PR to staging
         run: |
           PR_NUMBER=${{ steps.find-pr.outputs.pr_number }}
 

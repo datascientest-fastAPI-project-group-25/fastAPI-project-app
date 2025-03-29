@@ -1,8 +1,8 @@
-name: Merge to Dev
+name: Merge to Staging
 
 on:
   push:
-    branches: [dev]
+    branches: [stg]
 
 permissions:
   contents: read
@@ -59,7 +59,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: auto-pr-to-main
-          title: 'chore: Automatic PR from dev to main'
-          body: 'Automatically created PR to merge changes from dev to main'
+          title: 'chore: Automatic PR from staging to main'
+          body: 'Automatically created PR to merge changes from staging to main'
           labels: 'auto-pr'
           draft: true

@@ -4,8 +4,12 @@ import sys
 
 try:
     branch = (
-        subprocess.check_output("/usr/bin/git symbolic-ref --short HEAD", shell=True)
-        .decode()
+        subprocess.run(
+            ["/usr/bin/git", "symbolic-ref", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True
+        ).stdout
         .strip()
     )
     if branch == "main" or branch == "dev":

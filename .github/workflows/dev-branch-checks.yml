@@ -1,0 +1,68 @@
+name: Development Branch Checks
+
+on:
+  pull_request:
+    branches: [stg]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  check-skip:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Check if should run
+        id: check
+        run: |
+          # Always run for pull requests to staging
+          echo "Running workflow for pull request to staging"
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+
+  format:
+    needs: [check-skip]
+    if: needs.check-skip.outputs.should_run == 'true'
+    uses: ./.github/workflows/formatting.yml
+    with:
+      target: all
+    permissions:
+      contents: write
+
+  lint:
+    needs: [check-skip]
+    if: needs.check-skip.outputs.should_run == 'true'
+    uses: ./.github/workflows/linting.yml
+    with:
+      target: all
+
+  tests:
+    needs: [check-skip, format, lint]
+    if: needs.check-skip.outputs.should_run == 'true'
+    uses: ./.github/workflows/tests.yml
+    with:
+      test_type: all
+
+  deploy:
+    needs: [check-skip, tests]
+    if: needs.check-skip.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build and push staging image
+        if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'stg'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}:staging-pr-${{ github.event.pull_request.number }}
+          target: staging
+          cache-from: type=gha,scope=staging
+          cache-to: type=gha,mode=max,scope=staging

@@ -38,7 +38,7 @@ help:
 	@echo "  make cd                 Run full CD pipeline (build, deploy)"
 	@echo "  make security-scan      Run security scanning and audits"
 	@echo "  make test-workflow       Test a GitHub workflow with Act (interactive)"
-	@echo "  make test-workflow-params category=CATEGORY event=EVENT [workflow=WORKFLOW]  Test a specific workflow"
+	@echo "  make test-workflow-params event=EVENT workflow=WORKFLOW  Test a specific workflow"
 	@echo ""
 	@echo "Git Hooks:"
 	@echo "  make setup-hooks        Setup git hooks with pre-commit"
@@ -260,22 +260,24 @@ test-workflow: workflow-test-image
 # Test a specific workflow with Act
 test-workflow-params: workflow-test-image
 	@echo " Testing specific GitHub workflow..."
-	./scripts/test-workflow.sh .github/workflows/$(category)/$(workflow) $(event)
+	./scripts/test-workflow.sh .github/workflows/$(workflow) $(event)
 	@echo " Specific workflow testing complete!"
 
 # Test all GitHub workflows
 test-all-workflows: workflow-test-image
 	@echo " Testing all GitHub workflows..."
 	@echo " Testing feature workflows..."
-	@make test-workflow-params category=feature event=push workflow=feature-push.yml || echo "Feature workflow test failed"
-	@echo " Testing pre-commit workflows..."
-	@make test-workflow-params category=pre-commit event=push workflow=pre-commit.yml || echo "Pre-commit workflow test failed"
+	@make test-workflow-params event=push workflow=feature-push.yml || echo "Feature workflow test failed"
+	@echo " Testing formatting workflows..."
+	@make test-workflow-params event=push workflow=formatting.yml || echo "Formatting workflow test failed"
+	@echo " Testing linting workflows..."
+	@make test-workflow-params event=push workflow=linting.yml || echo "Linting workflow test failed"
 	@echo " Testing dev workflows..."
-	@make test-workflow-params category=dev event=push workflow=merge-to-dev.yml || echo "Dev workflow test failed"
-	@make test-workflow-params category=dev event=pull_request workflow=pr-to-dev.yml || echo "Dev PR workflow test failed"
-	@echo " Testing main workflows..."
-	@make test-workflow-params category=main event=push workflow=merge-to-main.yml || echo "Main workflow test failed"
-	@make test-workflow-params category=main event=pull_request workflow=pr-to-main.yml || echo "Main PR workflow test failed"
+	@make test-workflow-params event=push workflow=merge-to-dev.yml || echo "Dev workflow test failed"
+	@make test-workflow-params event=pull_request workflow=pr-to-dev.yml || echo "Dev PR workflow test failed"
+	@echo " Testing stg workflows..."
+	@make test-workflow-params event=push workflow=merge-to-stg.yml || echo "Stg workflow test failed"
+	@make test-workflow-params event=pull_request workflow=pr-to-stg.yml || echo "Stg PR workflow test failed"
 	@echo " All workflow tests complete!"
 
 #################################################

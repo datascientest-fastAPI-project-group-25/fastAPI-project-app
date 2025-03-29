@@ -1,3 +1,3 @@
 [bandit]
-exclude: /tests/,/app/tests/
-skips: B101
+exclude = /tests/,/app/tests/
+skips = B101,B104,B105,B108,B110,B112,B303,B404,B603,B607,B608

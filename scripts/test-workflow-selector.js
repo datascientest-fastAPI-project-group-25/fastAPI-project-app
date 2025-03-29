@@ -15,6 +15,7 @@ try {
 const { execSync } = require("child_process");
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
 
 // ANSI color codes
 const colors = {
@@ -43,16 +44,12 @@ try {
 
 // Command line arguments
 const args = process.argv.slice(2);
-let workflowCategory = "";
 let eventType = "";
 let workflowFile = "";
 
 // Parse command line arguments
 for (let i = 0; i < args.length; i++) {
   switch (args[i]) {
-    case "--category":
-      workflowCategory = args[++i];
-      break;
     case "--event":
       eventType = args[++i];
       break;
@@ -62,33 +59,50 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-// Define workflow categories and their workflows
-const WORKFLOW_CATEGORIES = {
-  "Pre-commit": [{ file: "pre-commit/pre-commit.yml", events: ["pull_request", "push"] }],
-  "Feature": [{ file: "feature/feature-push.yml", events: ["push"] }],
-  "Dev": [
-    { file: "dev/pr-to-dev.yml", events: ["pull_request"] },
-    { file: "dev/merge-to-dev.yml", events: ["push"] }
-  ],
-  "Main": [
-    { file: "main/pr-to-main.yml", events: ["pull_request"] },
-    { file: "main/merge-to-main.yml", events: ["push"] }
-  ],
-  "Shared": [
-    { file: "shared/shared-tests.yml", events: ["workflow_call"] },
-    { file: "shared/shared-build.yml", events: ["workflow_call"] },
-    { file: "shared/shared-release.yml", events: ["workflow_call"] }
-  ]
-};
+const WORKFLOW_DIR = path.join(__dirname, '..', '.github', 'workflows');
 
-// Workflow directory mapping
-const workflowDirMap = {
-  "Pre-commit": ".github/workflows/pre-commit",
-  "Feature": ".github/workflows/feature",
-  "Dev": ".github/workflows/dev",
-  "Main": ".github/workflows/main",
-  "Shared": ".github/workflows/shared",
-};
+/**
+ * Scans the workflow directory and parses YAML files to get workflow info.
+ * @returns {Array<{file: string, events: string[]}>} List of workflows and their events.
+ */
+function getWorkflows() {
+  const workflows = [];
+  try {
+    const files = fs.readdirSync(WORKFLOW_DIR);
+    files.forEach(file => {
+      if (file.endsWith('.yml') || file.endsWith('.yaml')) {
+        const filePath = path.join(WORKFLOW_DIR, file);
+        try {
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          const doc = yaml.load(fileContent);
+          let events = [];
+          if (doc && doc.on) {
+            if (typeof doc.on === 'string') {
+              events = [doc.on];
+            } else if (Array.isArray(doc.on)) {
+              events = doc.on;
+            } else if (typeof doc.on === 'object') {
+              events = Object.keys(doc.on);
+            }
+          }
+          // Filter out workflow_call as it's not directly triggerable by act
+          events = events.filter(e => e !== 'workflow_call');
+          if (events.length > 0) {
+            workflows.push({ file: file, events: events });
+          }
+        } catch (parseError) {
+          console.error(chalk.yellow(`Could not parse ${file}: ${parseError.message}`));
+        }
+      }
+    });
+  } catch (readError) {
+    console.error(chalk.red(`Error reading workflow directory: ${readError.message}`));
+    process.exit(1);
+  }
+  return workflows;
+}
+
+const ALL_WORKFLOWS = getWorkflows();
 
 /**
  * Execute a git command and return the result
@@ -111,7 +125,7 @@ const runTestScript = async (workflowFile, eventType) => {
   try {
     console.log(`\nTesting workflow: ${workflowFile} with event: ${eventType}`);
     const testScript = path.join(__dirname, '../.github/workflows/utils/test-workflow.sh');
-    const workflowPath = path.join(__dirname, "..", ".github", "workflows", workflowFile);
+    const workflowPath = path.join(WORKFLOW_DIR, workflowFile);
     const testCommand = `${testScript} "${workflowPath}" "${eventType}"`;
 
     // Run the test script with live output
@@ -142,51 +156,16 @@ const runTestScript = async (workflowFile, eventType) => {
 };
 
 /**
- * Interactive selection of workflow category
- * @returns {Promise<{category: string}>} - Selected category
- */
-async function selectWorkflowCategory() {
-  const categories = Object.keys(WORKFLOW_CATEGORIES);
-
-  // If there's only one category, return it immediately
-  if (categories.length === 1) {
-    console.log(chalk.cyan(`\nAuto-selected category: ${categories[0]}`));
-    return categories[0];
-  }
-
-  const questions = [
-    {
-      type: 'list',
-      name: 'category',
-      message: 'Select workflow category:',
-      choices: categories
-    }
-  ];
-
-  const { category } = await inquirer.prompt(questions);
-  return category;
-}
-
-/**
  * Interactive selection of workflow file
- * @param {string} category - Selected category
  * @returns {Promise<{workflow: string}>} - Selected workflow file
  */
-async function selectWorkflowFile(category) {
-  const workflows = WORKFLOW_CATEGORIES[category];
-
-  // If there's only one workflow, return it immediately
-  if (workflows.length === 1) {
-    console.log(chalk.cyan(`\nAuto-selected workflow: ${workflows[0].file}`));
-    return workflows[0].file;
-  }
-
+async function selectWorkflowFile() {
   const questions = [
     {
       type: 'list',
       name: 'workflow',
       message: 'Select workflow file:',
-      choices: workflows.map(w => w.file)
+      choices: ALL_WORKFLOWS.map(w => w.file)
     }
   ];
 
@@ -200,8 +179,7 @@ async function selectWorkflowFile(category) {
  * @returns {Promise<{event: string}>} - Selected event type
  */
 async function selectEventType(workflow) {
-  const workflows = Object.values(WORKFLOW_CATEGORIES).flat();
-  const workflowConfig = workflows.find(w => w.file === workflow);
+  const workflowConfig = ALL_WORKFLOWS.find(w => w.file === workflow);
 
   if (!workflowConfig) {
     console.error(chalk.red('Error: Workflow not found in configuration'));
@@ -229,19 +207,15 @@ async function selectEventType(workflow) {
   return event;
 }
 
-// Test all workflows in all categories
+// Test all workflows
 const testAllWorkflows = async () => {
   try {
     console.log(chalk.blue('\n📚 Testing All GitHub Workflows'));
 
-    for (const category of Object.keys(WORKFLOW_CATEGORIES)) {
-      console.log(chalk.cyan(`\n🔍 Testing category: ${category}`));
-
-      for (const workflowObj of WORKFLOW_CATEGORIES[category]) {
-        for (const event of workflowObj.events) {
-          console.log(chalk.yellow(`\n⚡ Testing workflow: ${workflowObj.file} with event: ${event}`));
-          await runTestScript(workflowObj.file, event);
-        }
+    for (const workflowObj of ALL_WORKFLOWS) {
+      for (const event of workflowObj.events) {
+        console.log(chalk.yellow(`\n⚡ Testing workflow: ${workflowObj.file} with event: ${event}`));
+        await runTestScript(workflowObj.file, event);
       }
     }
 
@@ -265,11 +239,8 @@ const testAllWorkflows = async () => {
     if (process.stdin.isTTY) {
       console.log(chalk.blue('\n📚 GitHub Workflow Tester'));
 
-      // Get category
-      const category = await selectWorkflowCategory();
-
       // Get workflow file
-      const workflow = await selectWorkflowFile(category);
+      const workflow = await selectWorkflowFile();
 
       // Get event type
       const event = await selectEventType(workflow);
@@ -278,11 +249,11 @@ const testAllWorkflows = async () => {
       await runTestScript(workflow, event);
     } else {
       // Non-interactive mode
-      if (workflowCategory && eventType) {
-        await runTestScript(workflowCategory, eventType);
+      if (workflowFile && eventType) {
+        await runTestScript(workflowFile, eventType);
         process.exit(0);
       } else {
-        console.error(chalk.red('\nError: In non-interactive mode, both category and event must be specified'));
+        console.error(chalk.red('\nError: In non-interactive mode, both workflow and event must be specified'));
         process.exit(1);
       }
     }
