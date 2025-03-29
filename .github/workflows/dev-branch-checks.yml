@@ -21,17 +21,25 @@ permissions:
 jobs:
   skip-duplicate:
     runs-on: ubuntu-latest
+    outputs:
+      duplicate: ${{ steps.skip.outputs.duplicate }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Skip Duplicate Actions
+        id: skip
         uses: fkirc/skip-duplicate-actions@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          paths: |
+            .
 
   format:
     needs: [skip-duplicate]
+    if: |
+      (github.event_name == 'pull_request' && needs.skip-duplicate.outputs.duplicate == 'false') ||
+      (github.event_name == 'push' && needs.skip-duplicate.outputs.duplicate == 'false')
     runs-on: ubuntu-latest
     steps:
       - name: Formatting
@@ -41,6 +49,9 @@ jobs:
 
   lint:
     needs: [format]
+    if: |
+      (github.event_name == 'pull_request' && needs.skip-duplicate.outputs.duplicate == 'false') ||
+      (github.event_name == 'push' && needs.skip-duplicate.outputs.duplicate == 'false')
     runs-on: ubuntu-latest
     steps:
       - name: Linting
@@ -50,6 +61,9 @@ jobs:
 
   backend-tests:
     needs: [lint]
+    if: |
+      (github.event_name == 'pull_request' && needs.skip-duplicate.outputs.duplicate == 'false') ||
+      (github.event_name == 'push' && needs.skip-duplicate.outputs.duplicate == 'false')
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -62,6 +76,9 @@ jobs:
 
   frontend-tests:
     needs: [lint]
+    if: |
+      (github.event_name == 'pull_request' && needs.skip-duplicate.outputs.duplicate == 'false') ||
+      (github.event_name == 'push' && needs.skip-duplicate.outputs.duplicate == 'false')
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -74,8 +91,8 @@ jobs:
 
   trigger-pr-creation:
     needs: [frontend-tests, backend-tests]
+    if: github.event_name == 'push' && needs.skip-duplicate.outputs.duplicate == 'false'
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     steps:
       - name: Trigger PR Creation Workflow
         uses: peter-evans/repository-dispatch@v2
@@ -86,8 +103,8 @@ jobs:
 
   build-staging:
     needs: [frontend-tests, backend-tests]
+    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'stg' && needs.skip-duplicate.outputs.duplicate == 'false'
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'stg'
     steps:
       - uses: actions/checkout@v4
 
