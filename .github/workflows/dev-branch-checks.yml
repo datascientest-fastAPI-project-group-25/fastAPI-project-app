@@ -19,77 +19,63 @@ permissions:
   packages: write
 
 jobs:
-  should-skip:
-    if: github.event_name == 'push'
+  skip-duplicate:
     runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.check.outputs.has_pr }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Check for existing PR
-        id: check
-        run: |
-          PR_COUNT=$(gh pr list --head "${{ github.ref_name }}" --base stg --state open --json number --jq 'length')
-          if [ "$PR_COUNT" -gt "0" ]; then
-            echo "Found existing PR from ${{ github.ref_name }} to stg, skipping push workflow"
-            echo "has_pr=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No PR exists from ${{ github.ref_name }} to stg, running workflow"
-            echo "has_pr=false" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Skip Duplicate Actions
+        uses: fkirc/skip-duplicate-actions@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   format:
-    needs: [should-skip]
-    if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && needs.should-skip.outputs.should_skip == 'false')
-    uses: ./.github/workflows/formatting.yml
-    with:
-      target: all
+    needs: [skip-duplicate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Formatting
+        uses: ./.github/workflows/formatting.yml
+        with:
+          target: all
 
   lint:
-    needs: [should-skip, format]
-    if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && needs.should-skip.outputs.should_skip == 'false')
-    uses: ./.github/workflows/linting.yml
-    with:
-      target: all
+    needs: [format]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Linting
+        uses: ./.github/workflows/linting.yml
+        with:
+          target: all
 
   backend-tests:
-    needs: [should-skip, format, lint]
-    if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && needs.should-skip.outputs.should_skip == 'false')
+    needs: [lint]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         test-type: [backend-unit, backend-integration, backend-e2e]
-    uses: ./.github/workflows/tests.yml
-    with:
-      test_type: ${{ matrix.test-type }}
+    steps:
+      - name: Backend Tests
+        uses: ./.github/workflows/tests.yml
+        with:
+          test_type: ${{ matrix.test-type }}
 
   frontend-tests:
-    needs: [should-skip, format, lint]
-    if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && needs.should-skip.outputs.should_skip == 'false')
+    needs: [lint]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         test-type: [frontend-unit, frontend-integration, frontend-e2e]
-    uses: ./.github/workflows/tests.yml
-    with:
-      test_type: ${{ matrix.test-type }}
+    steps:
+      - name: Frontend Tests
+        uses: ./.github/workflows/tests.yml
+        with:
+          test_type: ${{ matrix.test-type }}
 
   trigger-pr-creation:
-    needs: [should-skip, backend-tests, frontend-tests]
-    if: |
-      github.event_name == 'push' && needs.should-skip.outputs.should_skip == 'false'
+    needs: [frontend-tests, backend-tests]
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - name: Trigger PR Creation Workflow
         uses: peter-evans/repository-dispatch@v2
@@ -99,9 +85,9 @@ jobs:
           client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "branch": "${{ github.ref_name }}", "commit_message": "${{ github.event.head_commit.message }}"}'
 
   build-staging:
-    needs: [backend-tests, frontend-tests]
-    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'stg'
+    needs: [frontend-tests, backend-tests]
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'stg'
     steps:
       - uses: actions/checkout@v4
 
