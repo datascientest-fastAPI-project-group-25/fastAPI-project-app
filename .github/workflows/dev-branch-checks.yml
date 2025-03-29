@@ -44,42 +44,11 @@ jobs:
       target: all
 
   tests:
-    needs: [check-skip]
+    needs: [check-skip, format, lint]
     if: needs.check-skip.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Backend unit tests
-        uses: ./.github/workflows/tests.yml
-        with:
-          test_type: backend-unit
-
-      - name: Backend integration tests
-        uses: ./.github/workflows/tests.yml
-        with:
-          test_type: backend-integration
-
-      - name: Backend e2e tests
-        uses: ./.github/workflows/tests.yml
-        with:
-          test_type: backend-e2e
-
-      - name: Frontend unit tests
-        uses: ./.github/workflows/tests.yml
-        with:
-          test_type: frontend-unit
-
-      - name: Frontend integration tests
-        uses: ./.github/workflows/tests.yml
-        with:
-          test_type: frontend-integration
-
-      - name: Frontend e2e tests
-        uses: ./.github/workflows/tests.yml
-        with:
-          test_type: frontend-e2e
+    uses: ./.github/workflows/tests.yml
+    with:
+      test_type: all
 
   deploy:
     needs: [check-skip, tests]

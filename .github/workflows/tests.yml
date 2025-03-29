@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       test_type:
-        description: 'Type of tests to run (backend-unit, backend-integration, backend-e2e, frontend-unit, frontend-integration, frontend-e2e)'
+        description: 'Type of tests to run (all, backend-unit, backend-integration, backend-e2e, frontend-unit, frontend-integration, frontend-e2e)'
         required: true
         type: string
       cache_dependencies:
@@ -17,8 +17,8 @@ permissions:
   contents: read
 
 jobs:
-  backend-tests:
-    if: startsWith(inputs.test_type, 'backend-')
+  test:
+    if: inputs.test_type == 'all' || startsWith(inputs.test_type, 'backend-') || startsWith(inputs.test_type, 'frontend-')
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -54,102 +54,39 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Cache uv directory
-        if: inputs.cache_dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/uv
-            backend/.venv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/requirements*.txt', 'backend/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
-
       - name: Install uv
-        run: pip install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-      - name: Install dependencies
-        working-directory: backend
+      - name: Create virtual environment and install dependencies
         run: |
+          echo "Creating virtual environment..."
           uv venv
-          source .venv/bin/activate
-          uv pip install -e ".[dev,lint,types,test]"
-
-      - name: Wait for PostgreSQL and initialize database
-        working-directory: backend
-        run: |
-          cat > wait-for-postgres.py << 'EOL'
-          import time
-          import psycopg
-          for i in range(30):
-              try:
-                  conn = psycopg.connect('postgresql://postgres:postgres@localhost:5432/test_db')
-                  conn.close()
-                  print('PostgreSQL is ready!')
-                  break
-              except Exception as e:
-                  if i == 29:
-                      raise e
-                  print(f'Waiting for PostgreSQL: {e}')
-                  time.sleep(1)
-          EOL
-          uv run python wait-for-postgres.py
-          echo "Running database migrations..."
-          uv run alembic upgrade head
-          echo "Running database initialization..."
-          uv run python app/backend_pre_start.py
-          uv run python app/initial_data.py
-          echo "Database setup complete."
+          echo "Installing dependencies..."
+          uv pip install -r requirements.txt
+          echo "Dependencies installed."
 
       - name: Run backend unit tests
-        if: inputs.test_type == 'backend-unit'
-        working-directory: backend
+        if: inputs.test_type == 'all' || inputs.test_type == 'backend-unit'
         run: |
           echo "Running backend unit tests..."
-          uv run pytest app/tests/unit/ --cov=app --cov-report=xml
-          echo "Backend unit tests completed."
+          source .venv/bin/activate
+          pytest tests/unit
 
       - name: Run backend integration tests
-        if: inputs.test_type == 'backend-integration'
-        working-directory: backend
-        run: uv run pytest -m integration --cov=app --cov-report=xml
+        if: inputs.test_type == 'all' || inputs.test_type == 'backend-integration'
+        run: |
+          echo "Running backend integration tests..."
+          source .venv/bin/activate
+          pytest tests/integration
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-coverage-report
-          path: backend/coverage.xml
-
-  frontend-tests:
-    if: startsWith(inputs.test_type, 'frontend-')
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d test_db"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-          --health-start-period 5s
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-      PROJECT_NAME: FastAPI
-      POSTGRES_SERVER: localhost
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      FIRST_SUPERUSER: admin@example.com
-      FIRST_SUPERUSER_PASSWORD: password
-      PYTHONUNBUFFERED: "1"
-    steps:
-      - uses: actions/checkout@v4
+      - name: Run backend e2e tests
+        if: inputs.test_type == 'all' || inputs.test_type == 'backend-e2e'
+        run: |
+          echo "Running backend e2e tests..."
+          source .venv/bin/activate
+          pytest tests/e2e
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -168,7 +105,6 @@ jobs:
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
-        if: inputs.cache_dependencies
         uses: actions/cache@v4
         with:
           path: ${{ env.STORE_PATH }}
@@ -176,61 +112,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      - name: Install dependencies and setup
-        run: |
-          echo "Installing dependencies..."
-          pnpm install
-          echo "Installing Playwright..."
-          pnpm dlx playwright@latest install --with-deps
-          echo "Setup complete."
-
-      - name: Setup Python for backend service
-        if: startsWith(inputs.test_type, 'frontend-')
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install UV and backend dependencies
-        if: startsWith(inputs.test_type, 'frontend-')
-        working-directory: backend
-        run: |
-          echo "Installing UV and backend dependencies..."
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install uv
-          uv pip install -e ".[dev,test]"
-          echo "Backend dependencies installed"
-
-      - name: Initialize and start backend service
-        if: startsWith(inputs.test_type, 'frontend-')
-        run: |
-          echo "Setting up backend environment..."
-          cd backend
-          source .venv/bin/activate
-          echo "Initializing database..."
-          uv run python app/backend_pre_start.py
-          echo "Running database migrations..."
-          uv run alembic upgrade head
-          uv run python app/initial_data.py
-          echo "Starting backend service..."
-          uv run uvicorn app.main:app --port 8000 --host 0.0.0.0 &
-          echo "Waiting for backend to start..."
-          timeout 30 bash -c 'until curl -s http://localhost:8000/api/health; do sleep 1; done'
-          echo "Backend service ready"
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Run frontend unit tests
-        if: inputs.test_type == 'frontend-unit'
-        env:
-          FIRST_SUPERUSER: admin@example.com
-          FIRST_SUPERUSER_PASSWORD: password
-          VITE_API_BASE_URL: http://localhost:8000
-          NODE_ENV: test
+        if: inputs.test_type == 'all' || inputs.test_type == 'frontend-unit'
         run: |
-          echo "Running frontend unit tests with Vitest..."
-          cd frontend
-          pnpm test
-          echo "Frontend unit tests completed."
+          echo "Running frontend unit tests..."
+          pnpm run test:unit
 
-      - name: Run frontend E2E tests
-        if: inputs.test_type == 'frontend-e2e'
-        run: pnpm --filter frontend playwright test
+      - name: Run frontend integration tests
+        if: inputs.test_type == 'all' || inputs.test_type == 'frontend-integration'
+        run: |
+          echo "Running frontend integration tests..."
+          pnpm run test:integration
+
+      - name: Run frontend e2e tests
+        if: inputs.test_type == 'all' || inputs.test_type == 'frontend-e2e'
+        run: |
+          echo "Running frontend e2e tests..."
+          pnpm run test:e2e
