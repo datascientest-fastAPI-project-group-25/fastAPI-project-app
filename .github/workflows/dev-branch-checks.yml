@@ -47,7 +47,7 @@ jobs:
     needs: [should-skip]
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && needs.should-skip.outputs.should_skip != 'true')
+      (github.event_name == 'push' && needs.should-skip.outputs.should_skip == 'false')
     uses: ./.github/workflows/formatting.yml
     with:
       target: all
@@ -56,7 +56,7 @@ jobs:
     needs: [should-skip, format]
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && needs.should-skip.outputs.should_skip != 'true')
+      (github.event_name == 'push' && needs.should-skip.outputs.should_skip == 'false')
     uses: ./.github/workflows/linting.yml
     with:
       target: all
@@ -65,7 +65,7 @@ jobs:
     needs: [should-skip, format, lint]
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && needs.should-skip.outputs.should_skip != 'true')
+      (github.event_name == 'push' && needs.should-skip.outputs.should_skip == 'false')
     strategy:
       matrix:
         test-type: [backend-unit, backend-integration, backend-e2e]
@@ -77,7 +77,7 @@ jobs:
     needs: [should-skip, format, lint]
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && needs.should-skip.outputs.should_skip != 'true')
+      (github.event_name == 'push' && needs.should-skip.outputs.should_skip == 'false')
     strategy:
       matrix:
         test-type: [frontend-unit, frontend-integration, frontend-e2e]
@@ -88,7 +88,7 @@ jobs:
   trigger-pr-creation:
     needs: [should-skip, backend-tests, frontend-tests]
     if: |
-      github.event_name == 'push' && needs.should-skip.outputs.should_skip != 'true'
+      github.event_name == 'push' && needs.should-skip.outputs.should_skip == 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger PR Creation Workflow
