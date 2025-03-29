@@ -1,9 +1,9 @@
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, create_engine, select
 
 from app.core.config import settings
 from app.core.security import get_password_hash
-from app.schemas import UserCreate
 from app.models import User
+from app.schemas import UserCreate
 
 # Create database URL
 database_url = str(settings.SQLALCHEMY_DATABASE_URI)
@@ -12,13 +12,17 @@ database_url = str(settings.SQLALCHEMY_DATABASE_URI)
 engine = create_engine(
     database_url,
     echo=settings.ENVIRONMENT == "local",
-    connect_args={"check_same_thread": False} if database_url.startswith("sqlite") else {},
+    connect_args={"check_same_thread": False}
+    if database_url.startswith("sqlite")
+    else {},
 )
+
 
 def engine_connect(engine) -> None:
     """Test database connection."""
     with engine.connect() as conn:
         conn.execute(select(1))
+
 
 def init_db(session: Session) -> None:
     """Initialize database with first superuser."""

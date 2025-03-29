@@ -80,7 +80,7 @@ def read_user_me(current_user: CurrentUser) -> Any:
     return current_user
 
 
-@router.patch("/me", response_model=UserPublic) # Changed method from PUT to PATCH
+@router.patch("/me", response_model=UserPublic)  # Changed method from PUT to PATCH
 def update_user_me(
     *,
     session: SessionDep,
@@ -94,7 +94,7 @@ def update_user_me(
         if crud.get_user_by_email(session=session, email=user_in.email):
             raise HTTPException(
                 status_code=409,
-                detail="User with this email already exists", # Corrected message
+                detail="User with this email already exists",  # Corrected message
             )
 
     user_data = user_in.model_dump(exclude_unset=True)
@@ -104,7 +104,9 @@ def update_user_me(
     return updated_user
 
 
-@router.patch("/me/password", response_model=Message) # Changed method from PUT to PATCH
+@router.patch(
+    "/me/password", response_model=Message
+)  # Changed method from PUT to PATCH
 def update_password_me(
     *,
     session: SessionDep,
@@ -114,7 +116,9 @@ def update_password_me(
     """
     Update own password.
     """
-    if not verify_password(update_password.current_password, current_user.hashed_password):
+    if not verify_password(
+        update_password.current_password, current_user.hashed_password
+    ):
         raise HTTPException(status_code=400, detail="Incorrect password")
 
     if update_password.current_password == update_password.new_password:
@@ -157,7 +161,7 @@ def register_user(
     )
     user = crud.create_user(session=session, user_create=user_create)
 
-    if settings.emails_enabled and user_in.email: # Corrected attribute access
+    if settings.emails_enabled and user_in.email:  # Corrected attribute access
         send_email(
             email_to=user_in.email,
             subject=f"{settings.PROJECT_NAME} - New account",
@@ -179,13 +183,15 @@ def read_user_by_id(
     """
     # Check permissions first
     if user_id != current_user.id and not current_user.is_superuser:
-         raise HTTPException(
-             status_code=403, detail="The user doesn't have enough privileges"
-         )
+        raise HTTPException(
+            status_code=403, detail="The user doesn't have enough privileges"
+        )
 
     user = crud.get_user(session=session, user_id=user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found") # Correct message if not found after permission check
+        raise HTTPException(
+            status_code=404, detail="User not found"
+        )  # Correct message if not found after permission check
 
     return user
 
@@ -215,10 +221,12 @@ def update_user(  # type: ignore[unused-argument] # noqa: ARG001 - current_user 
         )
     if user_in.email is not None and user_in.email != user.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
-        if existing_user and existing_user.id != user_id: # Check if the email belongs to another user
+        if (
+            existing_user and existing_user.id != user_id
+        ):  # Check if the email belongs to another user
             raise HTTPException(
                 status_code=409,
-                detail="User with this email already exists", # Corrected message
+                detail="User with this email already exists",  # Corrected message
             )
     # Explicitly use current_user for logging
     admin_email: str = current_user.email
