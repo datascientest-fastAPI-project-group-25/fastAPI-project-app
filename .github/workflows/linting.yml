@@ -89,4 +89,4 @@ jobs:
 
       - name: Run Biome lint
         working-directory: frontend
-        run: pnpm run biome check --log-level=error
+        run: pnpm run biome check . --log-level=error
