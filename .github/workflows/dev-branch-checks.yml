@@ -9,10 +9,10 @@ on:
     branches: [stg]
   workflow_dispatch: {}
 
-# Skip the whole workflow if it's a push and there's an open PR
+# Avoid running duplicate workflows by using concurrency groups
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -20,37 +20,53 @@ permissions:
   packages: write
 
 jobs:
-  check-pr-status:
-    runs-on: ubuntu-latest
+  should-skip:
+    # Run this job only for push events to check for existing PRs
     if: github.event_name == 'push'
+    runs-on: ubuntu-latest
     outputs:
-      skip_ci: ${{ steps.check.outputs.skip }}
+      should_skip: ${{ steps.check.outputs.has_pr }}
     steps:
-      - name: Check if PR exists
-        id: check
+      - uses: actions/checkout@v4
+      - id: check
+        name: Check for existing PR
         run: |
-          PR_EXISTS=$(gh pr list --head "${{ github.ref_name }}" --json number --jq 'length > 0')
-          echo "skip=$PR_EXISTS" >> "$GITHUB_OUTPUT"
+          # Check if there's an open PR for this branch
+          PR_COUNT=$(gh pr list --head "${{ github.ref_name }}" --base stg --json number --jq 'length')
+          if [ "$PR_COUNT" -gt "0" ]; then
+            echo "PR exists, should skip push workflow"
+            echo "has_pr=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No PR exists, should run push workflow"
+            echo "has_pr=false" >> "$GITHUB_OUTPUT"
+          fi
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
   format:
-    needs: [check-pr-status]
+    # Skip this job (and all dependent jobs) for pushes when PR exists
+    needs: [should-skip]
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && needs.check-pr-status.outputs.skip != 'true')
+      (github.event_name == 'push' && needs.should-skip.outputs.should_skip != 'true')
     uses: ./.github/workflows/formatting.yml
     with:
       target: all
 
   lint:
-    needs: format
+    needs: [should-skip, format]
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && needs.should-skip.outputs.should_skip != 'true')
     uses: ./.github/workflows/linting.yml
     with:
       target: all
 
   backend-tests:
-    needs: [format, lint]
+    needs: [should-skip, format, lint]
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && needs.should-skip.outputs.should_skip != 'true')
     strategy:
       matrix:
         test-type: [backend-unit, backend-integration, backend-e2e]
@@ -59,7 +75,10 @@ jobs:
       test_type: ${{ matrix.test-type }}
 
   frontend-tests:
-    needs: [format, lint]
+    needs: [should-skip, format, lint]
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && needs.should-skip.outputs.should_skip != 'true')
     strategy:
       matrix:
         test-type: [frontend-unit, frontend-integration, frontend-e2e]
@@ -67,30 +86,12 @@ jobs:
     with:
       test_type: ${{ matrix.test-type }}
 
-  check-pr-exists:
-    needs: [backend-tests, frontend-tests]
-    # Only run on push events, not on PR events
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    outputs:
-      pr_exists: ${{ steps.check-pr.outputs.pr_exists }}
-    steps:
-      - name: Check for existing PR
-        id: check-pr
-        run: |
-          PR_COUNT=$(gh pr list --head "${{ github.ref_name }}" --base stg --json number --jq 'length')
-          if [ "$PR_COUNT" -gt "0" ]; then
-            echo "pr_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "pr_exists=false" >> $GITHUB_OUTPUT
-          fi
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
   trigger-pr-creation:
-    needs: check-pr-exists
-    # Only run on push events and if no PR exists
-    if: github.event_name == 'push' && needs.check-pr-exists.outputs.pr_exists == 'false'
+    # Only run when push event and no PR exists
+    needs: [should-skip, backend-tests, frontend-tests]
+    if: |
+      github.event_name == 'push' &&
+      needs.should-skip.outputs.should_skip != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger PR Creation Workflow
@@ -101,8 +102,8 @@ jobs:
           client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "branch": "${{ github.ref_name }}", "commit_message": "${{ github.event.head_commit.message }}"}'
 
   build-staging:
+    # Only run for PR events to staging
     needs: [backend-tests, frontend-tests]
-    # Only run on pull request events to staging
     if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'stg'
     runs-on: ubuntu-latest
     steps:
