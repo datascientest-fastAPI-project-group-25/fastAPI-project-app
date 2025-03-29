@@ -32,8 +32,6 @@ jobs:
         uses: fkirc/skip-duplicate-actions@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          paths: |
-            .
 
   format:
     needs: [skip-duplicate]
