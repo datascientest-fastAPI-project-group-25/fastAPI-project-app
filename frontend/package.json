@@ -9,6 +9,7 @@
     "lint": "biome check --apply-unsafe --no-errors-on-unmatched --files-ignore-unknown=true ./",
     "format:check": "biome check --no-errors-on-unmatched --files-ignore-unknown=true ./",
     "format": "biome check --apply-unsafe src/ tests/",
+    "biome": "biome",
     "preview": "vite preview",
     "generate-client": "openapi-ts",
     "test": "vitest run",
