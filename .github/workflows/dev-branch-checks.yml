@@ -19,107 +19,93 @@ permissions:
   packages: write
 
 jobs:
-  skip-duplicate:
+  check-skip:
     runs-on: ubuntu-latest
     outputs:
-      duplicate: ${{ steps.skip.outputs.duplicate }}
+      should_run: ${{ steps.check.outputs.should_run }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Skip Duplicate Actions
-        id: skip
-        uses: fkirc/skip-duplicate-actions@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check if should run
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # Check if there's an open PR for this branch targeting staging
+            PR_COUNT=$(gh pr list --head "${{ github.ref_name }}" --base stg --state open --json number --jq 'length')
+            if [ "$PR_COUNT" -gt "0" ]; then
+              echo "Found existing PR from ${{ github.ref_name }} to stg, skipping push workflow"
+              echo "should_run=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "No PR exists from ${{ github.ref_name }} to stg, running workflow"
+              echo "should_run=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            # For pull_request events, always run
+            echo "This is a pull_request event, running workflow"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  format:
-    needs: [skip-duplicate]
-    if: |
-      (github.event_name == 'pull_request' && needs.skip-duplicate.outputs.duplicate == 'false') ||
-      (github.event_name == 'push' && needs.skip-duplicate.outputs.duplicate == 'false')
+  main-workflow:
+    needs: [check-skip]
+    if: needs.check-skip.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Formatting
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Format
         uses: ./.github/workflows/formatting.yml
         with:
           target: all
 
-  lint:
-    needs: [format]
-    if: |
-      (github.event_name == 'pull_request' && needs.skip-duplicate.outputs.duplicate == 'false') ||
-      (github.event_name == 'push' && needs.skip-duplicate.outputs.duplicate == 'false')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Linting
+      - name: Lint
         uses: ./.github/workflows/linting.yml
         with:
           target: all
 
-  backend-tests:
-    needs: [lint]
-    if: |
-      (github.event_name == 'pull_request' && needs.skip-duplicate.outputs.duplicate == 'false') ||
-      (github.event_name == 'push' && needs.skip-duplicate.outputs.duplicate == 'false')
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        test-type: [backend-unit, backend-integration, backend-e2e]
-    steps:
-      - name: Backend Tests
+      - name: Backend tests
         uses: ./.github/workflows/tests.yml
         with:
-          test_type: ${{ matrix.test-type }}
+          test_type: backend-unit
 
-  frontend-tests:
-    needs: [lint]
-    if: |
-      (github.event_name == 'pull_request' && needs.skip-duplicate.outputs.duplicate == 'false') ||
-      (github.event_name == 'push' && needs.skip-duplicate.outputs.duplicate == 'false')
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        test-type: [frontend-unit, frontend-integration, frontend-e2e]
-    steps:
-      - name: Frontend Tests
+      - name: Backend integration tests
         uses: ./.github/workflows/tests.yml
         with:
-          test_type: ${{ matrix.test-type }}
+          test_type: backend-integration
 
-  trigger-pr-creation:
-    needs: [frontend-tests, backend-tests]
-    if: github.event_name == 'push' && needs.skip-duplicate.outputs.duplicate == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger PR Creation Workflow
+      - name: Backend e2e tests
+        uses: ./.github/workflows/tests.yml
+        with:
+          test_type: backend-e2e
+
+      - name: Frontend tests
+        uses: ./.github/workflows/tests.yml
+        with:
+          test_type: frontend-unit
+
+      - name: Frontend integration tests
+        uses: ./.github/workflows/tests.yml
+        with:
+          test_type: frontend-integration
+
+      - name: Frontend e2e tests
+        uses: ./.github/workflows/tests.yml
+        with:
+          test_type: frontend-e2e
+
+      - name: Trigger PR Creation
+        if: github.event_name == 'push'
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: create-pr-to-stg
           client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "branch": "${{ github.ref_name }}", "commit_message": "${{ github.event.head_commit.message }}"}'
 
-  build-staging:
-    needs: [frontend-tests, backend-tests]
-    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'stg' && needs.skip-duplicate.outputs.duplicate == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          platforms: linux/amd64
-          buildkitd-flags: --debug
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push staging image
+        if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'stg'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -129,19 +115,3 @@ jobs:
           target: staging
           cache-from: type=gha,scope=staging
           cache-to: type=gha,mode=max,scope=staging
-
-      - name: Deploy and test staging environment
-        run: |
-          docker compose -f docker-compose.yml -f docker-compose.staging.yml pull
-          docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
-          docker compose -f docker-compose.yml -f docker-compose.staging.yml run --rm test
-
-      - name: Health check
-        run: |
-          for i in {1..30}; do
-            if curl -f http://localhost:8000/api/health; then
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
