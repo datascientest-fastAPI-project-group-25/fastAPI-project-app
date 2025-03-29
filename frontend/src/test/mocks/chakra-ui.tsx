@@ -46,19 +46,29 @@ export const createChakraMock = () => {
     </span>
   )
   const Button: FC<any> = ({ children, ...props }) => (
-    <button data-testid="chakra-button" {...props}>
+    <button type="button" data-testid="chakra-button" {...props}>
       {children}
     </button>
   )
   const IconButton: FC<any> = ({ "aria-label": ariaLabel, ...props }) => (
     <button
+      type="button"
       data-testid="chakra-icon-button"
       aria-label={ariaLabel}
       {...props}
     />
   )
-  const Image: FC<any> = ({ alt, src, ...props }) => (
-    <img data-testid="chakra-image" alt={alt} src={src} {...props} />
+  const Image: FC<{
+    alt?: string
+    src?: string
+    h?: string
+    display?: string
+  }> = ({ alt, src, h, display }) => (
+    <img
+      data-testid="chakra-image"
+      alt={alt || "Descriptive alt text for image"}
+      src={src}
+    />
   )
   const Menu: FC<any> = ({ children, ...props }) => (
     <div data-testid="chakra-menu" {...props}>
@@ -66,7 +76,7 @@ export const createChakraMock = () => {
     </div>
   )
   const MenuButton: FC<any> = ({ children, ...props }) => (
-    <button data-testid="chakra-menu-button" {...props}>
+    <button type="button" data-testid="chakra-menu-button" {...props}>
       {children}
     </button>
   )

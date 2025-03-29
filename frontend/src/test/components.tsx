@@ -5,7 +5,7 @@ export const ChakraProvider: React.FC<any> = ({ children }) => <>{children}</>
 
 // Additional components
 export const Button: React.FC<any> = ({ children, ...props }) => (
-  <button {...props} data-testid="chakra-button">
+  <button type="button" {...props} data-testid="chakra-button">
     {children}
   </button>
 )
@@ -34,8 +34,17 @@ export const Link: React.FC<any> = ({ children, ...props }) => (
   </a>
 )
 
-export const Image: React.FC<any> = ({ alt, src, ...props }) => (
-  <img alt={alt} src={src} {...props} data-testid="chakra-image" />
+export const Image: React.FC<{
+  alt?: string
+  src?: string
+  h?: string
+  display?: string
+}> = ({ alt, src, h, display }) => (
+  <img
+    alt={alt || "Descriptive alt text for image"}
+    src={src}
+    data-testid="chakra-image"
+  />
 )
 
 export const Menu: React.FC<any> = ({ children, ...props }) => (
@@ -45,7 +54,7 @@ export const Menu: React.FC<any> = ({ children, ...props }) => (
 )
 
 export const MenuButton: React.FC<any> = ({ children, ...props }) => (
-  <button {...props} data-testid="chakra-menu-button">
+  <button type="button" {...props} data-testid="chakra-menu-button">
     {children}
   </button>
 )

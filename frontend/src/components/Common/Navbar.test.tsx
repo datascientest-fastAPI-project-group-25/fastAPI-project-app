@@ -1,26 +1,35 @@
 import "@testing-library/jest-dom"
-import { screen, render } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 
 // Mock Chakra UI components
 vi.mock("@chakra-ui/react", () => ({
-  Box: ({ children, ...props }: any) => (
-    <div data-testid="chakra-box" {...props}>
-      {children}
-    </div>
+  Box: ({ children, bg, borderBottom, borderColor, ...props }: any) => (
+    <div data-testid="chakra-box">{children}</div>
   ),
-  Flex: ({ children, ...props }: any) => (
-    <div data-testid="chakra-flex" {...props}>
-      {children}
-    </div>
-  ),
-  Link: ({ children, ...props }: any) => (
-    <a data-testid="chakra-link" {...props}>
+  Flex: ({
+    children,
+    alignItems,
+    justifyContent,
+    maxW,
+    mx,
+    px,
+    h,
+    flex,
+    justify,
+    ...props
+  }: any) => <div data-testid="chakra-flex">{children}</div>,
+  Link: ({ children, href, ...props }: any) => (
+    <a data-testid="chakra-link" href={href}>
       {children}
     </a>
   ),
-  Image: ({ alt, src, ...props }: any) => (
-    <img data-testid="chakra-image" alt={alt} src={src} {...props} />
+  Image: ({ alt, src, h, display }: any) => (
+    <img
+      data-testid="chakra-image"
+      alt={alt || "Descriptive alt text for image"}
+      src={src}
+    />
   ),
   useBreakpointValue: () => "flex",
 }))

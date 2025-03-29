@@ -9,7 +9,7 @@ vi.mock("@chakra-ui/react", () => ({
     </div>
   ),
   MenuButton: ({ children, ...props }: any) => (
-    <button data-testid="chakra-menu-button" {...props}>
+    <button type="button" data-testid="chakra-menu-button" {...props}>
       {children}
     </button>
   ),
@@ -24,7 +24,7 @@ vi.mock("@chakra-ui/react", () => ({
     </div>
   ),
   Button: ({ children, ...props }: any) => (
-    <button data-testid="chakra-button" {...props}>
+    <button type="button" data-testid="chakra-button" {...props}>
       {children}
     </button>
   ),

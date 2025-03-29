@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom"
 import { cleanup } from "@testing-library/react"
+import type { ImgHTMLAttributes } from "react"
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest"
 import { server } from "./mocks/server"
 
@@ -19,8 +20,8 @@ vi.mock("@tanstack/react-router", () => {
     Link: vi.fn(),
     useNavigate: vi.fn(),
     useParams: vi.fn(),
-    Image: ({ alt, src, ...props }: any) => (
-      <img alt={alt || "Descriptive alt text"} src={src} {...props} />
+    Image: ({ alt, src }: ImgHTMLAttributes<HTMLImageElement>) => (
+      <img alt={alt || "Descriptive alt text for image"} src={src} />
     ),
   }
 })

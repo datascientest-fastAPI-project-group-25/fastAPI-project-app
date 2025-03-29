@@ -1,5 +1,5 @@
-import "@testing-library/jest-dom"
-import * as React from "react"
+import type React from "react"
+import type { ImgHTMLAttributes, ReactNode } from "react"
 import { vi } from "vitest"
 
 // Mock the useAuth hook
@@ -68,8 +68,18 @@ vi.mock("@chakra-ui/react", async (importOriginal) => {
           {children}
         </button>
       ),
-      Image: ({ alt, src, ...props }: any) => (
-        <img alt={alt} src={src} {...props} />
+      Image: ({
+        alt,
+        src,
+      }: ImgHTMLAttributes<HTMLImageElement> & {
+        h?: string
+        display?: string
+      }) => (
+        <img
+          data-testid="chakra-image"
+          alt={alt || "Descriptive alt text for image"}
+          src={src}
+        />
       ),
 
       // Mock functions
@@ -114,8 +124,18 @@ vi.mock("@chakra-ui/react", async (importOriginal) => {
           {children}
         </button>
       ),
-      Image: ({ alt, src, ...props }: any) => (
-        <img alt={alt} src={src} {...props} />
+      Image: ({
+        alt,
+        src,
+      }: ImgHTMLAttributes<HTMLImageElement> & {
+        h?: string
+        display?: string
+      }) => (
+        <img
+          data-testid="chakra-image"
+          alt={alt || "Descriptive alt text for image"}
+          src={src}
+        />
       ),
       createToaster: vi.fn().mockReturnValue(mockToaster),
       defineRecipe: vi.fn().mockImplementation((config) => {
