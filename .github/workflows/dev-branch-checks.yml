@@ -44,7 +44,7 @@ jobs:
       target: all
 
   tests:
-    needs: [check-skip, format, lint]
+    needs: [check-skip]
     if: needs.check-skip.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
