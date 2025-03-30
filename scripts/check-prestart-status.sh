@@ -1,30 +1,57 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-# Script to check the status of the prestart container and display a more meaningful message
-# Usage: ./scripts/check-prestart-status.sh
+# This script checks the status of the prestart process
+# and provides detailed information about the database and migrations
 
-# Get the container name
-CONTAINER_NAME="fastapi-project-app-prestart-1"
+echo "===== Prestart Status Check ====="
+echo "Checking database connection..."
 
-# Check if the container exists
-if ! docker ps -a --format '{{.Names}}' | grep -q "$CONTAINER_NAME"; then
-    echo "Prestart container not found. Make sure the application is running."
+# Check if PostgreSQL is running
+if pg_isready -h ${POSTGRES_SERVER} -p 5432 -U ${POSTGRES_USER}; then
+    echo "✅ Database is running"
+else
+    echo "❌ Database is not running or not accessible"
+    echo "Connection details:"
+    echo "  Host: ${POSTGRES_SERVER}"
+    echo "  Port: 5432"
+    echo "  User: ${POSTGRES_USER}"
+    echo "  Database: ${POSTGRES_DB}"
     exit 1
 fi
 
-# Get the exit code of the prestart container
-EXIT_CODE=$(docker inspect --format='{{.State.ExitCode}}' $CONTAINER_NAME)
+# Check if alembic directory exists and has required files
+echo "Checking alembic setup..."
+if [ -d "/app/backend/alembic" ]; then
+    echo "✅ Alembic directory exists"
 
-# Check if the prestart container exited successfully
-if [ "$EXIT_CODE" -eq 0 ]; then
-    echo "============================================="
-    echo "✅ Prestart Status: DONE"
-    echo "Database initialization and migrations completed successfully."
-    echo "============================================="
+    if [ -f "/app/backend/alembic/env.py" ]; then
+        echo "✅ Alembic env.py exists"
+    else
+        echo "❌ Alembic env.py is missing"
+    fi
+
+    if [ -f "/app/backend/alembic/script.py.mako" ]; then
+        echo "✅ Alembic script.py.mako exists"
+    else
+        echo "❌ Alembic script.py.mako is missing"
+    fi
+
+    if [ -d "/app/backend/alembic/versions" ]; then
+        echo "✅ Alembic versions directory exists"
+        echo "   Versions found: $(ls -1 /app/backend/alembic/versions | wc -l)"
+    else
+        echo "❌ Alembic versions directory is missing"
+    fi
 else
-    echo "============================================="
-    echo "❌ Prestart Status: FAILED (Exit Code: $EXIT_CODE)"
-    echo "Database initialization and migrations failed. Check the logs for more details:"
-    echo "docker compose logs prestart"
-    echo "============================================="
+    echo "❌ Alembic directory does not exist"
 fi
+
+# Check alembic history
+echo "Checking alembic migration history..."
+cd /app/backend && alembic history || echo "❌ Failed to get alembic history"
+
+# Check current alembic revision
+echo "Current alembic revision:"
+cd /app/backend && alembic current || echo "❌ Failed to get current revision"
+
+echo "===== Prestart Status Check Complete ====="

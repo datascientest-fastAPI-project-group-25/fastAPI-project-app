@@ -1,7 +1,11 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from pydantic.networks import EmailStr
 
 from app.api.deps import get_current_active_superuser
+from app.core.config import settings
+from app.db.session import get_session
 from app.models import Message
 from app.utils import generate_test_email, send_email
 
@@ -27,5 +31,29 @@ def test_email(email_to: EmailStr) -> Message:
 
 
 @router.get("/health-check/")
-async def health_check() -> bool:
-    return True
+async def health_check() -> dict[str, Any]:
+    """
+    Health check endpoint that returns system status.
+    """
+    try:
+        # Add database connection check
+        with next(get_session()) as db:
+            db.execute("SELECT 1")
+
+        return {
+            "status": "healthy",
+            "service": {
+                "name": settings.PROJECT_NAME,
+                "version": "1.0.0",
+                "environment": settings.ENVIRONMENT
+            },
+            "system": {
+                "database": "connected",
+                "dependencies": "healthy"
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }

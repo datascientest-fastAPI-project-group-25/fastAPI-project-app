@@ -1,14 +1,14 @@
 from datetime import timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.api.deps import SessionDep
 from app.core.config import settings
-from app.core.security import create_access_token, verify_password
-from app.models import Token, User
+from app.core.security import create_access_token, get_password_hash, verify_password
+from app.models import Message, Token, User
 from app.utils import (
     generate_password_reset_token,
     send_reset_password_email,
@@ -57,9 +57,9 @@ def recover_password(email: str, db: SessionDep) -> Any:
 
 @router.post("/reset-password/", response_model=Message)
 def reset_password(
+    db: SessionDep,
     token: str = Body(...),
     new_password: str = Body(...),
-    db: SessionDep = Depends(get_db),
 ) -> Any:
     """
     Reset password

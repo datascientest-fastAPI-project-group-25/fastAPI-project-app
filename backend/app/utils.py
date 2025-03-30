@@ -1,17 +1,18 @@
 import logging
+from typing import Any
+
 import emails
 from emails.template import JinjaTemplate
-import os
-from pathlib import Path
-from typing import Any, Dict
 from pydantic.networks import EmailStr
+
 from app.core.config import settings
+
 
 def send_email(
     email_to: EmailStr,
     subject: str,
     html_content: str,
-    environment: Dict[str, Any] = {},
+    environment: dict[str, Any] | None = None,
 ) -> None:
     """Send an email using the configured SMTP server or log it in development."""
     assert settings.EMAILS_FROM_EMAIL, "EMAILS_FROM_EMAIL must be set"
@@ -39,7 +40,7 @@ def send_email(
     response = message.send(to=email_to, render=environment, smtp=smtp_options)
     logging.info(f"send email result: {response}")
 
-def generate_test_email(email_to: EmailStr) -> emails.Message:
+def generate_test_email() -> emails.Message:
     """Generate a test email with a template."""
     subject = "Test email"
     html_content = (

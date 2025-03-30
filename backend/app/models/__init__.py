@@ -1,3 +1,5 @@
+from sqlmodel import SQLModel
+
 from .item import Item, ItemBase, ItemCreate, ItemPublic, ItemsPublic, ItemUpdate
 from .token import Message, NewPassword, Token, TokenPayload
 from .user import (
@@ -13,6 +15,7 @@ from .user import (
 )
 
 __all__ = [
+    "SQLModel",
     # Item models
     "Item",
     "ItemBase",

@@ -1,21 +1,21 @@
 import uuid
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, verify_password
 from app.models import User, UserCreate, UserUpdate
 
 
-def get_user(session: Session, user_id: uuid.UUID) -> Optional[User]:
+def get_user(session: Session, user_id: uuid.UUID) -> User | None:
     return session.get(User, user_id)
 
 
-def get_user_by_email(session: Session, email: str) -> Optional[User]:
+def get_user_by_email(session: Session, email: str) -> User | None:
     return session.exec(select(User).where(User.email == email)).first()
 
 
-def get_users(session: Session, skip: int = 0, limit: int = 100) -> List[User]:
+def get_users(session: Session, skip: int = 0, limit: int = 100) -> list[User]:
     return session.exec(select(User).offset(skip).limit(limit)).all()
 
 
@@ -33,8 +33,8 @@ def create_user(session: Session, user: UserCreate) -> User:
 
 
 def update_user(
-    session: Session, user_id: uuid.UUID, user_in: Union[UserUpdate, Dict[str, Any]]
-) -> Optional[User]:
+    session: Session, user_id: uuid.UUID, user_in: UserUpdate | dict[str, Any]
+) -> User | None:
     db_user = get_user(session, user_id)
     if db_user is None:
         return None
@@ -53,7 +53,7 @@ def update_user(
     return db_user
 
 
-def delete_user(session: Session, user_id: uuid.UUID) -> Optional[User]:
+def delete_user(session: Session, user_id: uuid.UUID) -> User | None:
     db_user = get_user(session, user_id)
     if db_user is None:
         return None
@@ -62,7 +62,7 @@ def delete_user(session: Session, user_id: uuid.UUID) -> Optional[User]:
     return db_user
 
 
-def authenticate_user(session: Session, email: str, password: str) -> Optional[User]:
+def authenticate_user(session: Session, email: str, password: str) -> User | None:
     user = get_user_by_email(session, email)
     if not user:
         return None
@@ -71,9 +71,9 @@ def authenticate_user(session: Session, email: str, password: str) -> Optional[U
     return user
 
 
-def get_active_users(session: Session) -> List[User]:
-    return session.exec(select(User).where(User.is_active == True)).all()
+def get_active_users(session: Session) -> list[User]:
+    return session.exec(select(User).where(User.is_active.is_(True))).all()
 
 
-def get_superusers(session: Session) -> List[User]:
-    return session.exec(select(User).where(User.is_superuser == True)).all()
+def get_superusers(session: Session) -> list[User]:
+    return session.exec(select(User).where(User.is_superuser.is_(True))).all()

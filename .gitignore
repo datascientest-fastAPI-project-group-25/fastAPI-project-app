@@ -49,7 +49,7 @@ ENV/
 # ----------------------------------------
 backend/test-results/
 frontend/test-results/
-/playwright-report/
+frontend/playwright-report/
 frontend/Dockerfile.test
 scripts/run-frontend-tests.sh
 frontend/jest.config.js
@@ -94,8 +94,4 @@ temp/
 
 # Additional test and development directories
 .aider.tags.cache.v3/
-test-results/
 prometheus/
-frontend/src/app/
-frontend/tests/unit/
-backend/tests/
