@@ -63,7 +63,12 @@ help:
 #################################################
 # Setup and Installation                        #
 #################################################
-setup: env install ## Setup the complete project environment
+set-permissions: ## Set correct permissions for scripts
+	@echo "🔧 Setting script permissions..."
+	@chmod +x $(BACKEND_DIR)/scripts/*.sh
+	@echo "✨ Script permissions set!"
+
+setup: env install set-permissions ## Setup the complete project environment
 	@echo "✨ Project setup complete!"
 
 install: ## Install all project dependencies
@@ -97,7 +102,7 @@ stop: ## Stop all services
 	@$(DOCKER_COMPOSE) down
 	@echo "✨ All services stopped!"
 
-restart: stop dev ## Restart all services
+restart: stop set-permissions dev ## Restart all services
 
 logs: ## View logs from all services
 	@$(DOCKER_COMPOSE) logs -f
