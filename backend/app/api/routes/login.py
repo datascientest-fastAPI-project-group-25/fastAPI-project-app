@@ -17,6 +17,7 @@ from app.utils import (
 
 router = APIRouter(prefix="/login", tags=["login"])
 
+
 @router.post("/access-token", response_model=Token)
 def login_access_token(
     db: SessionDep, form_data: OAuth2PasswordRequestForm = Depends()
@@ -36,6 +37,7 @@ def login_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+
 @router.post("/password-recovery/{email}", response_model=Message)
 def recover_password(email: str, db: SessionDep) -> Any:
     """
@@ -54,6 +56,7 @@ def recover_password(email: str, db: SessionDep) -> Any:
         email_data={"reset_password_token": password_reset_token},
     )
     return {"msg": "Password recovery email sent"}
+
 
 @router.post("/reset-password/", response_model=Message)
 def reset_password(

@@ -25,6 +25,7 @@ def test_create_item(
     assert "id" in content
     assert "owner_id" in content
 
+
 @pytest.mark.api
 def test_read_item(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
@@ -41,6 +42,7 @@ def test_read_item(
     assert content["id"] == str(item.id)
     assert content["owner_id"] == str(item.owner_id)
 
+
 @pytest.mark.api
 def test_read_item_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
@@ -52,6 +54,7 @@ def test_read_item_not_found(
     assert response.status_code == 404
     content = response.json()
     assert content["detail"] == "Item not found"
+
 
 @pytest.mark.api
 def test_read_item_not_enough_permissions(
@@ -66,6 +69,7 @@ def test_read_item_not_enough_permissions(
     content = response.json()
     assert content["detail"] == "Not enough permissions"
 
+
 @pytest.mark.api
 def test_read_items(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
@@ -79,6 +83,7 @@ def test_read_items(
     assert response.status_code == 200
     content = response.json()
     assert len(content["data"]) >= 2
+
 
 @pytest.mark.api
 def test_update_item(
@@ -98,6 +103,7 @@ def test_update_item(
     assert content["id"] == str(item.id)
     assert content["owner_id"] == str(item.owner_id)
 
+
 @pytest.mark.api
 def test_update_item_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
@@ -111,6 +117,7 @@ def test_update_item_not_found(
     assert response.status_code == 404
     content = response.json()
     assert content["detail"] == "Item not found"
+
 
 @pytest.mark.api
 def test_update_item_not_enough_permissions(
@@ -127,6 +134,7 @@ def test_update_item_not_enough_permissions(
     content = response.json()
     assert content["detail"] == "Not enough permissions"
 
+
 @pytest.mark.api
 def test_delete_item(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
@@ -140,6 +148,7 @@ def test_delete_item(
     content = response.json()
     assert content["message"] == "Item deleted successfully"
 
+
 @pytest.mark.api
 def test_delete_item_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
@@ -151,6 +160,7 @@ def test_delete_item_not_found(
     assert response.status_code == 404
     content = response.json()
     assert content["detail"] == "Item not found"
+
 
 @pytest.mark.api
 def test_delete_item_not_enough_permissions(

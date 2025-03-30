@@ -21,6 +21,7 @@ def setup_test_db():
     # Clean up after tests
     SQLModel.metadata.drop_all(engine)
 
+
 @pytest.fixture(scope="function")
 def db() -> Generator[Session, None, None]:
     """Return a database session for each test."""
@@ -30,6 +31,7 @@ def db() -> Generator[Session, None, None]:
         session.rollback()
         session.close()
 
+
 @pytest.fixture(scope="function")
 def client(db: Session) -> Generator[TestClient, None, None]:
     """Create a new test client with fresh database session."""
@@ -37,10 +39,12 @@ def client(db: Session) -> Generator[TestClient, None, None]:
         init_db(db)  # Initialize database with superuser
         yield c
 
+
 @pytest.fixture(scope="function")
 def superuser_token_headers(client: TestClient) -> dict[str, str]:
     """Get superuser token headers."""
     return get_superuser_token_headers(client)
+
 
 @pytest.fixture(scope="function")
 def normal_user_token_headers(client: TestClient, db: Session) -> dict[str, str]:

@@ -45,15 +45,9 @@ async def health_check() -> dict[str, Any]:
             "service": {
                 "name": settings.PROJECT_NAME,
                 "version": "1.0.0",
-                "environment": settings.ENVIRONMENT
+                "environment": settings.ENVIRONMENT,
             },
-            "system": {
-                "database": "connected",
-                "dependencies": "healthy"
-            }
+            "system": {"database": "connected", "dependencies": "healthy"},
         }
     except Exception as e:
-        return {
-            "status": "unhealthy",
-            "error": str(e)
-        }
+        return {"status": "unhealthy", "error": str(e)}

@@ -40,12 +40,11 @@ def send_email(
     response = message.send(to=email_to, render=environment, smtp=smtp_options)
     logging.info(f"send email result: {response}")
 
+
 def generate_test_email() -> emails.Message:
     """Generate a test email with a template."""
     subject = "Test email"
-    html_content = (
-        "<p>This is a test email. Congratulations, it worked!</p>"
-    )
+    html_content = "<p>This is a test email. Congratulations, it worked!</p>"
     return emails.Message(
         subject=subject,
         html=JinjaTemplate(html_content),

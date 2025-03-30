@@ -24,12 +24,14 @@ def test_create_user_api(client: TestClient, superuser_token_headers: dict[str, 
         hashed_password="hashed_password",
         is_active=True,
         is_superuser=False,
-        full_name=user_data["full_name"]
+        full_name=user_data["full_name"],
     )
 
     # Execute with patched crud functions
-    with patch("app.api.routes.users.crud.get_user_by_email", return_value=None), \
-         patch("app.api.routes.users.crud.create_user", return_value=mock_user):
+    with (
+        patch("app.api.routes.users.crud.get_user_by_email", return_value=None),
+        patch("app.api.routes.users.crud.create_user", return_value=mock_user),
+    ):
         response = client.post(
             "/api/v1/users/",
             headers=superuser_token_headers,
@@ -40,6 +42,7 @@ def test_create_user_api(client: TestClient, superuser_token_headers: dict[str, 
     assert response.status_code == 200
     assert response.json()["email"] == user_data["email"]
     assert response.json()["full_name"] == user_data["full_name"]
+
 
 @pytest.mark.unit
 def test_get_users_api(client: TestClient, superuser_token_headers: dict[str, str]):
@@ -52,7 +55,7 @@ def test_get_users_api(client: TestClient, superuser_token_headers: dict[str, st
             hashed_password="hashed1",
             is_active=True,
             is_superuser=False,
-            full_name="User One"
+            full_name="User One",
         ),
         User(
             id=uuid.uuid4(),
@@ -60,13 +63,15 @@ def test_get_users_api(client: TestClient, superuser_token_headers: dict[str, st
             hashed_password="hashed2",
             is_active=True,
             is_superuser=False,
-            full_name="User Two"
-        )
+            full_name="User Two",
+        ),
     ]
 
     # Mock both the count and user list queries
-    with patch("app.api.routes.users.crud.get_users", return_value=mock_users), \
-         patch("app.api.routes.users.crud.count_users", return_value=2):
+    with (
+        patch("app.api.routes.users.crud.get_users", return_value=mock_users),
+        patch("app.api.routes.users.crud.count_users", return_value=2),
+    ):
         response = client.get(
             "/api/v1/users/",
             headers=superuser_token_headers,

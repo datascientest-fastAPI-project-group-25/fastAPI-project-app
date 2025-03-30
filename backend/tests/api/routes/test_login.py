@@ -24,6 +24,7 @@ def test_get_access_token(client: TestClient) -> None:
     assert "access_token" in tokens
     assert tokens["access_token"]
 
+
 @pytest.mark.api
 def test_get_access_token_incorrect_password(client: TestClient) -> None:
     login_data = {
@@ -32,6 +33,7 @@ def test_get_access_token_incorrect_password(client: TestClient) -> None:
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
     assert r.status_code == 400
+
 
 @pytest.mark.api
 def test_use_access_token(
@@ -45,6 +47,7 @@ def test_use_access_token(
     assert r.status_code == 200
     assert "email" in result
 
+
 @pytest.mark.api
 def test_recovery_password(client: TestClient) -> None:
     with patch("app.api.routes.login.send_email") as mock_send_email:
@@ -56,6 +59,7 @@ def test_recovery_password(client: TestClient) -> None:
         mock_send_email.assert_called_once()
         assert r.json() == {"msg": "Password recovery email sent"}
 
+
 @pytest.mark.api
 def test_recovery_password_user_not_exists(
     client: TestClient,
@@ -65,6 +69,7 @@ def test_recovery_password_user_not_exists(
         f"{settings.API_V1_STR}/password-recovery/{email}",
     )
     assert r.status_code == 404
+
 
 @pytest.mark.api
 def test_reset_password(client: TestClient, db: Session) -> None:
@@ -93,6 +98,7 @@ def test_reset_password(client: TestClient, db: Session) -> None:
 
     db.refresh(user)
     assert verify_password(new_password, user.hashed_password)
+
 
 @pytest.mark.api
 def test_reset_password_invalid_token(

@@ -18,6 +18,7 @@ def test_create_user(db: Session) -> None:
     assert user.email == email
     assert hasattr(user, "hashed_password")
 
+
 @pytest.mark.crud
 def test_authenticate_user(db: Session) -> None:
     email = random_email()
@@ -28,12 +29,14 @@ def test_authenticate_user(db: Session) -> None:
     assert authenticated_user
     assert user.email == authenticated_user.email
 
+
 @pytest.mark.crud
 def test_not_authenticate_user(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
     user = crud.authenticate(session=db, email=email, password=password)
     assert user is None
+
 
 @pytest.mark.crud
 def test_check_if_user_is_active(db: Session) -> None:
@@ -43,6 +46,7 @@ def test_check_if_user_is_active(db: Session) -> None:
     user = crud.create_user(session=db, user_create=user_in)
     assert user.is_active is True
 
+
 @pytest.mark.crud
 def test_check_if_user_is_active_inactive(db: Session) -> None:
     email = random_email()
@@ -50,6 +54,7 @@ def test_check_if_user_is_active_inactive(db: Session) -> None:
     user_in = UserCreate(email=email, password=password, disabled=True)
     user = crud.create_user(session=db, user_create=user_in)
     assert user.is_active
+
 
 @pytest.mark.crud
 def test_check_if_user_is_superuser(db: Session) -> None:
@@ -59,6 +64,7 @@ def test_check_if_user_is_superuser(db: Session) -> None:
     user = crud.create_user(session=db, user_create=user_in)
     assert user.is_superuser is True
 
+
 @pytest.mark.crud
 def test_check_if_user_is_superuser_normal_user(db: Session) -> None:
     username = random_email()
@@ -66,6 +72,7 @@ def test_check_if_user_is_superuser_normal_user(db: Session) -> None:
     user_in = UserCreate(email=username, password=password)
     user = crud.create_user(session=db, user_create=user_in)
     assert user.is_superuser is False
+
 
 @pytest.mark.crud
 def test_get_user(db: Session) -> None:
@@ -77,6 +84,7 @@ def test_get_user(db: Session) -> None:
     assert user_2
     assert user.email == user_2.email
     assert jsonable_encoder(user) == jsonable_encoder(user_2)
+
 
 @pytest.mark.crud
 def test_update_user(db: Session) -> None:

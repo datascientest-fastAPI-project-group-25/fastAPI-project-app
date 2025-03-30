@@ -24,6 +24,7 @@ def test_get_users_superuser_me(
     assert current_user["is_superuser"]
     assert current_user["email"] == settings.FIRST_SUPERUSER
 
+
 @pytest.mark.api
 def test_get_users_normal_user_me(
     client: TestClient, normal_user_token_headers: dict[str, str]
@@ -34,6 +35,7 @@ def test_get_users_normal_user_me(
     assert current_user["is_active"] is True
     assert current_user["is_superuser"] is False
     assert current_user["email"] == settings.EMAIL_TEST_USER
+
 
 @pytest.mark.api
 def test_create_user_new_email(
@@ -58,6 +60,7 @@ def test_create_user_new_email(
         assert user
         assert user.email == created_user["email"]
 
+
 @pytest.mark.api
 def test_get_existing_user(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
@@ -76,6 +79,7 @@ def test_get_existing_user(
     existing_user = crud.get_user_by_email(session=db, email=username)
     assert existing_user
     assert existing_user.email == api_user["email"]
+
 
 @pytest.mark.api
 def test_get_existing_user_current_user(client: TestClient, db: Session) -> None:
@@ -104,6 +108,7 @@ def test_get_existing_user_current_user(client: TestClient, db: Session) -> None
     assert existing_user
     assert existing_user.email == api_user["email"]
 
+
 @pytest.mark.api
 def test_get_existing_user_permissions_error(
     client: TestClient, normal_user_token_headers: dict[str, str]
@@ -114,6 +119,7 @@ def test_get_existing_user_permissions_error(
     )
     assert r.status_code == 403
     assert r.json() == {"detail": "The user doesn't have enough privileges"}
+
 
 @pytest.mark.api
 def test_create_user_existing_username(
@@ -133,6 +139,7 @@ def test_create_user_existing_username(
     assert r.status_code == 400
     assert "_id" not in created_user
 
+
 @pytest.mark.api
 def test_create_user_by_normal_user(
     client: TestClient, normal_user_token_headers: dict[str, str]
@@ -146,6 +153,7 @@ def test_create_user_by_normal_user(
         json=data,
     )
     assert r.status_code == 403
+
 
 @pytest.mark.api
 def test_retrieve_users(
@@ -169,6 +177,7 @@ def test_retrieve_users(
     for item in all_users["data"]:
         assert "email" in item
 
+
 @pytest.mark.api
 def test_update_user_me(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
@@ -191,6 +200,7 @@ def test_update_user_me(
     assert user_db
     assert user_db.email == email
     assert user_db.full_name == full_name
+
 
 @pytest.mark.api
 def test_update_password_me(
@@ -231,6 +241,7 @@ def test_update_password_me(
     assert r.status_code == 200
     assert verify_password(settings.FIRST_SUPERUSER_PASSWORD, user_db.hashed_password)
 
+
 @pytest.mark.api
 def test_update_password_me_incorrect_password(
     client: TestClient, superuser_token_headers: dict[str, str]
@@ -245,6 +256,7 @@ def test_update_password_me_incorrect_password(
     assert r.status_code == 400
     updated_user = r.json()
     assert updated_user["detail"] == "Incorrect password"
+
 
 @pytest.mark.api
 def test_update_user_me_email_exists(
@@ -264,6 +276,7 @@ def test_update_user_me_email_exists(
     assert r.status_code == 409
     assert r.json()["detail"] == "User with this email already exists"
 
+
 @pytest.mark.api
 def test_update_password_me_same_password_error(
     client: TestClient, superuser_token_headers: dict[str, str]
@@ -279,7 +292,11 @@ def test_update_password_me_same_password_error(
     )
     assert r.status_code == 400
     updated_user = r.json()
-    assert updated_user["detail"] == "New password cannot be the same as the current password" # Corrected message
+    assert (
+        updated_user["detail"]
+        == "New password cannot be the same as the current password"
+    )  # Corrected message
+
 
 @pytest.mark.api
 def test_register_user(client: TestClient, db: Session) -> None:
@@ -303,6 +320,7 @@ def test_register_user(client: TestClient, db: Session) -> None:
     assert user_db.full_name == full_name
     assert verify_password(password, user_db.hashed_password)
 
+
 @pytest.mark.api
 def test_register_user_already_exists_error(client: TestClient) -> None:
     password = random_lower_string()
@@ -318,6 +336,7 @@ def test_register_user_already_exists_error(client: TestClient) -> None:
     )
     assert r.status_code == 400
     assert r.json()["detail"] == "The user with this email already exists in the system"
+
 
 @pytest.mark.api
 def test_update_user(
@@ -345,6 +364,7 @@ def test_update_user(
     assert user_db
     assert user_db.full_name == "Updated_full_name"
 
+
 @pytest.mark.api
 def test_update_user_not_exists(
     client: TestClient, superuser_token_headers: dict[str, str]
@@ -357,6 +377,7 @@ def test_update_user_not_exists(
     )
     assert r.status_code == 404
     assert r.json()["detail"] == "The user with this id does not exist in the system"
+
 
 @pytest.mark.api
 def test_update_user_email_exists(
@@ -380,6 +401,7 @@ def test_update_user_email_exists(
     )
     assert r.status_code == 409
     assert r.json()["detail"] == "User with this email already exists"
+
 
 @pytest.mark.api
 def test_delete_user_me(client: TestClient, db: Session) -> None:
@@ -412,6 +434,7 @@ def test_delete_user_me(client: TestClient, db: Session) -> None:
     user_db = db.execute(user_query).first()
     assert user_db is None
 
+
 @pytest.mark.api
 def test_delete_user_me_as_superuser(
     client: TestClient, superuser_token_headers: dict[str, str]
@@ -423,6 +446,7 @@ def test_delete_user_me_as_superuser(
     assert r.status_code == 403
     response = r.json()
     assert response["detail"] == "Super users are not allowed to delete themselves"
+
 
 @pytest.mark.api
 def test_delete_user_super_user(
@@ -443,6 +467,7 @@ def test_delete_user_super_user(
     result = db.exec(select(User).where(User.id == user_id)).first()
     assert result is None
 
+
 @pytest.mark.api
 def test_delete_user_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
@@ -453,6 +478,7 @@ def test_delete_user_not_found(
     )
     assert r.status_code == 404
     assert r.json()["detail"] == "User not found"
+
 
 @pytest.mark.api
 def test_delete_user_current_super_user_error(
@@ -468,6 +494,7 @@ def test_delete_user_current_super_user_error(
     )
     assert r.status_code == 403
     assert r.json()["detail"] == "Super users are not allowed to delete themselves"
+
 
 @pytest.mark.api
 def test_delete_user_without_privileges(
