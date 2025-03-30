@@ -1,29 +1,30 @@
 import uuid
+from typing import Any, Dict, List, Optional, Union
 
-from sqlmodel import Session, func, select
+from sqlmodel import Session, select, func
 
-from app.core.security import get_password_hash, verify_password
-from app.models import Item, User
-from app.schemas import ItemCreate, ItemUpdate, UserCreate, UserUpdate
-
-# User CRUD operations
+from app.core.security import get_password_hash
+from app.models import User, UserCreate, UserUpdate
 
 
-def count_users(session: Session) -> int:
-    """Count all users in the database."""
-    statement = select(func.count()).select_from(User)
-    return session.exec(statement).one()
+def get_user(session: Session, user_id: uuid.UUID) -> Optional[User]:
+    return session.get(User, user_id)
 
 
-def create_user(session: Session, user_create: UserCreate) -> User:
-    """Create a new user."""
-    hashed_password = get_password_hash(user_create.password)
+def get_user_by_email(session: Session, email: str) -> Optional[User]:
+    return session.exec(select(User).where(User.email == email)).first()
+
+
+def get_users(session: Session, skip: int = 0, limit: int = 100) -> List[User]:
+    return session.exec(select(User).offset(skip).limit(limit)).all()
+
+
+def create_user(session: Session, user: UserCreate) -> User:
     db_user = User(
-        email=user_create.email,
-        hashed_password=hashed_password,
-        is_active=user_create.is_active,
-        is_superuser=user_create.is_superuser,
-        full_name=user_create.full_name,
+        email=user.email,
+        hashed_password=get_password_hash(user.password),
+        is_active=True,
+        is_superuser=False,
     )
     session.add(db_user)
     session.commit()
@@ -31,15 +32,38 @@ def create_user(session: Session, user_create: UserCreate) -> User:
     return db_user
 
 
-def get_user_by_email(session: Session, email: str) -> User | None:
-    """Get a user by email."""
-    statement = select(User).where(User.email == email)
-    return session.exec(statement).first()
+def update_user(
+    session: Session, user_id: uuid.UUID, user_in: Union[UserUpdate, Dict[str, Any]]
+) -> Optional[User]:
+    db_user = get_user(session, user_id)
+    if db_user is None:
+        return None
+
+    if isinstance(user_in, dict):
+        update_data = user_in
+    else:
+        update_data = user_in.dict(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(db_user, field, value)
+
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+    return db_user
 
 
-def authenticate(session: Session, email: str, password: str) -> User | None:
-    """Authenticate a user."""
-    user = get_user_by_email(session=session, email=email)
+def delete_user(session: Session, user_id: uuid.UUID) -> Optional[User]:
+    db_user = get_user(session, user_id)
+    if db_user is None:
+        return None
+    session.delete(db_user)
+    session.commit()
+    return db_user
+
+
+def authenticate_user(session: Session, email: str, password: str) -> Optional[User]:
+    user = get_user_by_email(session, email)
     if not user:
         return None
     if not verify_password(password, user.hashed_password):
@@ -47,77 +71,9 @@ def authenticate(session: Session, email: str, password: str) -> User | None:
     return user
 
 
-def get_user(session: Session, user_id: uuid.UUID) -> User | None:
-    """Get a user by ID."""
-    return session.get(User, user_id)
+def get_active_users(session: Session) -> List[User]:
+    return session.exec(select(User).where(User.is_active == True)).all()
 
 
-def get_users(session: Session, skip: int = 0, limit: int = 100) -> list[User]:
-    """Get a list of users."""
-    statement = select(User).offset(skip).limit(limit)
-    return session.exec(statement).all()
-
-
-def update_user(session: Session, db_user: User, user_in: UserUpdate) -> User:
-    """Update a user."""
-    user_data = user_in.model_dump(exclude_unset=True)
-    if "password" in user_data:
-        hashed_password = get_password_hash(user_data["password"])
-        del user_data["password"]
-        user_data["hashed_password"] = hashed_password
-    for key, value in user_data.items():
-        setattr(db_user, key, value)
-    session.add(db_user)
-    session.commit()
-    session.refresh(db_user)
-    return db_user
-
-
-# Item CRUD operations
-
-
-def create_item(session: Session, item_in: ItemCreate, owner_id: uuid.UUID) -> Item:
-    """Create a new item."""
-    db_item = Item(
-        title=item_in.title, description=item_in.description, owner_id=owner_id
-    )
-    session.add(db_item)
-    session.commit()
-    session.refresh(db_item)
-    return db_item
-
-
-def get_item(session: Session, item_id: uuid.UUID) -> Item | None:
-    """Get an item by ID."""
-    return session.get(Item, item_id)
-
-
-def get_items(session: Session, skip: int = 0, limit: int = 100) -> list[Item]:
-    """Get a list of items."""
-    statement = select(Item).offset(skip).limit(limit)
-    return session.exec(statement).all()
-
-
-def get_items_by_owner(
-    session: Session, owner_id: uuid.UUID, skip: int = 0, limit: int = 100
-) -> list[Item]:
-    """Get items by owner ID."""
-    statement = select(Item).where(Item.owner_id == owner_id).offset(skip).limit(limit)
-    return session.exec(statement).all()
-
-
-def update_item(session: Session, db_item: Item, item_in: ItemUpdate) -> Item:
-    """Update an item."""
-    item_data = item_in.model_dump(exclude_unset=True)
-    for key, value in item_data.items():
-        setattr(db_item, key, value)
-    session.add(db_item)
-    session.commit()
-    session.refresh(db_item)
-    return db_item
-
-
-def delete_item(session: Session, db_item: Item) -> None:
-    """Delete an item."""
-    session.delete(db_item)
-    session.commit()
+def get_superusers(session: Session) -> List[User]:
+    return session.exec(select(User).where(User.is_superuser == True)).all()
