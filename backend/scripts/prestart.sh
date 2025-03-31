@@ -6,28 +6,13 @@ echo "Starting prestart script..."
 # Ensure PYTHONPATH is set correctly and print it for debugging
 echo "PYTHONPATH before: $PYTHONPATH"
 
-# Create alembic directory structure if it doesn't exist
-mkdir -p /app/backend/alembic/versions
-
-# Copy necessary files from app/alembic to the alembic directory
-if [ ! -f "/app/backend/alembic/env.py" ]; then
-    echo "Copying alembic environment files..."
-    cp /app/backend/app/alembic/env.py /app/backend/alembic/
-    cp /app/backend/app/alembic/script.py.mako /app/backend/alembic/
-fi
+# Check Python version
+echo "Using Python $(python --version) environment at: $(which python | xargs dirname)"
 
 # Print environment variables for debugging
 echo "POSTGRES_USER: $POSTGRES_USER"
 echo "POSTGRES_SERVER: $POSTGRES_SERVER"
-
-export PYTHONPATH="/app:/app/backend:$PYTHONPATH"
-
-# Activate the virtual environment if it exists
-if [ -d "/app/.venv" ]; then
-    . /app/.venv/bin/activate
-fi
-
-echo "PYTHONPATH after: $PYTHONPATH"
+echo "POSTGRES_DB: $POSTGRES_DB"
 
 # Exit immediately if a command exits with a non-zero status
 set -e
@@ -39,13 +24,19 @@ ls -la /app/backend/alembic/
 
 # Run migrations
 echo "Running database migrations..."
-cd /app/backend && PYTHONPATH=/app:/app/backend alembic upgrade head
+cd /app/backend
+alembic -c alembic.ini upgrade head
 
+# Check if migrations were successful
 if [ $? -ne 0 ]; then
     echo "Migration failed! Check the error messages above."
+    exit 1
 else
     echo "Migrations completed successfully."
 fi
 
 # Create initial data in DB
 python /app/backend/app/backend_pre_start.py
+
+# Start the FastAPI application
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000

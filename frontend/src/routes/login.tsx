@@ -104,19 +104,19 @@ function Login() {
           Log In
         </Button>
 
-        {/* Admin login button with hardcoded credentials from memory */}
+        {/* Admin login button with hardcoded credentials */}
         <Button
           variant="outline"
           colorScheme="teal"
           size="md"
           loading={loginMutation.isPending}
           onClick={() => {
-            // Use the credentials from the memory
+            // Use the correct admin credentials that we set up
             const adminCredentials = {
               username: "admin@example.com",
-              password: "FastAPI_Secure_2025!",
+              password: "adminadmin123",
             }
-            console.log("Using admin credentials:", adminCredentials)
+            console.log("Using admin credentials")
             resetError()
             // Make sure we're using the correct format for the credentials
             loginMutation.mutate(adminCredentials)

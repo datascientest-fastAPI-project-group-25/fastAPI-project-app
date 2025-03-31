@@ -1,6 +1,7 @@
 import os
 import secrets
 import warnings
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -101,6 +102,10 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
     USERS_OPEN_REGISTRATION: bool = True
+
+    # Email templates directory
+    EMAIL_TEMPLATES_DIR: Path = Path(__file__).parent.parent / "email-templates"
+    SERVER_HOST: str = "http://localhost:8000"
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":

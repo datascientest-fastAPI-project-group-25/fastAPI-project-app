@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.11-slim-bookworm as development
 
 WORKDIR /app
 
@@ -8,41 +8,36 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     curl \
     procps \
+    postgresql-client \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv and add it to PATH
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc && \
-    . ~/.bashrc && \
-    ln -s /root/.local/bin/uv /usr/local/bin/uv
-
-# Copy project files
-COPY backend/pyproject.toml backend/uv.lock ./
-
-# Install Python dependencies using uv with explicit path and set PYTHONPATH
-RUN /root/.local/bin/uv pip install --system \
-    sqlalchemy==2.0.23 \
-    sqlmodel alembic psycopg psycopg-binary \
-    fastapi tenacity && \
-    /root/.local/bin/uv pip install --system -e .
-
-# Copy application files
-COPY backend /app/backend
-COPY backend/app /app/backend/app
-COPY backend/scripts /app/scripts
-
-# Set up directories and permissions
-RUN mkdir -p /app/backend/app/alembic/versions && \
-    chmod +x /app/scripts/*
-
-# Create alembic directory
-RUN mkdir -p /app/backend/alembic/versions
+# Copy uv from the official image (best practice according to docs)
+COPY --from=ghcr.io/astral-sh/uv:0.4.15 /uv /uvx /bin/
 
 # Set environment variables
-ENV PYTHONPATH="/app:/app/backend" \
-    BACKEND_DIR="/app/backend" \
+ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    ALEMBIC_CONFIG="/app/backend/alembic.ini"
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    PYTHONPATH="/app/backend" \
+    BACKEND_DIR="/app/backend"
 
-CMD ["/app/scripts/prestart.sh"]
+# Create backend directory structure
+RUN mkdir -p /app/backend/app /app/backend/alembic/versions /app/backend/tests
+
+# Copy the application files
+COPY backend/ /app/backend/
+
+# Make scripts executable
+RUN chmod +x /app/backend/scripts/*.sh
+
+# Install dependencies with uv using pyproject.toml
+WORKDIR /app/backend
+RUN uv pip install --system -e .
+
+# Install additional dependencies explicitly
+RUN uv pip install --system psycopg2-binary python-jose passlib python-multipart email-validator
+
+CMD ["/app/backend/scripts/prestart.sh"]

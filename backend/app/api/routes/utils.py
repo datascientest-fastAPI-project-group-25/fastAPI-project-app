@@ -1,7 +1,9 @@
+
 from typing import Any
 
 from fastapi import APIRouter, Depends
 from pydantic.networks import EmailStr
+from sqlalchemy import text
 
 from app.api.deps import get_current_active_superuser
 from app.core.config import settings
@@ -10,7 +12,6 @@ from app.models import Message
 from app.utils import generate_test_email, send_email
 
 router = APIRouter(prefix="/utils", tags=["utils"])
-
 
 @router.post(
     "/test-email/",
@@ -29,7 +30,6 @@ def test_email(email_to: EmailStr) -> Message:
     )
     return Message(message="Test email sent")
 
-
 @router.get("/health-check/")
 async def health_check() -> dict[str, Any]:
     """
@@ -38,7 +38,7 @@ async def health_check() -> dict[str, Any]:
     try:
         # Add database connection check
         with next(get_session()) as db:
-            db.execute("SELECT 1")
+            db.execute(text("SELECT 1"))
 
         return {
             "status": "healthy",

@@ -92,6 +92,12 @@ dev: ## Run the application in development mode
 	@echo "🚀 Starting development environment..."
 	@$(DOCKER_COMPOSE) up -d
 	@echo "✨ Development environment is running!"
+	@echo "🗃️  Checking if database initialization is needed..."
+	@sleep 10 # Give backend and database time to start
+	@if ! $(DOCKER_COMPOSE) exec -T backend python /app/backend/app/db/check_db.py; then \
+		echo "🗃️  Database needs initialization, running db-init..."; \
+		$(MAKE) db-init; \
+	fi
 	@echo "📝 Access the services at:"
 	@echo "   Frontend: http://dashboard.localhost"
 	@echo "   Backend:  http://api.localhost"
@@ -120,7 +126,7 @@ test: test-backend test-frontend test-e2e test-integration ## Run all tests
 
 test-backend: ## Run backend tests
 	@echo "🧪 Running backend tests..."
-	@$(DOCKER_COMPOSE) exec -T backend pytest /app/backend/tests/unit -v
+	@$(DOCKER_COMPOSE) exec -T backend bash -c "cd /app/backend && pytest -v"
 
 test-frontend: ## Run frontend tests
 	@echo "🧪 Running frontend tests..."
@@ -356,8 +362,4 @@ frontend-security:
 #################################################
 # Combined Commands                             #
 #################################################
-# Run all linting checks
-lint: backend-lint frontend-lint
-	@echo " All linting checks complete!"
-
 # Format all code

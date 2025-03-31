@@ -6,6 +6,7 @@ from jose import jwt
 from pydantic import ValidationError
 from sqlmodel import Session
 
+from app import crud
 from app.core.config import settings
 from app.core.security import ALGORITHM
 from app.db.session import get_session
@@ -31,7 +32,7 @@ async def get_current_user(db: SessionDep, token: str = Depends(oauth2_scheme)) 
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    user = db.get(User, token_data.sub)
+    user = crud.get_user_by_email(db, token_data.sub)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user

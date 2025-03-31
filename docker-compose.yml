@@ -9,12 +9,15 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
     networks:
       - default
 
   # Frontend with Node.js for development using pnpm
   frontend:
-    image: node:18-alpine
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.dev
     restart: "no"
     mem_limit: "8G"
     working_dir: /app
@@ -35,7 +38,8 @@ services:
       - VITE_API_URL=http://api.localhost
       - NODE_OPTIONS=--max-old-space-size=8192
       - PNPM_HOME=/usr/local/bin
-    command: sh -c "npm install -g pnpm && pnpm install --frozen-lockfile && cd frontend && pnpm dev"
+      - VITE_BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:5173", "http://dashboard.localhost"]
+    command: sh -c "npm install -g pnpm && pnpm install --force && cd frontend && pnpm dev"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     labels:
@@ -82,11 +86,10 @@ services:
     environment:
       - POSTGRES_SERVER=db
       - SMTP_HOST=mailcatcher
+      - PYTHONPATH=/app:/app/backend
       - SMTP_PORT=1025
       - SMTP_TLS=false
       - FRONTEND_HOST=http://dashboard.localhost
-      - PYTHONPATH=/app
-      - VIRTUAL_ENV=/app/backend/.venv
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
@@ -101,18 +104,14 @@ services:
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8000/api/v1/utils/health-check/", "-H", "Accept: application/json"]
       interval: 30s
+      start_period: 40s
+      retries: 5
       timeout: 10s
-      retries: 3
-      start_period: 10s
     restart: on-failure
     volumes:
       - .:/app
-      - ./backend:/app/backend
-      - ./backend/app:/app/backend/app
-      - ./backend/pytest.ini:/app/pytest.ini
-      - ./backend/scripts:/app/scripts
       - backend-cache:/root/.cache/uv
-    command: ["/bin/sh", "-c", ". /app/.venv/bin/activate && /app/scripts/prestart.sh"]
+    command: ["/app/backend/scripts/prestart.sh"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
       - "ghcr.io:140.82.121.33"

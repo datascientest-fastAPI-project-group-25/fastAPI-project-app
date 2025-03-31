@@ -15,6 +15,7 @@ class UserBase(SQLModel):
 # Properties to receive via API on creation
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=40)
+    is_superuser: bool = Field(default=False)  # Override the default from UserBase
 
 
 class UserRegister(SQLModel):

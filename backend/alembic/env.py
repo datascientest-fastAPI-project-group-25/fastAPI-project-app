@@ -1,7 +1,10 @@
 from logging.config import fileConfig
+import os
+from urllib.parse import quote_plus
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -18,10 +21,22 @@ fileConfig(config.config_file_name)
 # target_metadata = None
 
 from app.models import SQLModel  # noqa
-import os  # noqa
 from app.core.config import settings  # noqa
 
 target_metadata = SQLModel.metadata
+
+# Override the sqlalchemy.url with environment variables if available
+def get_url():
+    user = os.getenv("POSTGRES_USER", "postgres")
+    password = os.getenv("POSTGRES_PASSWORD", "postgres")
+    server = os.getenv("POSTGRES_SERVER", "db")
+    db = os.getenv("POSTGRES_DB", "app")
+
+    # Ensure password is properly URL-encoded
+    encoded_password = quote_plus(password) if password else ""
+
+    # Return PostgreSQL connection string
+    return f"postgresql://{user}:{encoded_password}@{server}/{db}"
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -29,18 +44,10 @@ target_metadata = SQLModel.metadata
 # ... etc.
 
 
-def get_url():
-    user = os.getenv("POSTGRES_USER", "postgres")
-    password = os.getenv("POSTGRES_PASSWORD", "postgres")
-    server = os.getenv("POSTGRES_SERVER", "db")
-    db = os.getenv("POSTGRES_DB", "app")
-
-    return f"postgresql+psycopg://{user}:{password}@{server}:5432/{db}"
-
-    # Alternative: return str(settings.SQLALCHEMY_DATABASE_URI)
-
-
 def run_migrations_offline():
+    # Override the URL with our constructed one
+    url = get_url()
+    config.set_main_option("sqlalchemy.url", url)
     """Run migrations in 'offline' mode.
 
     This configures the context with just a URL
@@ -54,7 +61,10 @@ def run_migrations_offline():
     """
     url = get_url()
     context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True, compare_type=True
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
     )
 
     with context.begin_transaction():
@@ -68,8 +78,10 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
+    # Get configuration section and override the URL
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = get_url()
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -78,7 +90,7 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, compare_type=True
+            connection=connection, target_metadata=target_metadata
         )
 
         with context.begin_transaction():
