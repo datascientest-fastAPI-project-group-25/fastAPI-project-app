@@ -31,6 +31,7 @@ except ImportError as e:
     logger.error(f"Error importing required modules: {e}")
     sys.exit(1)
 
+
 def reset_admin_password():
     """Reset the admin user password to 'adminadmin123'."""
     try:
@@ -54,11 +55,14 @@ def reset_admin_password():
             session.commit()
 
             logger.info(f"Successfully reset password for {admin_email}")
-            logger.info(f"New login credentials: Email: {admin_email}, Password: {new_password}")
+            logger.info(
+                f"New login credentials: Email: {admin_email}, Password: {new_password}"
+            )
 
     except Exception as e:
         logger.error(f"Failed to reset admin password: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     reset_admin_password()

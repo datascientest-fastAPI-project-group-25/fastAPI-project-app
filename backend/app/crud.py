@@ -35,7 +35,10 @@ def create_user(session: Session, user_create: UserCreate) -> User:
 
 
 def update_user(
-    session: Session, user_in: UserUpdate | dict[str, Any], db_user: User | None = None, user_id: uuid.UUID | None = None
+    session: Session,
+    user_in: UserUpdate | dict[str, Any],
+    db_user: User | None = None,
+    user_id: uuid.UUID | None = None,
 ) -> User | None:
     if db_user is None and user_id is not None:
         db_user = get_user(session, user_id)
@@ -84,6 +87,7 @@ def get_active_users(session: Session) -> list[User]:
 
 def get_superusers(session: Session) -> list[User]:
     return session.exec(select(User).where(User.is_superuser.is_(True))).all()
+
 
 def count_users(session: Session) -> int:
     statement = select(func.count()).select_from(User)

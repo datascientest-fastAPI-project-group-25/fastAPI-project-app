@@ -47,10 +47,8 @@ def generate_test_email() -> emails.Message:
     """Generate a test email with a template."""
     subject = "Test email"
     html_content = "<p>This is a test email. Congratulations, it worked!</p>"
-    return emails.Message(
-        subject=subject,
-        html=JinjaTemplate(html_content)
-    )
+    return emails.Message(subject=subject, html=JinjaTemplate(html_content))
+
 
 def generate_new_account_email(email_to: EmailStr) -> None:
     """Send a welcome email to new users."""
@@ -69,6 +67,7 @@ def generate_new_account_email(email_to: EmailStr) -> None:
         },
     )
 
+
 def generate_password_reset_token(email: str) -> str:
     """Generate a password reset token for the given email."""
     delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
@@ -82,6 +81,7 @@ def generate_password_reset_token(email: str) -> str:
     )
     return encoded_jwt
 
+
 def verify_password_reset_token(token: str) -> str | None:
     """Verify a password reset token and return the email if valid."""
     try:
@@ -89,6 +89,7 @@ def verify_password_reset_token(token: str) -> str | None:
         return decoded_token["sub"]
     except jwt.JWTError:
         return None
+
 
 def send_reset_password_email(
     email_to: EmailStr,

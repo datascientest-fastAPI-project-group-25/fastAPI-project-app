@@ -23,9 +23,11 @@ def mock_settings():
     settings.EMAILS_FROM_NAME = "Test Project"
     settings.SERVER_HOST = "http://localhost:8000"
 
+
 @pytest.fixture(autouse=True)
 def setup_settings():
     mock_settings()
+
 
 @patch("app.utils.send_email")
 def test_generate_password_reset_token():
@@ -33,15 +35,12 @@ def test_generate_password_reset_token():
     token = generate_password_reset_token(email)
 
     # Verify token can be decoded
-    decoded = jwt.decode(
-        token,
-        settings.SECRET_KEY,
-        algorithms=["HS256"]
-    )
+    decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
 
     assert decoded["sub"] == email
     assert decoded["exp"] > datetime.utcnow().timestamp()
     assert decoded["nbf"] < datetime.utcnow().timestamp()
+
 
 @patch("app.utils.send_email")
 def test_verify_password_reset_token():
@@ -55,6 +54,7 @@ def test_verify_password_reset_token():
     # Verify invalid token
     invalid_token = "invalid-token"
     assert verify_password_reset_token(invalid_token) is None
+
 
 @patch("app.utils.send_email")
 def test_generate_new_account_email(mock_send_email):
@@ -80,6 +80,7 @@ def test_generate_new_account_email(mock_send_email):
     assert "{{ email }}" not in rendered
     assert settings.PROJECT_NAME in rendered
     assert email in rendered
+
 
 @patch("app.utils.send_email")
 def test_send_reset_password_email(mock_send_email):
