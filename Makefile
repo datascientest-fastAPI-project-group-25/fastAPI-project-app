@@ -71,9 +71,16 @@ set-permissions: ## Set correct permissions for scripts
 setup: env install set-permissions ## Setup the complete project environment
 	@echo "✨ Project setup complete!"
 
-install: ## Install all project dependencies
+install: ## Install all dependencies
 	@echo "🔧 Installing dependencies..."
-	@$(DOCKER_COMPOSE) build
+	@$(DOCKER_COMPOSE) exec -T backend uv venv
+	@$(DOCKER_COMPOSE) exec -T backend uv pip install -e .
+	@$(DOCKER_COMPOSE) exec -T backend uv pip install pytest
+	@$(DOCKER_COMPOSE) exec -T backend uv pip install ruff
+	@$(DOCKER_COMPOSE) exec -T backend uv pip install python-jose[cryptography]
+	@$(DOCKER_COMPOSE) exec -T backend uv run ruff check /app/backend
+	@$(DOCKER_COMPOSE) exec -T frontend npm install -g typescript@latest
+	@$(DOCKER_COMPOSE) exec -T frontend pnpm install
 	@echo "✨ Dependencies installed!"
 
 env: ## Generate a secure .env file from .env.example
@@ -126,7 +133,8 @@ test: test-backend test-frontend test-e2e test-integration ## Run all tests
 
 test-backend: ## Run backend tests
 	@echo "🧪 Running backend tests..."
-	@$(DOCKER_COMPOSE) exec -T backend bash -c "cd /app/backend && pytest -v"
+	@$(DOCKER_COMPOSE) exec -T backend bash -c "cd /app/backend && uv run pytest tests/ -v"
+	@echo "🧪 Backend tests complete!"
 
 test-frontend: ## Run frontend tests
 	@echo "🧪 Running frontend tests..."
