@@ -43,6 +43,7 @@ ENV/
 *.egg-info/
 .installed.cfg
 *.egg
+backend/test.db
 
 # ----------------------------------------
 # Testing and Coverage
