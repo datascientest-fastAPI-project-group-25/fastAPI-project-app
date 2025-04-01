@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -33,10 +35,11 @@ def test_create_user(client: TestClient, db: Session) -> None:
         raise ValueError(f"Expected 'id' in response data, got: {data}")
 
     # Verify user was created in database
-    user = db.exec(select(User).where(User.id == data["id"])).first()
+    user_id = uuid.UUID(data["id"])
+    user = db.exec(select(User).where(User.id == user_id)).first()
     if not user:
         raise ValueError(
-            f"User with id {data['id']} not found in database after creation"
+            f"User with id {user_id} not found in database after creation"
         )
 
     # Verify user data
