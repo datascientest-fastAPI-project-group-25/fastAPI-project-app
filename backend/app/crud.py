@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
-from app.models import User, UserCreate, UserUpdate
+from app.models import Item, ItemCreate, ItemUpdate, User, UserCreate, UserUpdate
 
 
 def get_user(session: Session, user_id: uuid.UUID) -> User | None:
@@ -26,7 +26,8 @@ def create_user(session: Session, user_create: UserCreate) -> User:
         email=user_create.email,
         hashed_password=get_password_hash(user_create.password),
         is_active=True,
-        is_superuser=False,
+        is_superuser=user_create.is_superuser,
+        full_name=user_create.full_name,
     )
     session.add(db_user)
     session.commit()
@@ -53,6 +54,10 @@ def update_user(
             update_data = user_in.model_dump(exclude_unset=True)
         else:
             update_data = user_in.dict(exclude_unset=True)
+
+    if "password" in update_data and update_data["password"]:
+        update_data["hashed_password"] = get_password_hash(update_data["password"])
+        del update_data["password"]
 
     for field, value in update_data.items():
         setattr(db_user, field, value)
@@ -93,3 +98,37 @@ def count_users(session: Session) -> int:
     statement = select(func.count()).select_from(User)
     result = session.exec(statement).one()
     return result
+
+
+def create_item(session: Session, item_create: ItemCreate, owner_id: int) -> Item:
+    db_item = Item(
+        title=item_create.title,
+        description=item_create.description,
+        owner_id=owner_id
+    )
+    session.add(db_item)
+    session.commit()
+    session.refresh(db_item)
+    return db_item
+
+
+def get_item(session: Session, item_id: int) -> Item | None:
+    return session.get(Item, item_id)
+
+
+def get_items(session: Session, skip: int = 0, limit: int = 100) -> list[Item]:
+    return session.query(Item).offset(skip).limit(limit).all()
+
+
+def update_item(session: Session, item: Item, item_update: ItemUpdate) -> Item:
+    update_data = item_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(item, field, value)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
+def delete_item(session: Session, item: Item) -> None:
+    session.delete(item)
+    session.commit()
