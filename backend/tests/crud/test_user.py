@@ -64,8 +64,9 @@ def test_check_if_user_is_superuser(db: Session) -> None:
     password = random_lower_string()
     user_in = UserCreate(email=email, password=password, is_superuser=True)
     user = crud.create_user(session=db, user_create=user_in)
+    db.commit()  # Commit the transaction
     db.refresh(user)  # Ensure we have the latest data from the database
-    assert user.is_superuser is True
+    assert user.is_superuser
 
 
 @pytest.mark.crud
@@ -95,11 +96,23 @@ def test_update_user(db: Session) -> None:
     email = random_email()
     user_in = UserCreate(email=email, password=password, is_superuser=True)
     user = crud.create_user(session=db, user_create=user_in)
+    db.commit()  # Commit the transaction
+
     new_password = random_lower_string()
     user_in_update = UserUpdate(password=new_password, is_superuser=True)
-    if user.id is not None:
-        crud.update_user(session=db, user_id=user.id, user_in=user_in_update)
-    user_2 = db.get(User, user.id)
-    assert user_2
-    assert user.email == user_2.email
-    assert verify_password(new_password, user_2.hashed_password)
+
+    user_id = user.id
+    if user_id is not None:
+        # Get the user from the database first
+        db_user = db.get(User, user_id)
+        assert db_user is not None
+
+        # Update the user
+        updated_user = crud.update_user(session=db, user_id=user_id, user_in=user_in_update)
+        db.commit()  # Commit the transaction
+
+        # Verify the update
+        assert updated_user
+        assert updated_user.email == email
+        assert verify_password(new_password, updated_user.hashed_password)
+        assert updated_user.is_superuser
