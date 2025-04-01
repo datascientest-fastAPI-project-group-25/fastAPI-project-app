@@ -4,6 +4,7 @@ from typing import Any
 
 import emails
 from emails.template import JinjaTemplate
+from fastapi import HTTPException, status
 from jose import jwt
 from pydantic.networks import EmailStr
 
@@ -68,9 +69,12 @@ def generate_new_account_email(email_to: EmailStr) -> None:
     )
 
 
-def generate_password_reset_token(email: str) -> str:
+def generate_password_reset_token(email: str, expires_delta: int = None) -> str:
     """Generate a password reset token for the given email."""
-    delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
+    if expires_delta is not None:
+        delta = timedelta(hours=expires_delta)
+    else:
+        delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
     now = datetime.utcnow()
     expires = now + delta
     exp = expires.timestamp()
@@ -82,13 +86,16 @@ def generate_password_reset_token(email: str) -> str:
     return encoded_jwt
 
 
-def verify_password_reset_token(token: str) -> str | None:
+def verify_password_reset_token(token: str) -> str:
     """Verify a password reset token and return the email if valid."""
     try:
         decoded_token = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         return decoded_token["sub"]
     except jwt.JWTError:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token",
+        )
 
 
 def send_reset_password_email(
