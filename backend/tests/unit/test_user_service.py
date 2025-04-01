@@ -17,7 +17,7 @@ def test_create_user():
 
     # Execute
     with patch("app.crud.get_password_hash", return_value="hashed_password"):
-        result = create_user(session=mock_session, user=user_data)
+        result = create_user(session=mock_session, user_create=user_data)
 
     # Assert
     mock_session.add.assert_called_once()
