@@ -96,3 +96,4 @@ temp/
 # Additional test and development directories
 .aider.tags.cache.v3/
 prometheus/
+frontend/coverage/
