@@ -34,10 +34,15 @@ help:
 	@echo "Testing Commands:"
 	@echo "  make test               Run all tests"
 	@echo "  make test-backend       Run backend tests"
+	@echo "  make test-backend TEST_PATH=path/to/test.py  Run specific backend tests"
+	@echo "  make test-specific TEST_PATH=path/to/test.py Run specific tests with verbose output"
 	@echo "  make test-frontend      Run frontend tests"
 	@echo "  make test-e2e          Run end-to-end tests"
 	@echo "  make test-integration   Run integration tests"
 	@echo "  make test-hooks         Test git hooks locally"
+	@echo "  make test-coverage      Run all tests with coverage"
+	@echo "  make test-backend-coverage  Run backend tests with coverage"
+	@echo "  make test-frontend-coverage Run frontend tests with coverage"
 	@echo ""
 	@echo "CI/CD and Workflow Testing:"
 	@echo "  make ci                 Run full CI pipeline (lint, test, security)"
@@ -133,12 +138,30 @@ test: test-backend test-frontend test-e2e test-integration ## Run all tests
 
 test-backend: ## Run backend tests
 	@echo "🧪 Running backend tests..."
-	@$(DOCKER_COMPOSE) exec -T backend bash -c "cd /app/backend && uv run pytest tests/ -v"
+	@$(DOCKER_COMPOSE) exec -T backend bash -c "cd /app/backend && uv run pytest $(TEST_PATH) -v"
 	@echo "🧪 Backend tests complete!"
+
+test-specific: ## Run specific tests (usage: make test-specific TEST_PATH=tests/path/to/test.py)
+	@echo "🧪 Running specific tests: $(TEST_PATH)"
+	@$(DOCKER_COMPOSE) exec -T backend bash -c "cd /app/backend && uv run pytest $(TEST_PATH) -v"
+	@echo "🧪 Specific tests complete!"
 
 test-frontend: ## Run frontend tests
 	@echo "🧪 Running frontend tests..."
 	@$(DOCKER_COMPOSE) exec -T frontend pnpm test
+
+test-coverage: test-backend-coverage test-frontend-coverage ## Run all tests with coverage
+	@echo "📊 All coverage tests complete!"
+
+test-backend-coverage: ## Run backend tests with coverage
+	@echo "📊 Running backend tests with coverage..."
+	@$(DOCKER_COMPOSE) exec -T backend bash -c "cd /app/backend && uv pip install coverage pytest-cov && uv run pytest --cov=app --cov-report=term --cov-report=html"
+	@echo "📊 Backend coverage tests complete! HTML report available in backend/htmlcov/"
+
+test-frontend-coverage: ## Run frontend tests with coverage
+	@echo "📊 Running frontend tests with coverage..."
+	@$(DOCKER_COMPOSE) exec -T frontend sh -c "cd /app/frontend && pnpm test:coverage"
+	@echo "📊 Frontend coverage tests complete!"
 
 test-e2e: ## Run end-to-end tests
 	@echo "🧪 Running end-to-end tests..."
