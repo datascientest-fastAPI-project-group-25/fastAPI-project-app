@@ -1,9 +1,8 @@
-from datetime import datetime
 from unittest.mock import patch
 
 import pytest
 from emails.template import JinjaTemplate
-from jose import jwt
+from fastapi import HTTPException
 
 from app.core.config import settings
 from app.utils import (
@@ -30,30 +29,36 @@ def setup_settings():
 
 
 @patch("app.utils.send_email")
-def test_generate_password_reset_token():
+def test_generate_password_reset_token(_mock_send_email):
+    """Test generating a password reset token."""
     email = "test@example.com"
     token = generate_password_reset_token(email)
-
-    # Verify token can be decoded
-    decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-
-    assert decoded["sub"] == email
-    assert decoded["exp"] > datetime.utcnow().timestamp()
-    assert decoded["nbf"] < datetime.utcnow().timestamp()
+    assert isinstance(token, str)
+    assert len(token) > 0
 
 
 @patch("app.utils.send_email")
-def test_verify_password_reset_token():
+def test_verify_password_reset_token(_mock_send_email):
+    """Test verifying a password reset token."""
     email = "test@example.com"
     token = generate_password_reset_token(email)
-
-    # Verify valid token
     verified_email = verify_password_reset_token(token)
     assert verified_email == email
 
-    # Verify invalid token
+    # Test with invalid token
     invalid_token = "invalid-token"
-    assert verify_password_reset_token(invalid_token) is None
+    with pytest.raises(HTTPException):
+        verify_password_reset_token(invalid_token)
+
+    # Test with expired token
+    expired_token = generate_password_reset_token(email, expires_delta=-1)
+    with pytest.raises(HTTPException):
+        verify_password_reset_token(expired_token)
+
+    # Test with tampered token
+    tampered_token = token + "tampered"
+    with pytest.raises(HTTPException):
+        verify_password_reset_token(tampered_token)
 
 
 @patch("app.utils.send_email")

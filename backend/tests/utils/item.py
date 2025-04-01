@@ -33,5 +33,5 @@ def create_random_item(db: Session) -> Item:
     description = random_lower_string()
 
     # Create the item
-    item_in = ItemCreate(title=title, description=description)
-    return crud.create_item(session=db, item_in=item_in, owner_id=owner_id)
+    item_create = ItemCreate(title=title, description=description)
+    return crud.create_item(session=db, item_create=item_create, owner_id=owner_id)
