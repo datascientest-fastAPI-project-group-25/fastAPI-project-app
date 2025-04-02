@@ -1,100 +1,43 @@
-# Stage 1: Build the environment with uv
-FROM python:3.11-slim-bookworm as builder
-
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONBREAKSYSTEMPACKAGES=1
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
-    curl \
-    gcc \
-    python3-dev \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install uv
-RUN pip install uv
-
-# Set the working directory
-WORKDIR /app
-
-# Copy dependency files
-COPY pyproject.toml uv.lock alembic.ini ./
-
-# Create virtual environment and install dependencies
-RUN uv venv /app/.venv && \
-    . /app/.venv/bin/activate && \
-    uv pip install -e ".[dev,lint,types,test]" && \
-    uv pip install sqlalchemy sqlmodel psycopg[binary] alembic tenacity "fastapi[standard]" pydantic pydantic-settings emails jinja2 httpx PyJWT passlib python-multipart bcrypt email-validator sentry-sdk
-
-# Stage 2: Development environment
 FROM python:3.11-slim-bookworm as development
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONBREAKSYSTEMPACKAGES=1 \
-    PYTHONPATH=/app \
-    PATH="/app/.venv/bin:$PATH"
+WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
-    curl \
     gcc \
-    python3-dev \
     libpq-dev \
+    curl \
+    procps \
+    postgresql-client \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
-WORKDIR /app
+# Copy uv from the official image (best practice according to docs)
+COPY --from=ghcr.io/astral-sh/uv:0.4.15 /uv /uvx /bin/
 
-# Copy virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    PYTHONPATH="/app/backend" \
+    BACKEND_DIR="/app/backend"
 
-# Copy uv from builder
-COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+# Create backend directory structure
+RUN mkdir -p /app/backend/app /app/backend/alembic/versions /app/backend/tests
 
-# Copy application code
-COPY pyproject.toml uv.lock alembic.ini ./
-COPY app/ ./app/
-COPY scripts/ ./scripts/
+# Copy the application files
+COPY backend/ /app/backend/
 
 # Make scripts executable
-RUN chmod +x /app/scripts/*
+RUN chmod +x /app/backend/scripts/*.sh
 
-# Stage 3: Test environment
-FROM development as test
+# Install dependencies with uv using pyproject.toml
+WORKDIR /app/backend
+RUN uv pip install --system -e .
 
-# Install additional test dependencies
-RUN . /app/.venv/bin/activate && \
-    uv pip install pytest-cov pytest-asyncio httpx
+# Install additional dependencies explicitly
+RUN uv pip install --system psycopg2-binary python-jose passlib python-multipart email-validator
 
-# Stage 4: Production environment
-FROM python:3.11-slim-bookworm as production
-
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONBREAKSYSTEMPACKAGES=1 \
-    PYTHONPATH=/app \
-    PATH="/app/.venv/bin:$PATH"
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
-    curl \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set the working directory
-WORKDIR /app
-
-# Copy virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
-
-# Copy application code
-COPY pyproject.toml uv.lock alembic.ini ./
+CMD ["/app/backend/scripts/prestart.sh"]

@@ -2,7 +2,7 @@
 FROM --platform=linux/amd64 node:18-alpine AS deps
 
 # Install pnpm and TypeScript globally
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 RUN pnpm install -g typescript@latest
 
 # Set environment variables to avoid optional dependency issues
@@ -17,11 +17,11 @@ COPY package.json pnpm-lock.yaml* ./
 COPY frontend/package.json ./frontend/
 
 # Install root dependencies
-RUN pnpm install --frozen-lockfile --prefer-offline --no-optional
+RUN pnpm install --frozen-lockfile --prefer-offline --no-optional --force
 
 # Ensure frontend dependencies are installed
 WORKDIR /app/frontend
-RUN pnpm install --prefer-offline --no-optional
+RUN pnpm install --prefer-offline --no-optional --force
 
 # Switch back to root workspace
 WORKDIR /app
@@ -30,7 +30,7 @@ WORKDIR /app
 FROM --platform=linux/amd64 node:18-alpine AS builder
 
 # Install pnpm and TypeScript globally
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 RUN pnpm install -g typescript@latest
 
 # Set environment variables
@@ -77,7 +77,7 @@ RUN NODE_ENV=production npx vite build
 FROM --platform=linux/amd64 node:18-alpine AS development
 
 # Install pnpm and TypeScript globally
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 RUN pnpm install -g typescript@latest
 
 # Set environment variables

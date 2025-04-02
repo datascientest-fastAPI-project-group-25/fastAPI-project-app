@@ -1,0 +1,178 @@
+name: Formatting
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: 'Target to format (backend, frontend, or all)'
+        required: true
+        type: string
+        default: 'all'
+
+permissions:
+  contents: write
+
+jobs:
+  backend-format:
+    if: inputs.target == 'backend' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    env:
+      UV_SYSTEM_PYTHON: 1
+    steps:
+      - name: Checkout code
+        if: env.ACT != 'true'
+        uses: actions/checkout@v4
+
+      - name: Check working directory (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Using local working directory..."
+          ls -la
+          echo "Working directory checked."
+
+      - name: Setup Python
+        if: env.ACT != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Check Python (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Using local Python installation..."
+          python --version
+          echo "Python version checked."
+
+      - name: Install uv
+        if: env.ACT != 'true'
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install uv (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Installing uv locally..."
+          pip install uv
+          echo "uv installed."
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          echo "Installing dependencies..."
+          uv pip install ruff
+          echo "Dependencies installed."
+
+      - name: Format Python code
+        working-directory: backend
+        run: |
+          echo "Formatting Python code..."
+          uv run ruff format app
+          echo "Checking Python code..."
+          uv run ruff check --fix app
+          echo "Formatting complete."
+
+      - name: Commit changes
+        if: env.ACT != 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: format Python code with ruff"
+          file_pattern: 'backend/**/*.py'
+
+      - name: Skip commit (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Skipping commit in local environment..."
+          echo "Changes would be committed with message: style: format Python code with ruff"
+          echo "Commit skipped."
+
+  frontend-format:
+    if: inputs.target == 'frontend' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        if: env.ACT != 'true'
+        uses: actions/checkout@v4
+
+      - name: Check working directory (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Using local working directory..."
+          ls -la
+          echo "Working directory checked."
+
+      - name: Setup Node.js
+        if: env.ACT != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check Node.js (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Using local Node.js installation..."
+          node --version
+          echo "Node.js version checked."
+
+      - name: Install pnpm
+        if: env.ACT != 'true'
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Install pnpm (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Installing pnpm locally..."
+          npm install -g pnpm@8
+          echo "pnpm installed."
+
+      - name: Get pnpm store directory
+        if: env.ACT != 'true'
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        if: env.ACT != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: |
+          pnpm install
+
+      - name: Format frontend code with Biome
+        working-directory: frontend
+        run: |
+          echo "Formatting frontend code..."
+          pnpm exec biome format --write .
+          echo "Formatting complete."
+
+      - name: Check frontend code with Biome
+        working-directory: frontend
+        run: |
+          echo "Checking frontend code..."
+          pnpm exec biome check --no-errors-on-unmatched --files-ignore-unknown=true .
+          echo "Checking complete."
+
+      - name: Commit changes
+        if: env.ACT != 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: format frontend code with Biome"
+          file_pattern: 'frontend/**/*.(js|jsx|ts|tsx|json)'
+
+      - name: Skip commit (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Skipping commit in local environment..."
+          echo "Changes would be committed with message: style: format frontend code with Biome"
+          echo "Commit skipped."

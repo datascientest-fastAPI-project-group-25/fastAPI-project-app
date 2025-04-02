@@ -9,12 +9,15 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
     networks:
       - default
 
   # Frontend with Node.js for development using pnpm
   frontend:
-    image: node:18-alpine
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.dev
     restart: "no"
     mem_limit: "8G"
     working_dir: /app
@@ -29,11 +32,14 @@ services:
       - frontend-pnpm-store:/root/.local/share/pnpm/store
       - frontend-node-modules:/app/node_modules
       - frontend-frontend-node-modules:/app/frontend/node_modules
+    env_file:
+      - .env
     environment:
       - VITE_API_URL=http://api.localhost
       - NODE_OPTIONS=--max-old-space-size=8192
       - PNPM_HOME=/usr/local/bin
-    command: sh -c "npm install -g pnpm && pnpm install --frozen-lockfile && cd frontend && pnpm dev"
+      - VITE_BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:5173", "http://dashboard.localhost"]
+    command: sh -c "npm install -g pnpm && pnpm install --force && cd frontend && pnpm dev"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     labels:
@@ -72,32 +78,43 @@ services:
 
   # Backend with improved caching using uv
   backend:
-    working_dir: /app/backend
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: development
-    restart: "no"
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend/app:/app/app
-      - backend-cache:/root/.cache/uv
-    env_file:
-      - .env
     environment:
       - POSTGRES_SERVER=db
       - SMTP_HOST=mailcatcher
+      - PYTHONPATH=/app:/app/backend
       - SMTP_PORT=1025
       - SMTP_TLS=false
       - FRONTEND_HOST=http://dashboard.localhost
-      - VIRTUAL_ENV=/app/backend/.venv
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - PROJECT_NAME=FastAPI Project App
+      - SECRET_KEY=${SECRET_KEY}
+      - FIRST_SUPERUSER=${FIRST_SUPERUSER}
+      - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/api/v1/utils/health-check/", "-H", "Accept: application/json"]
+      interval: 30s
+      start_period: 40s
+      retries: 5
+      timeout: 10s
+    restart: on-failure
+    volumes:
+      - .:/app
+      - backend-cache:/root/.cache/uv
+    command: ["/app/backend/scripts/prestart.sh"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
       - "ghcr.io:140.82.121.33"
-    depends_on:
-      - db
-    command: sh -c "sleep 10 && bash /app/scripts/prestart.sh && uv run --app app --path app/main.py --reload"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.localhost`)"
@@ -106,15 +123,27 @@ services:
   # Database
   db:
     image: postgres:12
+    platform: linux/arm64
     restart: always
     env_file:
       - .env
     environment:
       - PGDATA=/var/lib/postgresql/data/pgdata
-    ports:
-      - "5432:5432"
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: [
+        "CMD-SHELL",
+        "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+      ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - app-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
 networks:
   default:

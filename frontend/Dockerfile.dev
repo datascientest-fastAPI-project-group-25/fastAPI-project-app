@@ -1,0 +1,55 @@
+# Stage 0: Dependencies stage
+FROM --platform=linux/amd64 node:18-alpine AS deps
+
+# Install pnpm and TypeScript globally
+RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
+RUN pnpm install -g typescript@latest
+
+# Set environment variables
+ENV ROLLUP_SKIP_NODEJS=true
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+
+# Set up workspace
+WORKDIR /app
+
+# Copy package.json files
+COPY package.json pnpm-lock.yaml* ./
+COPY frontend/package.json ./frontend/
+
+# Install root dependencies
+RUN pnpm install --frozen-lockfile --prefer-offline --no-optional --force
+
+# Ensure frontend dependencies are installed
+WORKDIR /app/frontend
+RUN pnpm install --prefer-offline --no-optional --force
+
+# Switch back to root workspace
+WORKDIR /app
+
+# Stage 1: Development stage
+FROM --platform=linux/amd64 node:18-alpine
+
+# Install pnpm and TypeScript globally
+RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
+RUN pnpm install -g typescript@latest
+
+# Set environment variables
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+ENV PNPM_CACHE_FOLDER="/app/.pnpm-cache"
+
+# Set up workspace
+WORKDIR /app
+
+# Copy package files and install dependencies
+COPY package.json pnpm-lock.yaml* ./
+COPY frontend/package.json ./frontend/
+
+# Create empty directories for mounting
+RUN mkdir -p /app/frontend
+
+# Install dependencies
+RUN pnpm install --no-optional --force
+
+# Start the development server
+WORKDIR /app/frontend
+CMD ["pnpm", "dev"]

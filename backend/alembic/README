@@ -1,0 +1,10 @@
+# Alembic Migrations
+
+This directory contains database migrations for the FastAPI project.
+
+## Structure
+
+
+## Usage
+
+To create a new migration:

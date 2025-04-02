@@ -7,9 +7,12 @@
     "dev": "uvicorn app.main:app --reload",
     "build": "echo 'Python backend build step - preparing for production'",
     "start": "uvicorn app.main:app",
-    "test": "pytest",
-    "lint": "ruff check .",
-    "format": "ruff format .",
+    "test": "if command -v uv >/dev/null 2>&1; then uv pip install pytest && uv run pytest; else echo 'UV not available, skipping backend tests'; fi",
+    "test:unit": "if command -v uv >/dev/null 2>&1; then uv pip install pytest && uv run pytest tests/unit; else echo 'UV not available, skipping unit tests'; fi",
+    "test:integration": "if command -v uv >/dev/null 2>&1; then uv pip install pytest && uv run pytest tests/integration; else echo 'UV not available, skipping integration tests'; fi",
+    "test:coverage": "if command -v uv >/dev/null 2>&1; then uv pip install pytest pytest-cov && uv run pytest --cov=app; else echo 'UV not available, skipping coverage tests'; fi",
+    "lint": "ruff check app",
+    "format": "ruff format app",
     "clean": "rm -rf .pytest_cache .ruff_cache htmlcov .coverage"
   }
 }

@@ -6,12 +6,28 @@ on:
       pr_number:
         description: 'PR number to approve'
         required: true
-        default: '67'
+        type: string
+
+permissions:
+  pull-requests: write
 
 jobs:
   approve:
     runs-on: ubuntu-latest
     steps:
+      - name: Check PR target
+        id: check-pr
+        run: |
+          PR_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.inputs.pr_number }}")
+
+          BASE=$(echo "$PR_INFO" | jq -r '.base.ref')
+          if [ "$BASE" != "stg" ]; then
+            echo "PR #${{ github.event.inputs.pr_number }} targets $BASE branch. Only PRs targeting stg branch can be auto-approved."
+            exit 1
+          fi
+          echo "PR targets stg branch, proceeding with approval"
+
       - name: Approve PR
         uses: hmarr/auto-approve-action@v4
         with:
