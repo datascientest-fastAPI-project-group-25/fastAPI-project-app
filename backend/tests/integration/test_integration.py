@@ -44,7 +44,7 @@ def test_data(client: TestClient, db: Session):
 
 
 @pytest.mark.integration
-def test_complete_user_flow(_client: TestClient, _test_data: dict, _db: Session):
+def test_complete_user_flow(client: TestClient):
     """Test complete user flow."""
     # Create user
     user_data = {
@@ -52,7 +52,7 @@ def test_complete_user_flow(_client: TestClient, _test_data: dict, _db: Session)
         "password": "password123",
         "full_name": "Test User",
     }
-    response = _client.post("/api/v1/users/open", json=user_data)
+    response = client.post("/api/v1/users/open", json=user_data)
     assert response.status_code == 200
     user = response.json()
     assert user["email"] == user_data["email"]
@@ -62,13 +62,13 @@ def test_complete_user_flow(_client: TestClient, _test_data: dict, _db: Session)
         "username": user_data["email"],
         "password": user_data["password"],
     }
-    response = _client.post("/api/v1/login/access-token", data=login_data)
+    response = client.post("/api/v1/login/access-token", data=login_data)
     assert response.status_code == 200
     tokens = response.json()
     assert "access_token" in tokens
 
     # Get user
-    response = _client.get(
+    response = client.get(
         "/api/v1/users/me",
         headers={"Authorization": f"Bearer {tokens['access_token']}"},
     )
@@ -79,7 +79,7 @@ def test_complete_user_flow(_client: TestClient, _test_data: dict, _db: Session)
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "_endpoint,_method",
+    "endpoint,method",
     [
         (f"{settings.API_V1_STR}/users/me", "GET"),
         (f"{settings.API_V1_STR}/users/me", "PUT"),
@@ -87,21 +87,23 @@ def test_complete_user_flow(_client: TestClient, _test_data: dict, _db: Session)
         (f"{settings.API_V1_STR}/users/me", "DELETE"),
     ],
 )
-def test_endpoints_with_invalid_token(_client: TestClient, _endpoint: str, _method: str):
+def test_endpoints_with_invalid_token(
+    client: TestClient, endpoint: str, method: str
+):
     """Test endpoints with invalid token."""
     invalid_token = "invalid-token"
     headers = {"Authorization": f"Bearer {invalid_token}"}
 
-    if _method == "GET":
-        response = _client.get(_endpoint, headers=headers)
-    elif _method == "POST":
-        response = _client.post(_endpoint, headers=headers)
-    elif _method == "PUT":
-        response = _client.put(_endpoint, headers=headers)
-    elif _method == "DELETE":
-        response = _client.delete(_endpoint, headers=headers)
+    if method == "GET":
+        response = client.get(endpoint, headers=headers)
+    elif method == "POST":
+        response = client.post(endpoint, headers=headers)
+    elif method == "PUT":
+        response = client.put(endpoint, headers=headers)
+    elif method == "DELETE":
+        response = client.delete(endpoint, headers=headers)
     else:
-        raise ValueError(f"Unsupported method: {_method}")
+        raise ValueError(f"Unsupported method: {method}")
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Could not validate credentials"

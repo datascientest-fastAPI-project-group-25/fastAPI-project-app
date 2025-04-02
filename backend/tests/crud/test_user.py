@@ -108,7 +108,9 @@ def test_update_user(db: Session) -> None:
         assert db_user is not None
 
         # Update the user
-        updated_user = crud.update_user(session=db, user_id=user_id, user_in=user_in_update)
+        updated_user = crud.update_user(
+            session=db, user_id=user_id, user_in=user_in_update
+        )
         db.commit()  # Commit the transaction
 
         # Verify the update

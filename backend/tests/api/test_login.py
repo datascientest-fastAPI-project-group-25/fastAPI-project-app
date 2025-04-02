@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 def test_credentials():
     """Get test credentials from environment variables or use defaults."""
     from app.core.config import settings
+
     username = os.getenv("TEST_USERNAME", settings.FIRST_SUPERUSER)
     password = os.getenv("TEST_PASSWORD", settings.FIRST_SUPERUSER_PASSWORD)
     return username, password
@@ -21,7 +22,7 @@ def test_login_success(client: TestClient, test_credentials):
     response = client.post(
         "/api/v1/login/access-token",
         data={"username": username, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"}
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
 
     assert response.status_code == 200
@@ -35,7 +36,7 @@ def test_login_failure(client: TestClient):
     response = client.post(
         "/api/v1/login/access-token",
         data={"username": "invalid@example.com", "password": "wrongpassword"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"}
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
 
     assert response.status_code == 400

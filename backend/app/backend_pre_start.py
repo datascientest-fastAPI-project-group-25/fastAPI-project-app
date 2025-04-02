@@ -35,6 +35,8 @@ def init() -> None:
         # Try to create session to check if DB is awake
         with Session(engine) as session:
             session.execute(select(1))
+            # Explicitly commit the transaction to avoid warnings
+            session.commit()
     except Exception as e:
         logger.error(e)
         raise e

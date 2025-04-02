@@ -69,3 +69,14 @@ These rules outline the desired workflow and interaction style.
     *   Our workflow is strictly Dockerized.
     *   We strictly use `pnpm` and `uv`.
     *   Strive to have our Makefile as the central control point for all operations.
+    *   We use `biome`for formatting and linting on frontend and `ruff` for formatting and linting on backend.
+    *   We use `pytest` for backend testing and `vitest` with `testing-library` & `playwright` for frontend testing.
+
+14. **Workflow Testing:**
+    *   We use `act` for local workflow testing.
+    *   We use `gh cli` for GitHub workflow testing.
+    *   We use `MCP` for multi-branch testing.
+
+https://testing-library.com/docs/guiding-principles/
+https://biomejs.dev/
+https://docs.astral.sh/uv/guides/integration/docker/

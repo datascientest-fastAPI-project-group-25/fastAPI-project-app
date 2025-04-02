@@ -12,7 +12,8 @@
       "src/client/core/**",
       "dist/**",
       "playwright.config.ts",
-      "playwright-report"
+      "playwright-report",
+      "coverage/**"
     ]
   },
   "linter": {

@@ -102,9 +102,7 @@ def count_users(session: Session) -> int:
 
 def create_item(session: Session, item_create: ItemCreate, owner_id: int) -> Item:
     db_item = Item(
-        title=item_create.title,
-        description=item_create.description,
-        owner_id=owner_id
+        title=item_create.title, description=item_create.description, owner_id=owner_id
     )
     session.add(db_item)
     session.commit()

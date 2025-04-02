@@ -1,10 +1,15 @@
 --container-architecture linux/amd64
 --env-file .env.test
 --env CI=true
--P ubuntu-latest=local/workflow-test:latest
--P ubuntu-22.04=local/workflow-test:latest
--P ubuntu-20.04=local/workflow-test:latest
+--env ACT_TIMEOUT=300
+--env ACT=true
+--env UV_SYSTEM_PYTHON=1
+-P ubuntu-latest=node:18-bullseye
+-P ubuntu-22.04=node:18-bullseye
+-P ubuntu-20.04=node:18-bullseye
 --pull=false
---secret GITHUB_TOKEN=
+--secret GITHUB_TOKEN=${GITHUB_TOKEN}
+--secret AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+--secret AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 --secret CR_PAT=
 --bind

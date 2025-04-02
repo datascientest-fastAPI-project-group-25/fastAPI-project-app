@@ -1,4 +1,3 @@
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -26,10 +25,6 @@ def test_get_access_token_incorrect_password(client: TestClient) -> None:
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
     assert r.status_code == 400
-
-
-
-
 
 
 @pytest.mark.api

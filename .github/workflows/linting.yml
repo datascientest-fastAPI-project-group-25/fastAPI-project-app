@@ -17,18 +17,43 @@ jobs:
     if: inputs.target == 'backend' || inputs.target == 'all'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        if: env.ACT != 'true'
+        uses: actions/checkout@v4
+
+      - name: Check working directory (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Using local working directory..."
+          ls -la
+          echo "Working directory checked."
 
       - name: Setup Python
+        if: env.ACT != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
 
+      - name: Check Python (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Using local Python installation..."
+          python --version
+          echo "Python version checked."
+
       - name: Install uv
+        if: env.ACT != 'true'
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+
+      - name: Install uv (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Installing uv locally..."
+          pip install uv
+          echo "uv installed."
 
       - name: Create virtual environment and install dependencies
         working-directory: backend
@@ -43,40 +68,65 @@ jobs:
         working-directory: backend
         run: |
           echo "Running ruff checks..."
-          source .venv/bin/activate
-          ruff check --fix .
-          ruff format .
+          uv run ruff check --fix app
+          uv run ruff format app
 
       - name: Run bandit
         working-directory: backend
         run: |
           echo "Running security checks..."
-          source .venv/bin/activate
-          bandit -r app/ -c bandit.yaml
+          uv run bandit -r app/ -c bandit.yaml
 
   frontend-lint:
     if: inputs.target == 'frontend' || inputs.target == 'all'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        if: env.ACT != 'true'
+        uses: actions/checkout@v4
+
+      - name: Check working directory (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Using local working directory..."
+          ls -la
+          echo "Working directory checked."
 
       - name: Setup Node.js
+        if: env.ACT != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
+      - name: Check Node.js (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Using local Node.js installation..."
+          node --version
+          echo "Node.js version checked."
+
       - name: Install pnpm
+        if: env.ACT != 'true'
         uses: pnpm/action-setup@v2
         with:
           version: 8
           run_install: false
 
+      - name: Install pnpm (local)
+        if: env.ACT == 'true'
+        run: |
+          echo "Installing pnpm locally..."
+          npm install -g pnpm@8
+          echo "pnpm installed."
+
       - name: Get pnpm store directory
+        if: env.ACT != 'true'
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
+        if: env.ACT != 'true'
         uses: actions/cache@v4
         with:
           path: ${{ env.STORE_PATH }}

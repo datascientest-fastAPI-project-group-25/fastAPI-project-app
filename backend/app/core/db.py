@@ -22,6 +22,8 @@ def engine_connect(engine) -> None:
     """Test database connection."""
     with engine.connect() as conn:
         conn.execute(select(1))
+        # Explicitly commit the transaction to avoid warnings
+        conn.commit()
 
 
 def init_db(session: Session) -> None:

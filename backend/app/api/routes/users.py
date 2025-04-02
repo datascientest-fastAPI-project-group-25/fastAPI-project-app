@@ -28,9 +28,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/", response_model=UsersPublic)
-def get_users(
-    *, db: SessionDep, skip: int = 0, limit: int = 100
-) -> UsersPublic:
+def get_users(*, db: SessionDep, skip: int = 0, limit: int = 100) -> UsersPublic:
     """
     Get all users.
     """
@@ -41,7 +39,10 @@ def get_users(
 
 @router.post("/", response_model=User)
 def create_user(
-    *, db: SessionDep, user_in: UserCreate, _current_user: User = Depends(get_current_active_superuser)
+    *,
+    db: SessionDep,
+    user_in: UserCreate,
+    _current_user: User = Depends(get_current_active_superuser),
 ) -> User:
     """
     Create new user with the privileges of superuser.
@@ -58,7 +59,11 @@ def create_user(
 
 @router.post("/open", response_model=User)
 def create_user_open(
-    *, db: SessionDep, password: str = Body(...), email: str = Body(...), full_name: str = Body(None)
+    *,
+    db: SessionDep,
+    password: str = Body(...),
+    email: str = Body(...),
+    full_name: str = Body(None),
 ) -> User:
     """
     Create new user without the need to be logged in.
@@ -80,9 +85,7 @@ def create_user_open(
 
 
 @router.post("/signup", response_model=User)
-def register_user(
-    *, db: SessionDep, user_in: UserRegister
-) -> User:
+def register_user(*, db: SessionDep, user_in: UserRegister) -> User:
     """
     Register a new user.
     """
@@ -107,7 +110,9 @@ def register_user(
 
 
 @router.get("/me", response_model=User)
-def read_user_me(_db: SessionDep, current_user: User = Depends(get_current_active_user)) -> User:
+def read_user_me(
+    _db: SessionDep, current_user: User = Depends(get_current_active_user)
+) -> User:
     """
     Get current user.
     """
@@ -126,7 +131,7 @@ def update_user_me(
     """
     Update own user.
     """
-    current_user_data = current_user.dict()
+    current_user_data = current_user.model_dump()
     user_in = UserUpdate(**current_user_data)
     if password is not None:
         user_in.password = password
@@ -164,7 +169,9 @@ def update_password_me(
     """
     Update current user password.
     """
-    if not verify_password(password_data.current_password, current_user.hashed_password):
+    if not verify_password(
+        password_data.current_password, current_user.hashed_password
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect password",

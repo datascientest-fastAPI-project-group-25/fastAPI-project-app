@@ -38,9 +38,7 @@ def test_create_user(client: TestClient, db: Session) -> None:
     user_id = uuid.UUID(data["id"])
     user = db.exec(select(User).where(User.id == user_id)).first()
     if not user:
-        raise ValueError(
-            f"User with id {user_id} not found in database after creation"
-        )
+        raise ValueError(f"User with id {user_id} not found in database after creation")
 
     # Verify user data
     if user.email != test_email:
