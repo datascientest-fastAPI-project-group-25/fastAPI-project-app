@@ -98,7 +98,7 @@ jobs:
 
       - name: Install pnpm
         if: env.ACT != 'true'
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: 8
           run_install: false
@@ -416,7 +416,7 @@ jobs:
 
       - name: Install pnpm
         if: env.ACT != 'true'
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: 8
           run_install: false
