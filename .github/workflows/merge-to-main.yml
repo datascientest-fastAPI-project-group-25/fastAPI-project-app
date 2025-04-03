@@ -68,24 +68,31 @@ jobs:
       - name: Pull staging images
         run: |
           # Pull the staging images
-          docker pull ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg
-          docker pull ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg
+          echo "Pulling backend image: ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg"
+          docker pull ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg || echo "Failed to pull backend image"
+
+          echo "Pulling frontend image: ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg"
+          docker pull ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg || echo "Failed to pull frontend image"
 
       - name: Retag and push production images
         run: |
           # Retag with semantic version and latest
-          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ env.NEW_VERSION }}
-          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:latest
+          echo "Retagging backend image with version ${{ env.NEW_VERSION }}"
+          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ env.NEW_VERSION }} || echo "Failed to tag backend with version"
+          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:latest || echo "Failed to tag backend as latest"
 
-          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ env.NEW_VERSION }}
-          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:latest
+          echo "Retagging frontend image with version ${{ env.NEW_VERSION }}"
+          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ env.NEW_VERSION }} || echo "Failed to tag frontend with version"
+          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:latest || echo "Failed to tag frontend as latest"
 
           # Push the new tags
-          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ env.NEW_VERSION }}
-          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:latest
+          echo "Pushing backend images"
+          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ env.NEW_VERSION }} || echo "Failed to push backend version"
+          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:latest || echo "Failed to push backend latest"
 
-          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ env.NEW_VERSION }}
-          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:latest
+          echo "Pushing frontend images"
+          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ env.NEW_VERSION }} || echo "Failed to push frontend version"
+          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:latest || echo "Failed to push frontend latest"
 
       - name: Update VERSION file
         run: |
