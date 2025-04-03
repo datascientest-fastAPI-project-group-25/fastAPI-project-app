@@ -68,24 +68,24 @@ jobs:
       - name: Pull staging images
         run: |
           # Pull the staging images
-          docker pull ghcr.io/${{ github.repository }}-backend:stg
-          docker pull ghcr.io/${{ github.repository }}-frontend:stg
+          docker pull ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg
+          docker pull ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg
 
       - name: Retag and push production images
         run: |
           # Retag with semantic version and latest
-          docker tag ghcr.io/${{ github.repository }}-backend:stg ghcr.io/${{ github.repository }}-backend:${{ env.NEW_VERSION }}
-          docker tag ghcr.io/${{ github.repository }}-backend:stg ghcr.io/${{ github.repository }}-backend:latest
+          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ env.NEW_VERSION }}
+          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:latest
 
-          docker tag ghcr.io/${{ github.repository }}-frontend:stg ghcr.io/${{ github.repository }}-frontend:${{ env.NEW_VERSION }}
-          docker tag ghcr.io/${{ github.repository }}-frontend:stg ghcr.io/${{ github.repository }}-frontend:latest
+          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ env.NEW_VERSION }}
+          docker tag ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:latest
 
           # Push the new tags
-          docker push ghcr.io/${{ github.repository }}-backend:${{ env.NEW_VERSION }}
-          docker push ghcr.io/${{ github.repository }}-backend:latest
+          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ env.NEW_VERSION }}
+          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:latest
 
-          docker push ghcr.io/${{ github.repository }}-frontend:${{ env.NEW_VERSION }}
-          docker push ghcr.io/${{ github.repository }}-frontend:latest
+          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ env.NEW_VERSION }}
+          docker push ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:latest
 
       - name: Update VERSION file
         run: |
