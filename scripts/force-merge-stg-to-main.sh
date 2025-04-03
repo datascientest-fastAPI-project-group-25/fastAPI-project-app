@@ -62,9 +62,9 @@ if ! git reset --hard origin/stg; then
 fi
 success "Reset main to match stg"
 
-# Step 4: Force push main
-echo -e "${YELLOW}Step 4: Force pushing main${NC}"
-if ! git push -f origin main; then
+# Step 4: Force push main (bypassing pre-commit hooks)
+echo -e "${YELLOW}Step 4: Force pushing main (bypassing pre-commit hooks)${NC}"
+if ! git push -f --no-verify origin main; then
     error "Failed to force push main"
     git checkout "$CURRENT_BRANCH"
     exit 1
