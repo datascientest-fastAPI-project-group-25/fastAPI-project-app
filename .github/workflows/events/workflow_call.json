@@ -1,10 +1,6 @@
 {
   "inputs": {
-    "test_type": {
-      "value": "all"
-    },
-    "cache_dependencies": {
-      "value": true
-    }
+    "test_type": "all",
+    "cache_dependencies": true
   }
 }

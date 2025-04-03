@@ -29,7 +29,7 @@ jobs:
           POSTGRES_DB: test_db
           POSTGRES_HOST_AUTH_METHOD: trust
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
           --health-cmd "pg_isready -U postgres -d test_db"
           --health-interval 5s
@@ -37,7 +37,7 @@ jobs:
           --health-retries 10
           --health-start-period 5s
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5433/test_db
       PROJECT_NAME: FastAPI
       POSTGRES_SERVER: localhost
       POSTGRES_USER: postgres
@@ -352,7 +352,7 @@ jobs:
           POSTGRES_DB: test_db
           POSTGRES_HOST_AUTH_METHOD: trust
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
           --health-cmd "pg_isready -U postgres -d test_db"
           --health-interval 5s

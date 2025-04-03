@@ -657,7 +657,8 @@ clean-all: clean clean-docker ## Remove all generated files and Docker resources
         ci cd lint format security-scan \
         db-init db-migrate db-reset clean clean-docker clean-all \
         backend-format backend-security \
-        frontend-install frontend-lint frontend-format frontend-security
+        frontend-install frontend-lint frontend-format frontend-security \
+        merge-stg-to-main
 
 # Format backend code
 backend-format:
@@ -710,3 +711,12 @@ frontend-security:
 # Combined Commands                             #
 #################################################
 # Format all code
+format: backend-format frontend-format ## Format all code
+
+#################################################
+# Git and Branch Management                     #
+#################################################
+merge-stg-to-main: ## Merge stg branch into main and clean up branches
+	@echo "🔄 Merging stg branch into main..."
+	@./scripts/merge-stg-to-main.sh
+	@echo "✨ Merge complete!"
