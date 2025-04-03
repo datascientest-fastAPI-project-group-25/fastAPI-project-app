@@ -345,6 +345,13 @@ test-frontend: ## Run frontend tests (JavaScript/TypeScript with Vitest)
 		exit \$$TEST_EXIT_CODE"
 	@echo "🧪 Frontend tests complete!"
 
+test-fixed: ## Run tests with fixed port configuration
+	@echo "🧪 Running tests with fixed port configuration..."
+	@cd backend && python -m pytest tests/unit tests/integration tests/api tests/crud -v
+	@echo "✅ Backend tests complete!"
+	@cd frontend && pnpm run test:unit
+	@echo "✅ Frontend unit tests complete!"
+
 test-coverage: ## Run all tests with code coverage reporting
 	@echo "📊 Running all tests with code coverage reporting..."
 	@if ! $(DOCKER_COMPOSE) ps -q | grep -q .; then \
@@ -651,7 +658,7 @@ clean-all: clean clean-docker ## Remove all generated files and Docker resources
 
 # Mark targets that don't create files
 .PHONY: help setup install env dev stop restart logs backend-logs frontend-logs \
-        test test-backend test-frontend test-e2e test-specific test-integration \
+        test test-backend test-frontend test-e2e test-specific test-integration test-fixed \
         test-coverage test-backend-coverage test-frontend-coverage \
         test-hooks test-workflow test-workflow-params test-all-workflows setup-hooks \
         ci cd lint format security-scan \
