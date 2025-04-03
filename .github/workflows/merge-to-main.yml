@@ -104,6 +104,8 @@ jobs:
             const prNumber = context.payload.pull_request.number;
             const newVersion = '${{ env.NEW_VERSION }}';
             const bumpType = '${{ env.BUMP_TYPE }}';
+            const repoOwner = context.repo.owner.toLowerCase();
+            const repoName = context.repo.repo.toLowerCase();
 
             let bumpMessage = '';
             if (bumpType === 'minor') {
@@ -116,5 +118,16 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `## 🚀 Production Images Tagged and Pushed\n\n${bumpMessage}: **${newVersion}**\n\nImages are available at:\n- \`ghcr.io/${context.repo.owner}/${context.repo.repo}-backend:${newVersion}\`\n- \`ghcr.io/${context.repo.owner}/${context.repo.repo}-backend:latest\`\n- \`ghcr.io/${context.repo.owner}/${context.repo.repo}-frontend:${newVersion}\`\n- \`ghcr.io/${context.repo.owner}/${context.repo.repo}-frontend:latest\`\n\nDeployment to production is complete.`
+              body: |
+                ## 🚀 Production Images Tagged and Pushed
+
+                ${bumpMessage}: **${newVersion}**
+
+                Images are available at:
+                - \`ghcr.io/${repoOwner}/${repoName}-backend:${newVersion}\`
+                - \`ghcr.io/${repoOwner}/${repoName}-backend:latest\`
+                - \`ghcr.io/${repoOwner}/${repoName}-frontend:${newVersion}\`
+                - \`ghcr.io/${repoOwner}/${repoName}-frontend:latest\`
+
+                Deployment to production is complete.
             });
