@@ -347,7 +347,13 @@ test-frontend: ## Run frontend tests (JavaScript/TypeScript with Vitest)
 
 test-fixed: ## Run tests with fixed port configuration
 	@echo "🧪 Running tests with fixed port configuration..."
-	@cd backend && python -m pytest tests/unit tests/integration tests/api tests/crud -v
+	@if [ -d "backend/.venv" ]; then \
+		echo "Using virtual environment..."; \
+		cd backend && . .venv/bin/activate && python -m pytest tests/unit tests/integration tests/api tests/crud -v; \
+	else \
+		echo "No virtual environment found. Using system Python..."; \
+		cd backend && python -m pytest tests/unit tests/integration tests/api tests/crud -v; \
+	fi
 	@echo "✅ Backend tests complete!"
 	@cd frontend && pnpm run test:unit
 	@echo "✅ Frontend unit tests complete!"
