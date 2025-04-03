@@ -81,24 +81,23 @@ if ! git checkout main; then
 fi
 success "Checked out main branch"
 
-# Step 6: Merge stg into main
-echo -e "${YELLOW}Step 6: Merging stg into main${NC}"
-if ! git merge stg --no-ff -m "Merge stg into main"; then
-    error "Failed to merge stg into main. Please resolve conflicts manually."
-    warning "After resolving conflicts, run: git merge --continue"
-    warning "Then push the changes with: git push origin main"
-    exit 1
-fi
-success "Merged stg into main"
-
-# Step 7: Push changes to main
-echo -e "${YELLOW}Step 7: Pushing changes to main${NC}"
-if ! git push origin main; then
-    error "Failed to push changes to main"
+# Step 6: Force reset main to stg
+echo -e "${YELLOW}Step 6: Force resetting main to match stg${NC}"
+if ! git reset --hard origin/stg; then
+    error "Failed to reset main to stg"
     git checkout "$CURRENT_BRANCH"
     exit 1
 fi
-success "Pushed changes to main"
+success "Reset main to match stg"
+
+# Step 7: Force push changes to main
+echo -e "${YELLOW}Step 7: Force pushing changes to main${NC}"
+if ! git push -f origin main; then
+    error "Failed to force push changes to main"
+    git checkout "$CURRENT_BRANCH"
+    exit 1
+fi
+success "Force pushed changes to main"
 
 # Step 8: Clean up branches
 echo -e "${YELLOW}Step 8: Cleaning up branches${NC}"
