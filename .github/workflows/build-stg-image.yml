@@ -88,7 +88,7 @@ jobs:
       - name: Build and push backend image
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ./backend
           file: ./backend/Dockerfile
           push: true
           tags: |
@@ -98,11 +98,13 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             APP_VERSION=${{ needs.bump-version.outputs.new_version }}
+            GIT_HASH=${{ github.sha }}
+            BRANCH_TYPE=stg
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ./frontend
           file: ./frontend/Dockerfile
           push: true
           tags: |
@@ -112,6 +114,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             APP_VERSION=${{ needs.bump-version.outputs.new_version }}
+            GIT_HASH=${{ github.sha }}
+            BRANCH_TYPE=stg
 
       - name: Comment on commit
         uses: actions/github-script@v6
