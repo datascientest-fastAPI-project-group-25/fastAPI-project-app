@@ -62,7 +62,7 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}:staging-pr-${{ github.event.pull_request.number }}
+          tags: ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}:staging-pr-${{ github.event.pull_request.number }}
           target: staging
           cache-from: type=gha,scope=staging
           cache-to: type=gha,mode=max,scope=staging
