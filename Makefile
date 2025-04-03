@@ -507,6 +507,11 @@ test-workflow: ## Test a GitHub workflow interactively
 	esac; \
 	make test-workflow-params workflow=$$(basename $$workflow) event=$$event
 
+test-ci-workflow: ## Test the complete CI/CD workflow pipeline
+	@echo "🔄 Testing CI/CD workflow pipeline..."
+	@./scripts/test-ci-workflow.sh
+
+
 test-workflow-params: ## Test a specific GitHub workflow
 	@if [ -z "$(workflow)" ] || [ -z "$(event)" ]; then \
 		echo "⚠️  Usage: make test-workflow-params workflow=<workflow-file> event=<event-type>"; \
@@ -539,11 +544,14 @@ test-all-workflows: ## Test all GitHub workflows with appropriate events
 			"formatting.yml:workflow_call" \
 			"dev-branch-checks.yml:push" \
 			"merge-to-main.yml:pull_request" \
+			"merge-to-staging.yml:pull_request" \
 			"merge-to-stg.yml:pull_request" \
 			"pr-to-main.yml:push" \
 			"pr-to-stg-creation.yml:push" \
 			"approve-pr.yml:pull_request" \
-			"automerge.yml:pull_request"; \
+			"automerge.yml:pull_request" \
+			"feature-branch-pr.yml:push" \
+			"pr-checks.yml:pull_request"; \
 		do \
 			IFS=: read -r workflow event <<< "$$workflow_event"; \
 			echo "🔄 Testing workflow: $$workflow with event: $$event"; \
@@ -653,7 +661,7 @@ clean-all: clean clean-docker ## Remove all generated files and Docker resources
 .PHONY: help setup install env dev stop restart logs backend-logs frontend-logs \
         test test-backend test-frontend test-e2e test-specific test-integration \
         test-coverage test-backend-coverage test-frontend-coverage \
-        test-hooks test-workflow test-workflow-params test-all-workflows setup-hooks \
+        test-hooks test-workflow test-workflow-params test-all-workflows test-ci-workflow setup-hooks \
         ci cd lint format security-scan \
         db-init db-migrate db-reset clean clean-docker clean-all \
         backend-format backend-security \

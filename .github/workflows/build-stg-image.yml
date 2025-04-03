@@ -1,0 +1,137 @@
+name: Build and Push Staging Images
+
+on:
+  push:
+    branches:
+      - stg
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.bump-version.outputs.new_version }}
+      bump_type: ${{ steps.determine-bump-type.outputs.bump_type }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Determine bump type from commit message
+        id: determine-bump-type
+        run: |
+          # Get the merge commit message
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+
+          if [[ "$COMMIT_MSG" == *"Merge pull request"* ]]; then
+            PR_BRANCH=$(echo "$COMMIT_MSG" | grep -o "from [^ ]* " | sed 's/from //' | sed 's/ //')
+            echo "PR branch: $PR_BRANCH"
+
+            if [[ "$PR_BRANCH" == feat/* ]]; then
+              echo "bump_type=minor" >> $GITHUB_OUTPUT
+              echo "PR is a feature branch, will bump minor version"
+            elif [[ "$PR_BRANCH" == fix/* ]]; then
+              echo "bump_type=patch" >> $GITHUB_OUTPUT
+              echo "PR is a fix branch, will bump patch version"
+            else
+              echo "bump_type=patch" >> $GITHUB_OUTPUT
+              echo "PR branch type not recognized, defaulting to patch version bump"
+            fi
+          else
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            echo "Not a merge commit, defaulting to patch version bump"
+          fi
+
+      - name: Bump version
+        id: bump-version
+        run: |
+          BUMP_TYPE="${{ steps.determine-bump-type.outputs.bump_type }}"
+          python version.py bump $BUMP_TYPE
+          NEW_VERSION=$(python version.py get)
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Version bumped to $NEW_VERSION"
+
+      - name: Commit and push version bump
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add VERSION
+          git commit -m "chore: bump version to ${{ steps.bump-version.outputs.new_version }} [skip ci]"
+          git push
+
+  build-and-push:
+    needs: bump-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: stg
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg
+            ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ needs.bump-version.outputs.new_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            APP_VERSION=${{ needs.bump-version.outputs.new_version }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg
+            ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ needs.bump-version.outputs.new_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            APP_VERSION=${{ needs.bump-version.outputs.new_version }}
+
+      - name: Comment on commit
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const sha = context.sha;
+            const version = '${{ needs.bump-version.outputs.new_version }}';
+            const bumpType = '${{ needs.bump-version.outputs.bump_type }}';
+
+            let bumpMessage = '';
+            if (bumpType === 'minor') {
+              bumpMessage = 'Minor version bump';
+            } else if (bumpType === 'patch') {
+              bumpMessage = 'Patch version bump';
+            }
+
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: sha,
+              body: `## 🚀 Staging Images Built and Pushed\n\n${bumpMessage}: **${version}**\n\nImages are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:stg\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${version}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:stg\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${version}\``
+            });
