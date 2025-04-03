@@ -99,8 +99,8 @@ jobs:
 
             ### Docker Images
 
-            - Backend: `ghcr.io/${{ github.repository }}-backend:${{ env.GIT_HASH }}-${{ env.BRANCH_TYPE }}`
-            - Frontend: `ghcr.io/${{ github.repository }}-frontend:${{ env.GIT_HASH }}-${{ env.BRANCH_TYPE }}`
+            - Backend: `ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ env.GIT_HASH }}-${{ env.BRANCH_TYPE }}`
+            - Frontend: `ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ env.GIT_HASH }}-${{ env.BRANCH_TYPE }}`
           labels: |
             automated-pr
             release
