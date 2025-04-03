@@ -1,6 +1,16 @@
+# Accept build arguments for versioning
+ARG GIT_HASH="dev"
+ARG BRANCH_TYPE="local"
+
 FROM python:3.11-slim-bookworm as development
 
 WORKDIR /app
+
+# Set build arguments as environment variables
+ARG GIT_HASH
+ARG BRANCH_TYPE
+ENV GIT_HASH=${GIT_HASH}
+ENV BRANCH_TYPE=${BRANCH_TYPE}
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
