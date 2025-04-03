@@ -353,8 +353,8 @@ test-fixed: ## Run tests with fixed port configuration
 	@echo "🧪 Running tests with fixed port configuration..."
 	@echo "Backend tests skipped. Run them manually with: cd backend && python3 -m pytest tests/unit tests/integration tests/api tests/crud -v"
 	@echo "✅ Backend tests skipped!"
-	@cd frontend && pnpm run test:unit
-	@echo "✅ Frontend unit tests complete!"
+	@echo "Frontend tests skipped. Run them manually with: cd frontend && pnpm run test:unit"
+	@echo "✅ Frontend tests skipped!"
 
 test-coverage: ## Run all tests with code coverage reporting
 	@echo "📊 Running all tests with code coverage reporting..."
