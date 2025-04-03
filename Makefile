@@ -169,6 +169,14 @@ lint: backend-lint frontend-lint
 format: backend-format frontend-format
 	@echo " All code formatting complete!"
 
+#################################################
+# Git and Branch Management                     #
+#################################################
+merge-stg-to-main: ## Merge stg branch into main and clean up branches
+	@echo "🔄 Merging stg branch into main..."
+	@./scripts/merge-stg-to-main.sh
+	@echo "✨ Merge complete!"
+
 # Run all tests
 test: test-backend test-frontend test-integration
 	@echo " All tests complete!"
@@ -305,7 +313,7 @@ clean:
         docker-build docker-up docker-down \
         setup-hooks run-hooks \
         test-workflow test-workflow-params validate-workflows \
-        clean test-app-local test-app-ci
+        clean test-app-local test-app-ci merge-stg-to-main
 
 # Run tests in local mode
 test-app-local:
