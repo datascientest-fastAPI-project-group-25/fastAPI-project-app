@@ -73,8 +73,12 @@ set-permissions: ## Set correct permissions for scripts
 	@chmod +x $(BACKEND_DIR)/scripts/*.sh
 	@echo "✨ Script permissions set!"
 
-setup: env install set-permissions ## Setup the complete project environment
+setup: env install set-permissions setup-venv ## Setup the complete project environment
 	@echo "✨ Project setup complete!"
+
+setup-venv: ## Setup the virtual environment for backend
+	@echo "🐍 Setting up virtual environment for backend..."
+	@./scripts/setup-venv.sh
 
 install: ## Install all dependencies
 	@echo "🔧 Installing dependencies..."
@@ -663,7 +667,7 @@ clean-docker: ## Remove Docker containers and volumes
 clean-all: clean clean-docker ## Remove all generated files and Docker resources
 
 # Mark targets that don't create files
-.PHONY: help setup install env dev stop restart logs backend-logs frontend-logs \
+.PHONY: help setup setup-venv install env dev stop restart logs backend-logs frontend-logs \
         test test-backend test-frontend test-e2e test-specific test-integration test-fixed \
         test-coverage test-backend-coverage test-frontend-coverage \
         test-hooks test-workflow test-workflow-params test-all-workflows setup-hooks \
