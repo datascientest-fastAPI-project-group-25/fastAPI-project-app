@@ -32,6 +32,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install uv
           cd backend
+          uv venv
+          . .venv/bin/activate
           uv pip install -e ".[dev,lint,types,test]"
 
       - name: Run backend linting
@@ -91,6 +93,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install uv
           cd backend
+          uv venv
+          . .venv/bin/activate
           uv pip install -e ".[dev,lint,types,test]"
 
       - name: Check backend formatting
@@ -150,6 +154,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install uv bandit safety
           cd backend
+          uv venv
+          . .venv/bin/activate
           uv pip install -e ".[dev,lint,types,test]"
 
       - name: Run bandit security scan
@@ -229,6 +235,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install uv
           cd backend
+          uv venv
+          . .venv/bin/activate
           uv pip install -e ".[dev,lint,types,test]"
 
       - name: Wait for PostgreSQL
