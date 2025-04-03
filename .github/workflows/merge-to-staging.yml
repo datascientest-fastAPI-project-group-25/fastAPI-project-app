@@ -52,7 +52,7 @@ jobs:
       - name: Build and push backend image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./backend
           file: ./backend/Dockerfile
           push: true
           tags: |
@@ -67,7 +67,7 @@ jobs:
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./frontend
           file: ./frontend/Dockerfile
           push: true
           tags: |
@@ -81,7 +81,7 @@ jobs:
 
       - name: Create Pull Request to main
         id: create-pr
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: main
