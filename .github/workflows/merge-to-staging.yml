@@ -56,8 +56,8 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}-backend:${{ env.GIT_HASH }}-${{ env.BRANCH_TYPE }}
-            ghcr.io/${{ github.repository }}-backend:stg
+            ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${{ env.GIT_HASH }}-${{ env.BRANCH_TYPE }}
+            ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:stg
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
           build-args: |
@@ -71,8 +71,8 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}-frontend:${{ env.GIT_HASH }}-${{ env.BRANCH_TYPE }}
-            ghcr.io/${{ github.repository }}-frontend:stg
+            ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${{ env.GIT_HASH }}-${{ env.BRANCH_TYPE }}
+            ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:stg
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
           build-args: |
