@@ -1,0 +1,43 @@
+name: Create Pull Request
+
+on:
+  push:
+    branches:
+      - 'feat/*'
+      - 'fix/*'
+
+jobs:
+  create_pull_request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get branch name
+        id: get_branch
+        run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "feat: Auto PR for ${{ steps.get_branch.outputs.BRANCH_NAME }}"
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          signoff: false
+          branch: ${{ steps.get_branch.outputs.BRANCH_NAME }} # The branch the changes are on
+          base: dev # The branch to merge into
+          delete-branch: false # Keep the feature branch after PR merge
+          title: 'PR for ${{ steps.get_branch.outputs.BRANCH_NAME }}'
+          body: |
+            Auto-generated Pull Request for branch: `${{ steps.get_branch.outputs.BRANCH_NAME }}`
+
+            Please review the changes.
+          labels: |
+            auto-pr
+            needs-review
+          assignees: ${{ github.actor }}
+          reviewers: '' # Add reviewers if needed e.g., user1,user2
+          team-reviewers: '' # Add team reviewers if needed e.g. org/team1,org/team2
+          milestone: '' # Associate with a milestone by number
+          draft: false # Set to true to create a draft PR
