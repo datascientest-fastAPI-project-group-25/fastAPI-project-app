@@ -32,4 +32,4 @@ jobs:
             --body "Auto-generated Pull Request for branch: `$BRANCH_NAME`.
               Please review the changes." \
             --label "auto-pr,needs-review" \
-            --assignee "@me"
+            --assignee "${{ github.actor }}"
