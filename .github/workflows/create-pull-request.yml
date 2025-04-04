@@ -9,6 +9,9 @@ on:
 jobs:
   create_pull_request:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to checkout
+      pull-requests: write # Needed for gh pr create
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -17,27 +20,16 @@ jobs:
         id: get_branch
         run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "feat: Auto PR for ${{ steps.get_branch.outputs.BRANCH_NAME }}"
-          committer: GitHub <noreply@github.com>
-          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-          signoff: false
-          branch: ${{ steps.get_branch.outputs.BRANCH_NAME }} # The branch the changes are on
-          base: dev # The branch to merge into
-          delete-branch: false # Keep the feature branch after PR merge
-          title: 'PR for ${{ steps.get_branch.outputs.BRANCH_NAME }}'
-          body: |
-            Auto-generated Pull Request for branch: `${{ steps.get_branch.outputs.BRANCH_NAME }}`
-
-            Please review the changes.
-          labels: |
-            auto-pr
-            needs-review
-          assignees: ${{ github.actor }}
-          reviewers: '' # Add reviewers if needed e.g., user1,user2
-          team-reviewers: '' # Add team reviewers if needed e.g. org/team1,org/team2
-          milestone: '' # Associate with a milestone by number
-          draft: false # Set to true to create a draft PR
+      - name: Create Pull Request using gh CLI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ steps.get_branch.outputs.BRANCH_NAME }}
+        run: |
+          gh pr create \
+            --base stg \
+            --head "$BRANCH_NAME" \
+            --title "PR for $BRANCH_NAME" \
+            --body "Auto-generated Pull Request for branch: `$BRANCH_NAME`.
+              Please review the changes." \
+            --label "auto-pr,needs-review" \
+            --assignee "@me"
