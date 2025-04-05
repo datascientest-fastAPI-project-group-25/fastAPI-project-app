@@ -1,24 +1,25 @@
 #!/bin/bash
+set -e
 
 # Colors for output
 GREEN="\033[0;32m"
-BLUE="\033[0;34m"
 YELLOW="\033[1;33m"
 RED="\033[0;31m"
+BLUE="\033[0;34m"
 NC="\033[0m" # No Color
 
-echo -e "${BLUE}=== GitHub Actions Local Runner (act) Diagnostic Tool ===${NC}"
+echo -e "${BLUE}=== ACT Diagnostic Tool ===${NC}"
+echo -e "${YELLOW}This script will help diagnose issues with act workflow testing${NC}"
+echo "================================================="
 
 # Check if act is installed
 echo -e "${BLUE}Checking if act is installed...${NC}"
 if ! command -v act &> /dev/null; then
-    echo -e "${RED}Error: act is not installed.${NC}"
-    echo -e "${YELLOW}Please install act using one of the following methods:${NC}"
-    echo "  - Homebrew: brew install act"
-    echo "  - GitHub: https://github.com/nektos/act#installation"
+    echo -e "${RED}Error: act is not installed. Please install it first.${NC}"
+    echo "You can install it with: brew install act"
     exit 1
 fi
-echo -e "${GREEN}✓ act is installed: $(act --version)${NC}"
+echo -e "${GREEN}✓ act is installed${NC}"
 
 # Check Docker
 echo -e "${BLUE}Checking Docker...${NC}"
@@ -45,93 +46,39 @@ for image in "${REQUIRED_IMAGES[@]}"; do
 done
 
 if [ ${#MISSING_IMAGES[@]} -gt 0 ]; then
-    echo -e "${YELLOW}The following images are missing and will be pulled automatically by act:${NC}"
-    for image in "${MISSING_IMAGES[@]}"; do
-        echo "  - $image"
-    done
-    echo -e "${YELLOW}This may take some time on first run.${NC}"
+    echo -e "${YELLOW}Some required Docker images are missing. Would you like to pull them now? (y/n)${NC}"
+    read -r pull_images
+    if [[ "$pull_images" == "y" ]]; then
+        for image in "${MISSING_IMAGES[@]}"; do
+            echo -e "${BLUE}Pulling image: $image${NC}"
+            docker pull "$image"
+        done
+    else
+        echo -e "${YELLOW}Skipping image pull. Some workflows may fail without these images.${NC}"
+    fi
 fi
 
-# Check for workflow files
-echo -e "${BLUE}Checking for workflow files...${NC}"
-if [ ! -d ".github/workflows" ]; then
-    echo -e "${RED}Error: .github/workflows directory not found.${NC}"
-    echo "Please make sure you're running this script from the repository root."
+# Check .actrc file
+echo -e "${BLUE}Checking .actrc configuration...${NC}"
+if [ ! -f ".actrc" ]; then
+    echo -e "${RED}Error: .actrc file not found.${NC}"
     exit 1
 fi
+echo -e "${GREEN}✓ .actrc file exists${NC}"
 
-WORKFLOW_FILES=$(find .github/workflows -name "*.yml" -o -name "*.yaml" | wc -l)
-if [ "$WORKFLOW_FILES" -eq 0 ]; then
-    echo -e "${RED}Error: No workflow files found in .github/workflows.${NC}"
+# Check test environment file
+echo -e "${BLUE}Checking test environment file...${NC}"
+if [ ! -f ".env.test" ]; then
+    echo -e "${RED}Error: .env.test file not found.${NC}"
     exit 1
 fi
-echo -e "${GREEN}✓ Found $WORKFLOW_FILES workflow files${NC}"
+echo -e "${GREEN}✓ .env.test file exists${NC}"
 
 # Check for event files
-echo -e "${BLUE}Checking for event files...${NC}"
+echo -e "${BLUE}Checking event files...${NC}"
 if [ ! -d ".github/workflows/events" ]; then
-    echo -e "${YELLOW}Warning: .github/workflows/events directory not found.${NC}"
-    echo "Creating directory and sample event files..."
-    mkdir -p .github/workflows/events
-
-    # Create sample push event
-    cat > .github/workflows/events/push.json << 'EOF'
-{
-  "ref": "refs/heads/main",
-  "before": "0000000000000000000000000000000000000000",
-  "after": "1111111111111111111111111111111111111111",
-  "repository": {
-    "name": "test-repo",
-    "full_name": "user/test-repo",
-    "private": false,
-    "owner": {
-      "name": "user",
-      "email": "user@example.com"
-    }
-  },
-  "pusher": {
-    "name": "user",
-    "email": "user@example.com"
-  },
-  "commits": []
-}
-EOF
-
-    # Create sample pull_request event
-    cat > .github/workflows/events/pull_request.json << 'EOF'
-{
-  "action": "opened",
-  "number": 1,
-  "pull_request": {
-    "number": 1,
-    "state": "open",
-    "title": "Test PR",
-    "user": {
-      "login": "user"
-    },
-    "body": "This is a test PR",
-    "head": {
-      "ref": "feature-branch",
-      "sha": "1111111111111111111111111111111111111111"
-    },
-    "base": {
-      "ref": "main",
-      "sha": "0000000000000000000000000000000000000000"
-    }
-  },
-  "repository": {
-    "name": "test-repo",
-    "full_name": "user/test-repo",
-    "owner": {
-      "login": "user"
-    }
-  },
-  "sender": {
-    "login": "user"
-  }
-}
-EOF
-    echo -e "${GREEN}✓ Created sample event files${NC}"
+    echo -e "${RED}Error: Event files directory not found.${NC}"
+    exit 1
 fi
 
 EVENT_FILES=(".github/workflows/events/push.json" ".github/workflows/events/pull_request.json")
@@ -177,17 +124,10 @@ echo -e "${BLUE}Cleaning up...${NC}"
 rm "$TEMP_WORKFLOW"
 echo -e "${GREEN}✓ Temporary workflow file removed${NC}"
 
-# Summary
-echo -e "${BLUE}=== Diagnostic Summary ===${NC}"
-echo -e "${GREEN}✓ act is installed and working correctly${NC}"
-echo -e "${GREEN}✓ Docker is running${NC}"
-echo -e "${GREEN}✓ Workflow files are available${NC}"
-echo -e "${GREEN}✓ Event files are available${NC}"
-
-echo -e "${BLUE}=== Next Steps ===${NC}"
-echo -e "To test a specific workflow, use:"
-echo -e "${YELLOW}act -W .github/workflows/your-workflow.yml -e .github/workflows/events/push.json${NC}"
-echo -e "Or use our test-workflow script:"
-echo -e "${YELLOW}./scripts/test/test-workflow.sh -w your-workflow.yml -e push${NC}"
-
-echo -e "${GREEN}Diagnostic complete!${NC}"
+echo -e "${GREEN}Diagnostic test complete!${NC}"
+echo -e "${YELLOW}If the test workflow ran successfully, act is working correctly.${NC}"
+echo -e "${YELLOW}If you're still experiencing issues with specific workflows, check:${NC}"
+echo "1. The workflow file for syntax errors"
+echo "2. Required secrets or environment variables"
+echo "3. Docker image compatibility with the workflow"
+echo "4. Node.js version requirements for the workflow"

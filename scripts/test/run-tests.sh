@@ -4,7 +4,7 @@
 # This is used by the pre-commit hook to ensure tests have the required environment variables
 
 # Change to the project root directory
-cd "$(dirname "$0")/../.." || exit 1
+cd "$(dirname "$0")/.." || exit 1
 
 # Load environment variables from .env.test if it exists
 if [ -f .env.test ]; then
