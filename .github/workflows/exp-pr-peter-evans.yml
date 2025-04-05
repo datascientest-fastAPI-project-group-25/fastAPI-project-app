@@ -38,7 +38,7 @@ jobs:
         id: create-pr
         uses: devops-infra/action-pull-request@v0.5.4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.MACHINE_USER_TOKEN }}
           target_branch: stg
 
       - name: PR Details
