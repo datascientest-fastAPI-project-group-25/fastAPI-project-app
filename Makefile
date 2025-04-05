@@ -50,6 +50,7 @@ help:
 	@echo "  make test-workflow      Test GitHub workflow interactively"
 	@echo "  make test-workflow-params workflow=FILE event=TYPE  Test specific workflow"
 	@echo ""
+	@echo "  make manage-prs        Manage PRs (Dependabot, feature/fix branches)"
 	@echo "Code Quality Commands:"
 	@echo "  make lint               Run all linting checks"
 	@echo "  make format             Format all code"
@@ -727,4 +728,9 @@ format: backend-format frontend-format ## Format all code
 merge-stg-to-main: ## Merge stg branch into main and clean up branches
 	@echo "🔄 Merging stg branch into main..."
 	@./scripts/merge-stg-to-main.sh
+
+manage-prs: ## Manage PRs (Dependabot, feature/fix branches)
+	@echo "🔄 Managing PRs..."
+	@chmod +x ./scripts/manage-prs.sh
+	@./scripts/manage-prs.sh
 	@echo "✨ Merge complete!"
