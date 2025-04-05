@@ -6,21 +6,21 @@
 setup() {
   # Create a temporary directory for test files
   export TEMP_DIR="$(mktemp -d)"
-  
+
   # Save the original directory
   export ORIG_DIR="$PWD"
-  
+
   # Change to the temp directory
   cd "$TEMP_DIR"
-  
+
   # Create mock project structure
   touch .env.test
-  
+
   # Create a mock version of the script for testing
   export SCRIPT_PATH="$TEMP_DIR/test-local.sh"
   cp "$ORIG_DIR/scripts/test/test-local.sh" "$SCRIPT_PATH"
   chmod +x "$SCRIPT_PATH"
-  
+
   # Mock external commands
   mock_command "docker" "echo 'Docker command executed: $@'"
   mock_command "docker-compose" "echo 'Docker Compose command executed: $@'"
@@ -30,7 +30,7 @@ setup() {
 teardown() {
   # Return to the original directory
   cd "$ORIG_DIR"
-  
+
   # Clean up the temporary directory
   rm -rf "$TEMP_DIR"
 }
@@ -39,7 +39,7 @@ teardown() {
 mock_command() {
   local cmd="$1"
   local output="$2"
-  
+
   mkdir -p "$TEMP_DIR/bin"
   cat > "$TEMP_DIR/bin/$cmd" << EOF
 #!/bin/bash
@@ -62,15 +62,15 @@ echo "ENV_FILE_COPIED=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates the env file was copied
   [ "$status" -eq 0 ]
   [[ "$output" == *"Running local tests"* ]]
   [[ "$output" == *"ENV_FILE_COPIED=true"* ]]
-  
+
   # Check that the .env file was created
   [ -f ".env" ]
 }
@@ -89,10 +89,10 @@ echo "BACKEND_BUILT=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates the backend was built
   [ "$status" -eq 0 ]
   [[ "$output" == *"Building and starting services"* ]]
@@ -114,10 +114,10 @@ echo "SERVICES_STARTED=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates the services were started
   [ "$status" -eq 0 ]
   [[ "$output" == *"Building and starting services"* ]]
@@ -141,10 +141,10 @@ echo "BACKEND_TESTS_RUN=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates the backend tests were run
   [ "$status" -eq 0 ]
   [[ "$output" == *"Running backend tests"* ]]
@@ -172,10 +172,10 @@ echo "BACKEND_LINTING_RUN=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates the backend linting was run
   [ "$status" -eq 0 ]
   [[ "$output" == *"Running backend linting"* ]]
@@ -207,10 +207,10 @@ echo "FRONTEND_TESTS_RUN=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates the frontend tests were run
   [ "$status" -eq 0 ]
   [[ "$output" == *"Running frontend tests"* ]]
@@ -242,10 +242,10 @@ echo "All tests completed!"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script executed successfully
   [ "$status" -eq 0 ]
   [[ "$output" == *"Running local tests"* ]]

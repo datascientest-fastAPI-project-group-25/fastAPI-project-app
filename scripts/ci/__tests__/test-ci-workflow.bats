@@ -6,37 +6,37 @@
 setup() {
   # Create a temporary directory for test files
   export TEMP_DIR="$(mktemp -d)"
-  
+
   # Save the original directory
   export ORIG_DIR="$PWD"
-  
+
   # Change to the temp directory
   cd "$TEMP_DIR"
-  
+
   # Create mock project structure
   mkdir -p .github/workflows
   touch .github/workflows/feature-branch-pr.yml
   touch .github/workflows/pr-checks.yml
   touch .github/workflows/merge-to-staging.yml
   touch .github/workflows/merge-to-main.yml
-  
+
   # Create test scripts directory
   mkdir -p scripts/test
   touch scripts/test/test-workflow.sh
   chmod +x scripts/test/test-workflow.sh
-  
+
   # Mock test-workflow.sh to return success
   cat > scripts/test/test-workflow.sh << 'EOF'
 #!/bin/bash
 echo "Mock test-workflow.sh called with args: $@"
 exit 0
 EOF
-  
+
   # Create a mock version of the script for testing
   export SCRIPT_PATH="$TEMP_DIR/test-ci-workflow.sh"
   cp "$ORIG_DIR/scripts/ci/test-ci-workflow.sh" "$SCRIPT_PATH"
   chmod +x "$SCRIPT_PATH"
-  
+
   # Mock external commands
   mock_command "act" "echo 'Act command executed: $@'"
 }
@@ -45,7 +45,7 @@ EOF
 teardown() {
   # Return to the original directory
   cd "$ORIG_DIR"
-  
+
   # Clean up the temporary directory
   rm -rf "$TEMP_DIR"
 }
@@ -54,7 +54,7 @@ teardown() {
 mock_command() {
   local cmd="$1"
   local output="$2"
-  
+
   mkdir -p "$TEMP_DIR/bin"
   cat > "$TEMP_DIR/bin/$cmd" << EOF
 #!/bin/bash
@@ -90,10 +90,10 @@ echo "DEPENDENCIES_CHECKED=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates dependencies were checked
   [ "$status" -eq 0 ]
   [[ "$output" == *"DEPENDENCIES_CHECKED=true"* ]]
@@ -141,10 +141,10 @@ echo "SECRET_FILE=$SECRET_FILE"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script with arguments
   run "$SCRIPT_PATH" --verbose --secret-file test_secrets.env
-  
+
   # Check that the output indicates arguments were parsed
   [ "$status" -eq 0 ]
   [[ "$output" == *"ARGUMENTS_PARSED=true"* ]]
@@ -156,7 +156,7 @@ EOF
 @test "test-ci-workflow.sh loads secrets from a file" {
   # Create a test secret file
   echo "TEST_SECRET=test_value" > test_secrets.env
-  
+
   # Run the script with a modified version that exits after loading secrets
   cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
@@ -189,10 +189,10 @@ fi
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates secrets were loaded
   [ "$status" -eq 0 ]
   [[ "$output" == *"Loading secrets from test_secrets.env"* ]]
@@ -230,10 +230,10 @@ done
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates workflows were defined
   [ "$status" -eq 0 ]
   [[ "$output" == *"WORKFLOWS_DEFINED=true"* ]]
@@ -271,16 +271,16 @@ for workflow_event in "${CI_CD_WORKFLOWS[@]}"; do
   # Use the existing test-workflow.sh script
   echo "Would run: ./scripts/test/test-workflow.sh .github/workflows/$workflow $event"
   ./scripts/test/test-workflow.sh .github/workflows/$workflow $event
-  
+
   echo "WORKFLOW_TESTED=true"
   exit 0
 done
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates a workflow was tested
   [ "$status" -eq 0 ]
   [[ "$output" == *"Testing workflow: feature-branch-pr.yml"* ]]
@@ -324,15 +324,15 @@ for workflow_event in "${CI_CD_WORKFLOWS[@]}"; do
   else
     echo "Would run with output suppressed"
   fi
-  
+
   exit 0
 done
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates verbose mode was used
   [ "$status" -eq 0 ]
   [[ "$output" == *"Running command: ./scripts/test/test-workflow.sh .github/workflows/feature-branch-pr.yml push"* ]]
@@ -368,11 +368,12 @@ else
 fi
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates a summary was reported
   [ "$status" -eq 0 ]
   [[ "$output" == *"All CI/CD workflows passed!"* ]]
   [[ "$output" == *"SUMMARY_REPORTED=true"* ]]
+}

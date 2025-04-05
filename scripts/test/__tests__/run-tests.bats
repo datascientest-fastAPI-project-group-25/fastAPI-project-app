@@ -6,18 +6,18 @@
 setup() {
   # Create a temporary directory for test files
   export TEMP_DIR="$(mktemp -d)"
-  
+
   # Save the original directory
   export ORIG_DIR="$PWD"
-  
+
   # Change to the temp directory
   cd "$TEMP_DIR"
-  
+
   # Create mock project structure
   mkdir -p backend/app
   touch backend/app/test_auth.py
   mkdir -p .venv/bin
-  
+
   # Create mock .env.test file
   cat > .env.test << EOF
 PROJECT_NAME="FastAPI Project Test"
@@ -29,12 +29,12 @@ POSTGRES_DB="app_test"
 FIRST_SUPERUSER="admin@example.com"
 FIRST_SUPERUSER_PASSWORD="admin123"
 EOF
-  
+
   # Create a mock version of the script for testing
   export SCRIPT_PATH="$TEMP_DIR/run-tests.sh"
   cp "$ORIG_DIR/scripts/test/run-tests.sh" "$SCRIPT_PATH"
   chmod +x "$SCRIPT_PATH"
-  
+
   # Mock external commands
   mock_command "docker" "echo 'Docker command executed: $@'"
   mock_command "pytest" "echo 'Pytest executed with args: $@'"
@@ -44,7 +44,7 @@ EOF
 teardown() {
   # Return to the original directory
   cd "$ORIG_DIR"
-  
+
   # Clean up the temporary directory
   rm -rf "$TEMP_DIR"
 }
@@ -53,7 +53,7 @@ teardown() {
 mock_command() {
   local cmd="$1"
   local output="$2"
-  
+
   mkdir -p "$TEMP_DIR/bin"
   cat > "$TEMP_DIR/bin/$cmd" << EOF
 #!/bin/bash
@@ -89,10 +89,10 @@ if [ -f .env.test ]; then
 fi
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output contains the environment variable
   [ "$status" -eq 0 ]
   [[ "$output" == *"Loading test environment variables from .env.test"* ]]
@@ -103,7 +103,7 @@ EOF
 @test "run-tests.sh warns when .env.test is missing" {
   # Remove the .env.test file
   rm -f .env.test
-  
+
   # Run the script with a modified version that exits after checking for .env.test
   cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
@@ -116,10 +116,10 @@ else
 fi
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output contains the warning
   [ "$status" -eq 0 ]
   [[ "$output" == *"Warning: .env.test file not found"* ]]
@@ -129,7 +129,7 @@ EOF
 @test "run-tests.sh uses local virtual environment when available" {
   # Create a mock virtual environment
   create_mock_venv
-  
+
   # Create a mock pytest in the virtual environment
   mkdir -p .venv/bin
   cat > .venv/bin/pytest << 'EOF'
@@ -138,7 +138,7 @@ echo "Running pytest in virtual environment with args: $@"
 exit 0
 EOF
   chmod +x .venv/bin/pytest
-  
+
   # Run the script with a modified version that exits after detecting venv
   cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
@@ -150,10 +150,10 @@ if [ -d ".venv" ]; then
 fi
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates using the virtual environment
   [ "$status" -eq 0 ]
   [[ "$output" == *"Using local virtual environment"* ]]
@@ -164,7 +164,7 @@ EOF
 @test "run-tests.sh uses Docker when virtual environment is not available" {
   # Remove the virtual environment
   rm -rf .venv
-  
+
   # Run the script with a modified version that exits after detecting Docker
   cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
@@ -177,10 +177,10 @@ elif command -v docker >/dev/null 2>&1; then
 fi
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates using Docker
   [ "$status" -eq 0 ]
   [[ "$output" == *"Using Docker container for tests"* ]]
@@ -190,7 +190,7 @@ EOF
 @test "run-tests.sh runs pytest with correct arguments in virtual environment" {
   # Create a mock virtual environment
   create_mock_venv
-  
+
   # Run the script with a modified version that shows the pytest command
   cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
@@ -203,10 +203,10 @@ if [ -d ".venv" ]; then
 fi
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script with additional arguments
   run "$SCRIPT_PATH" -v --no-header
-  
+
   # Check that the output shows the correct pytest command
   [ "$status" -eq 0 ]
   [[ "$output" == *"Would run: pytest -v --no-header -k \"test_password_hashing or test_authentication\" backend/app/test_auth.py"* ]]
@@ -216,7 +216,7 @@ EOF
 @test "run-tests.sh runs Docker with correct arguments" {
   # Remove the virtual environment
   rm -rf .venv
-  
+
   # Run the script with a modified version that shows the Docker command
   cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
@@ -231,10 +231,10 @@ elif command -v docker >/dev/null 2>&1; then
 fi
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script with additional arguments
   run "$SCRIPT_PATH" -v --no-header
-  
+
   # Check that the output shows the correct Docker commands
   [ "$status" -eq 0 ]
   [[ "$output" == *"Would run: docker compose up -d backend"* ]]
@@ -245,7 +245,7 @@ EOF
 @test "run-tests.sh runs successfully with mocked commands" {
   # Create a mock virtual environment
   create_mock_venv
-  
+
   # Create a simplified version of the script for testing
   cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
@@ -256,10 +256,10 @@ echo "Pytest executed with args: -k \"test_password_hashing or test_authenticati
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script executed successfully
   [ "$status" -eq 0 ]
   [[ "$output" == *"Running pre-commit tests"* ]]

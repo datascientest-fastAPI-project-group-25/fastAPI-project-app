@@ -6,16 +6,16 @@
 setup() {
   # Create a temporary directory for test files
   export TEMP_DIR="$(mktemp -d)"
-  
+
   # Save the original directory
   export ORIG_DIR="$PWD"
-  
+
   # Change to the temp directory
   cd "$TEMP_DIR"
-  
+
   # Create mock project structure
   mkdir -p docs
-  
+
   # Create a mock version of the script for testing
   export SCRIPT_PATH="$TEMP_DIR/test-docs-update.sh"
   cp "$ORIG_DIR/scripts/test/test-docs-update.sh" "$SCRIPT_PATH"
@@ -26,7 +26,7 @@ setup() {
 teardown() {
   # Return to the original directory
   cd "$ORIG_DIR"
-  
+
   # Clean up the temporary directory
   rm -rf "$TEMP_DIR"
 }
@@ -48,10 +48,10 @@ echo "CHANGELOG_FETCHED=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates the changelog was fetched
   [ "$status" -eq 0 ]
   [[ "$output" == *"CHANGELOG_FETCHED=true"* ]]
@@ -61,13 +61,13 @@ EOF
 @test "test-docs-update.sh writes the changelog to a file" {
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script executed successfully
   [ "$status" -eq 0 ]
-  
+
   # Check that the changelog file was created
   [ -f "docs/CHANGELOG.md" ]
-  
+
   # Check the content of the changelog file
   run cat "docs/CHANGELOG.md"
   [[ "$output" == *"# Changelog"* ]]
@@ -80,7 +80,7 @@ EOF
 @test "test-docs-update.sh outputs a success message" {
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output contains the success message
   [ "$status" -eq 0 ]
   [[ "$output" == *"Simulated documentation update complete!"* ]]
@@ -107,16 +107,16 @@ echo "Simulated documentation update complete!"
 echo "Changelog written to docs/CHANGELOG.md"
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script executed successfully
   [ "$status" -eq 0 ]
-  
+
   # Check that the changelog file was created
   [ -f "docs/CHANGELOG.md" ]
-  
+
   # Check the content of the changelog file
   run cat "docs/CHANGELOG.md"
   [[ "$output" == *"# Custom Changelog"* ]]
@@ -129,16 +129,16 @@ EOF
 @test "test-docs-update.sh creates the docs directory if it doesn't exist" {
   # Remove the docs directory
   rm -rf docs
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script executed successfully
   [ "$status" -eq 0 ]
-  
+
   # Check that the docs directory was created
   [ -d "docs" ]
-  
+
   # Check that the changelog file was created
   [ -f "docs/CHANGELOG.md" ]
 }
@@ -147,14 +147,14 @@ EOF
 @test "test-docs-update.sh runs successfully" {
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script executed successfully
   [ "$status" -eq 0 ]
-  
+
   # Check that the output contains the expected messages
   [[ "$output" == *"Simulated documentation update complete!"* ]]
   [[ "$output" == *"Changelog written to docs/CHANGELOG.md"* ]]
-  
+
   # Check that the changelog file was created with the expected content
   [ -f "docs/CHANGELOG.md" ]
   run cat "docs/CHANGELOG.md"

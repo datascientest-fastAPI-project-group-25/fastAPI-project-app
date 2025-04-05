@@ -6,26 +6,26 @@
 setup() {
   # Create a temporary directory for test files
   export TEMP_DIR="$(mktemp -d)"
-  
+
   # Save the original directory
   export ORIG_DIR="$PWD"
-  
+
   # Change to the temp directory
   cd "$TEMP_DIR"
-  
+
   # Create mock project structure
   touch docker-compose.yml
-  
+
   # Create a mock version of the script for testing
   export SCRIPT_PATH="$TEMP_DIR/deploy-app.sh"
   cp "$ORIG_DIR/scripts/deployment/deploy-app.sh" "$SCRIPT_PATH"
   chmod +x "$SCRIPT_PATH"
-  
+
   # Mock external commands
   mock_command "docker" "echo 'Docker command executed: $@'; exit 0"
   mock_command "docker-compose" "echo 'Docker Compose command executed: $@'; exit 0"
   mock_command "docker-auto-labels" "echo 'Docker Auto Labels command executed: $@'; exit 0"
-  
+
   # Set environment variables
   export TAG="test-tag"
   export DOMAIN="test.example.com"
@@ -37,10 +37,10 @@ setup() {
 teardown() {
   # Return to the original directory
   cd "$ORIG_DIR"
-  
+
   # Clean up the temporary directory
   rm -rf "$TEMP_DIR"
-  
+
   # Unset environment variables
   unset TAG
   unset DOMAIN
@@ -52,7 +52,7 @@ teardown() {
 mock_command() {
   local cmd="$1"
   local output="$2"
-  
+
   mkdir -p "$TEMP_DIR/bin"
   cat > "$TEMP_DIR/bin/$cmd" << EOF
 #!/bin/bash
@@ -88,10 +88,10 @@ check_docker
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates Docker is available
   [ "$status" -eq 0 ]
   [[ "$output" == *"DOCKER_AVAILABLE=true"* ]]
@@ -128,19 +128,19 @@ check_env_vars "build"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script with TAG set
   export TAG="test-tag"
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates environment variables are OK
   [ "$status" -eq 0 ]
   [[ "$output" == *"ENV_VARS_OK=true"* ]]
-  
+
   # Run the script with TAG unset
   unset TAG
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates missing variables
   [ "$status" -eq 1 ]
   [[ "$output" == *"ERROR_MISSING_VARS=true"* ]]
@@ -189,30 +189,30 @@ check_env_vars "deploy"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script with all required variables set
   export TAG="test-tag"
   export DOMAIN="test.example.com"
   export STACK_NAME="test-stack"
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates environment variables are OK
   [ "$status" -eq 0 ]
   [[ "$output" == *"ENV_VARS_OK=true"* ]]
-  
+
   # Run the script with DOMAIN unset
   unset DOMAIN
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates missing variables
   [ "$status" -eq 1 ]
   [[ "$output" == *"ERROR_MISSING_VARS=true"* ]]
-  
+
   # Run the script with STACK_NAME unset
   export DOMAIN="test.example.com"
   unset STACK_NAME
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates missing variables
   [ "$status" -eq 1 ]
   [[ "$output" == *"ERROR_MISSING_VARS=true"* ]]
@@ -237,10 +237,10 @@ build_images
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates images were built
   [ "$status" -eq 0 ]
   [[ "$output" == *"Building Docker images with tag: test-tag"* ]]
@@ -266,10 +266,10 @@ push_images
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates images were pushed
   [ "$status" -eq 0 ]
   [[ "$output" == *"Pushing Docker images with tag: test-tag"* ]]
@@ -308,10 +308,10 @@ deploy_app
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output indicates the application was deployed
   [ "$status" -eq 0 ]
   [[ "$output" == *"Deploying application to stack: test-stack"* ]]
@@ -357,32 +357,32 @@ main() {
 main "$@"
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Test build operation
   run "$SCRIPT_PATH" build
   [ "$status" -eq 0 ]
   [[ "$output" == *"OPERATION_BUILD=true"* ]]
-  
+
   # Test push operation
   run "$SCRIPT_PATH" push
   [ "$status" -eq 0 ]
   [[ "$output" == *"OPERATION_PUSH=true"* ]]
-  
+
   # Test deploy operation
   run "$SCRIPT_PATH" deploy
   [ "$status" -eq 0 ]
   [[ "$output" == *"OPERATION_DEPLOY=true"* ]]
-  
+
   # Test all operation
   run "$SCRIPT_PATH" all
   [ "$status" -eq 0 ]
   [[ "$output" == *"OPERATION_ALL=true"* ]]
-  
+
   # Test default operation (all)
   run "$SCRIPT_PATH"
   [ "$status" -eq 0 ]
   [[ "$output" == *"OPERATION_ALL=true"* ]]
-  
+
   # Test invalid operation
   run "$SCRIPT_PATH" invalid
   [ "$status" -eq 1 ]
@@ -409,10 +409,10 @@ echo "=== Operation completed successfully ==="
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script executed successfully
   [ "$status" -eq 0 ]
   [[ "$output" == *"=== DevOps Demo Application - Deployment Script ==="* ]]

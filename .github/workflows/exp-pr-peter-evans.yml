@@ -36,10 +36,10 @@ jobs:
 
       - name: Create Pull Request to staging
         id: create-pr
-        uses: peter-evans/create-pull-request@v5
+        uses: devops-infra/action-pull-request@v0.5.4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: stg
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          target_branch: stg
           title: "${{ env.TYPE }}: ${{ env.BRANCH_NAME }}"
           body: |
             ## Automated PR from ${{ env.BRANCH_NAME }}
@@ -58,9 +58,6 @@ jobs:
             - [ ] Documentation updated
             - [ ] Linting passes
             - [ ] Security checks pass
-          labels: |
-            automated-pr
-            ${{ env.TYPE }}
           draft: false
 
       - name: PR Details

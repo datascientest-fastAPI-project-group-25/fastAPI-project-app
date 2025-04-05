@@ -6,22 +6,22 @@
 setup() {
   # Create a temporary directory for test files
   export TEMP_DIR="$(mktemp -d)"
-  
+
   # Save the original directory
   export ORIG_DIR="$PWD"
-  
+
   # Change to the temp directory
   cd "$TEMP_DIR"
-  
+
   # Create mock project structure
   mkdir -p frontend
   mkdir -p frontend/playwright
-  
+
   # Create a mock version of the script for testing
   export SCRIPT_PATH="$TEMP_DIR/run-frontend-tests.sh"
   cp "$ORIG_DIR/scripts/test/run-frontend-tests.sh" "$SCRIPT_PATH"
   chmod +x "$SCRIPT_PATH"
-  
+
   # Mock external commands
   mock_command "docker" "echo 'Docker command executed: $@'"
   mock_command "docker-compose" "echo 'Docker Compose command executed: $@'"
@@ -31,7 +31,7 @@ setup() {
 teardown() {
   # Return to the original directory
   cd "$ORIG_DIR"
-  
+
   # Clean up the temporary directory
   rm -rf "$TEMP_DIR"
 }
@@ -40,7 +40,7 @@ teardown() {
 mock_command() {
   local cmd="$1"
   local output="$2"
-  
+
   mkdir -p "$TEMP_DIR/bin"
   cat > "$TEMP_DIR/bin/$cmd" << EOF
 #!/bin/bash
@@ -63,10 +63,10 @@ echo "SETUP_COMPLETE=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output contains the setup message
   [ "$status" -eq 0 ]
   [[ "$output" == *"Setting up frontend test environment"* ]]
@@ -87,10 +87,10 @@ echo "BACKEND_STARTED=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output contains the backend start message
   [ "$status" -eq 0 ]
   [[ "$output" == *"Starting backend services"* ]]
@@ -111,10 +111,10 @@ echo "CONTAINER_CREATED=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output contains the container creation message
   [ "$status" -eq 0 ]
   [[ "$output" == *"Creating test container"* ]]
@@ -136,10 +136,10 @@ echo "Would run: docker run --rm -it --network fastapi-project-app_default -v \"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output shows the correct Docker commands
   [ "$status" -eq 0 ]
   [[ "$output" == *"Would run: docker compose up -d backend"* ]]
@@ -164,10 +164,10 @@ echo "CLEANUP_COMPLETE=true"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output contains the cleanup message
   [ "$status" -eq 0 ]
   [[ "$output" == *"Cleaning up"* ]]
@@ -192,14 +192,14 @@ echo "Frontend tests completed with exit code: $TEST_EXIT_CODE"
 exit $TEST_EXIT_CODE
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output contains the success message and exit code
   [ "$status" -eq 0 ]
   [[ "$output" == *"Frontend tests completed with exit code: 0"* ]]
-  
+
   # Now test with a failure exit code
   cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
@@ -215,10 +215,10 @@ echo "Frontend tests completed with exit code: $TEST_EXIT_CODE"
 exit $TEST_EXIT_CODE
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the output contains the failure message and exit code
   [ "$status" -eq 1 ]
   [[ "$output" == *"Frontend tests completed with exit code: 1"* ]]
@@ -242,10 +242,10 @@ echo "Frontend tests completed with exit code: 0"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script executed successfully
   [ "$status" -eq 0 ]
   [[ "$output" == *"Setting up frontend test environment"* ]]

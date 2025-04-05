@@ -405,3 +405,4 @@ EOF
   [[ "$output" == *"Docker images pushed successfully"* ]]
   [[ "$output" == *"Application deployed successfully"* ]]
   [[ "$output" == *"=== Operation completed successfully ==="* ]]
+}

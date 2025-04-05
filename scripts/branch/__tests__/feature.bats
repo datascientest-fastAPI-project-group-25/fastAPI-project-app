@@ -6,13 +6,13 @@
 setup() {
   # Create a temporary directory for test files
   export TEMP_DIR="$(mktemp -d)"
-  
+
   # Save the original directory
   export ORIG_DIR="$PWD"
-  
+
   # Change to the temp directory
   cd "$TEMP_DIR"
-  
+
   # Create a mock git repository
   git init
   git config --local user.email "test@example.com"
@@ -20,15 +20,15 @@ setup() {
   echo "# Test Repository" > README.md
   git add README.md
   git commit -m "Initial commit"
-  
+
   # Create main branch
   git branch -m master main
-  
+
   # Create a mock version of the script for testing
   export SCRIPT_PATH="$TEMP_DIR/feature.sh"
   cp "$ORIG_DIR/scripts/branch/feature.sh" "$SCRIPT_PATH"
   chmod +x "$SCRIPT_PATH"
-  
+
   # Mock external commands
   mock_command "git" "echo 'Git command executed: $@'; exit 0"
 }
@@ -37,7 +37,7 @@ setup() {
 teardown() {
   # Return to the original directory
   cd "$ORIG_DIR"
-  
+
   # Clean up the temporary directory
   rm -rf "$TEMP_DIR"
 }
@@ -46,7 +46,7 @@ teardown() {
 mock_command() {
   local cmd="$1"
   local output="$2"
-  
+
   mkdir -p "$TEMP_DIR/bin"
   cat > "$TEMP_DIR/bin/$cmd" << EOF
 #!/bin/bash
@@ -60,21 +60,21 @@ EOF
 @test "feature.sh validates branch names correctly" {
   # Extract the validate_branch_name function from the script
   source "$SCRIPT_PATH"
-  
+
   # Test valid branch names
   validate_branch_name "feature-name"
   [ "$?" -eq 0 ]
-  
+
   validate_branch_name "fix-123"
   [ "$?" -eq 0 ]
-  
+
   # Test invalid branch names
   validate_branch_name "Feature_Name"
   [ "$?" -eq 1 ]
-  
+
   validate_branch_name "feature name"
   [ "$?" -eq 1 ]
-  
+
   validate_branch_name "feature_name"
   [ "$?" -eq 1 ]
 }
@@ -98,13 +98,13 @@ handle_unstaged_changes() {
 handle_unstaged_changes
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Create an unstaged change
   echo "Unstaged change" >> README.md
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that unstaged changes were detected
   [ "$status" -eq 0 ]
   [[ "$output" == *"UNSTAGED_CHANGES_DETECTED=true"* ]]
@@ -114,7 +114,7 @@ EOF
 @test "feature.sh creates dev branch if it doesn't exist" {
   # Mock git to simulate dev branch not existing
   mock_command "git" "if [[ \$* == *show-ref* && \$* == *dev* ]]; then exit 1; else echo 'Git command executed: $@'; exit 0; fi"
-  
+
   # Create a modified version of the script for testing
   cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
@@ -131,10 +131,10 @@ else
 fi
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script detected dev branch doesn't exist and would create it
   [ "$status" -eq 0 ]
   [[ "$output" == *"DEV_BRANCH_DOESNT_EXIST=true"* ]]
@@ -158,10 +158,10 @@ git checkout -b "$new_branch"
 echo "FEATURE_BRANCH_CREATED=true"
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script would create a feature branch
   [ "$status" -eq 0 ]
   [[ "$output" == *"CREATING_FEATURE_BRANCH=feat/test-feature"* ]]
@@ -185,10 +185,10 @@ git checkout -b "$new_branch"
 echo "FIX_BRANCH_CREATED=true"
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script would create a fix branch
   [ "$status" -eq 0 ]
   [[ "$output" == *"CREATING_FIX_BRANCH=fix/bug-fix"* ]]
@@ -199,7 +199,7 @@ EOF
 @test "feature.sh shows error when branch already exists" {
   # Mock git to simulate branch already existing
   mock_command "git" "if [[ \$* == *show-ref* && \$* == *feat/existing-feature* ]]; then exit 0; else echo 'Git command executed: $@'; exit 0; fi"
-  
+
   # Create a modified version of the script for testing
   cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
@@ -221,10 +221,10 @@ git checkout -b "$new_branch"
 echo "FEATURE_BRANCH_CREATED=true"
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script detected the branch already exists
   [ "$status" -eq 1 ]
   [[ "$output" == *"ERROR_BRANCH_EXISTS=true"* ]]
@@ -244,10 +244,10 @@ echo "Successfully created and switched to feat/test-feature"
 exit 0
 EOF
   chmod +x "$SCRIPT_PATH"
-  
+
   # Run the script
   run "$SCRIPT_PATH"
-  
+
   # Check that the script executed successfully
   [ "$status" -eq 0 ]
   [[ "$output" == *"Successfully created and switched to feat/test-feature"* ]]
