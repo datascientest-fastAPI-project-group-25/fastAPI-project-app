@@ -1,0 +1,147 @@
+name: PR Workflow
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - stg
+      - main
+
+jobs:
+  determine-version-bump:
+    runs-on: ubuntu-latest
+    outputs:
+      bump_type: ${{ steps.set-bump-type.outputs.bump_type }}
+    steps:
+      - name: Determine version bump type
+        id: set-bump-type
+        run: |
+          PR_BRANCH="${{ github.head_ref }}"
+          if [[ "$PR_BRANCH" == feat/* ]]; then
+            echo "bump_type=minor" >> $GITHUB_OUTPUT
+            echo "PR is a feature branch, will bump minor version"
+          elif [[ "$PR_BRANCH" == fix/* ]]; then
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            echo "PR is a fix branch, will bump patch version"
+          else
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            echo "PR branch type not recognized, defaulting to patch version bump"
+          fi
+
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install uv
+          cd backend
+          uv pip install -e ".[dev]"
+
+      - name: Lint backend
+        run: |
+          cd backend
+          ruff check .
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install frontend dependencies
+        run: |
+          pnpm install
+
+      - name: Lint frontend
+        run: |
+          pnpm run lint
+
+  tests:
+    needs: lint-and-format
+    uses: ./.github/workflows/tests.yml
+    with:
+      test_type: all
+      cache_dependencies: true
+
+  build-docker-images:
+    needs: [determine-version-bump, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          push: false
+          tags: fastapi-project-app-backend:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./frontend/Dockerfile
+          push: false
+          tags: fastapi-project-app-frontend:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  comment-on-pr:
+    needs: [determine-version-bump, build-docker-images]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const bumpType = '${{ needs.determine-version-bump.outputs.bump_type }}';
+            const prNumber = context.issue.number;
+
+            let bumpMessage = '';
+            if (bumpType === 'minor') {
+              bumpMessage = 'This PR will bump the **minor** version when merged.';
+            } else if (bumpType === 'patch') {
+              bumpMessage = 'This PR will bump the **patch** version when merged.';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## CI Workflow Complete ✅\n\n${bumpMessage}\n\nAll checks have passed:\n- ✅ Linting and formatting\n- ✅ Tests\n- ✅ Docker image builds\n\nThe PR is ready to be merged.`
+            });
