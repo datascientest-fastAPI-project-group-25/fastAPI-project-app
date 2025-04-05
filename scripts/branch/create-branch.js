@@ -5,16 +5,8 @@
  * Updated for new workflow (feat/fix → dev → main)
  */
 
-// Try to load dependencies
-let inquirer;
-try {
-  inquirer = require("inquirer");
-} catch (error) {
-  console.log("Inquirer not found, using fallback for non-interactive mode");
-}
-const { execSync } = require("child_process");
-const readline = require("readline");
-
+const { execSync } = require('child_process');
+const readline = require('readline');
 
 // ANSI color codes
 const colors = {
@@ -26,20 +18,6 @@ const colors = {
   magenta: "\x1b[35m",
   cyan: "\x1b[36m",
 };
-
-let chalk;
-try {
-  chalk = require("chalk");
-} catch (error) {
-  chalk = {
-    green: (text) => `${colors.green}${text}${colors.reset}`,
-    yellow: (text) => `${colors.yellow}${text}${colors.reset}`,
-    red: (text) => `${colors.red}${text}${colors.reset}`,
-    blue: (text) => `${colors.blue}${text}${colors.reset}`,
-    magenta: (text) => `${colors.magenta}${text}${colors.reset}`,
-    cyan: (text) => `${colors.cyan}${text}${colors.reset}`,
-  };
-}
 
 // Command line arguments
 const args = process.argv.slice(2);
@@ -69,6 +47,16 @@ const rl = readline.createInterface({
 
 const branchTypes = ["feat", "fix"];
 
+// Utility function to convert to param case
+function paramCase(input) {
+  if (!input) return '';
+  return input
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/^-+|-+$/g, '');
+}
 
 function runGitCommand(command) {
   try {
@@ -151,6 +139,10 @@ async function askBranchType() {
   });
 }
 
+function isValidBranchName(name) {
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name);
+}
+
 async function askBranchName() {
   return new Promise((resolve) => {
     rl.question(
@@ -178,15 +170,6 @@ async function askAutomerge() {
 async function main() {
   let success = false;
 
-  let normalizeBranchName;
-
-  try {
-    const paramCaseModule = await import('param-case');
-    normalizeBranchName = (name) => paramCaseModule.paramCase(name);
-  } catch (error) {
-    console.error("Failed to import change-case module:", error);
-    process.exit(1);
-  }
   try {
     // Non-interactive mode
     if (branchType && branchName) {
@@ -195,7 +178,7 @@ async function main() {
         return false;
       }
 
-      const normalizedBranchName = normalizeBranchName(branchName);
+      const normalizedBranchName = paramCase(branchName);
 
       await updateDevBranch();
       success = createBranchWithParams(branchType, normalizedBranchName, automerge);
@@ -207,7 +190,7 @@ async function main() {
     branchType = await askBranchType();
     branchName = await askBranchName();
 
-    const normalizedBranchName = normalizeBranchName(branchName);
+    const normalizedBranchName = paramCase(branchName);
 
     if (branchType === "fix") {
       automerge = await askAutomerge();

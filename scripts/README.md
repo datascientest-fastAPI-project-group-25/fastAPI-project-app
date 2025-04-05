@@ -13,12 +13,19 @@ scripts/
 ├── test/             # Testing scripts
 │   ├── test-app.ts            # Test application runner
 │   ├── test-workflow.sh       # GitHub workflow tester
-│   └── test-workflow-selector.ts # Interactive workflow selector
+│   ├── test-workflow-selector.ts # Interactive workflow selector
+│   ├── test-local.sh          # Run local tests
+│   ├── run-tests.sh           # Run tests with test environment variables
+│   └── diagnose-act.sh        # Diagnose GitHub Actions local runner
 ├── dev/              # Development tools
 │   ├── dev-generate-client.sh # API client generator
-│   └── setup-precommit.ts     # Pre-commit hooks setup
+│   ├── setup-precommit.ts     # Pre-commit hooks setup
+│   └── setup-project.sh       # Set up project directory structure
 ├── ci/               # CI/CD scripts
-│   └── test-ci-workflow.sh    # CI/CD workflow tester
+│   ├── test-ci-workflow.sh    # CI/CD workflow tester
+│   └── deploy-app.sh          # Build, push, and deploy application
+├── docs/             # Documentation scripts
+│   └── update-docs.sh         # Update documentation files
 └── utils/            # Utility functions
     ├── index.ts               # String utilities
     └── __tests__/             # Tests for utilities
@@ -102,6 +109,30 @@ Interactive selector for testing GitHub workflows.
 node scripts/test/test-workflow-selector.ts
 ```
 
+### test-local.sh
+
+Runs local tests for both backend and frontend.
+
+```bash
+./scripts/test/test-local.sh
+```
+
+### run-tests.sh
+
+Runs tests with test environment variables. Used by pre-commit hooks.
+
+```bash
+./scripts/test/run-tests.sh
+```
+
+### diagnose-act.sh
+
+Diagnoses issues with GitHub Actions local runner (act).
+
+```bash
+./scripts/test/diagnose-act.sh
+```
+
 ## Development Tools
 
 ### dev-generate-client.sh
@@ -120,6 +151,14 @@ Installs and configures pre-commit hooks for the project.
 node scripts/dev/setup-precommit.ts
 ```
 
+### setup-project.sh
+
+Sets up the project directory structure.
+
+```bash
+./scripts/dev/setup-project.sh
+```
+
 ## CI/CD Scripts
 
 ### test-ci-workflow.sh
@@ -128,6 +167,24 @@ Tests the complete CI/CD workflow pipeline using GitHub Actions local runner.
 
 ```bash
 ./scripts/ci/test-ci-workflow.sh
+```
+
+### deploy-app.sh
+
+Unified script for building, pushing, and deploying the application.
+
+```bash
+./scripts/ci/deploy-app.sh [build|push|deploy|all]
+```
+
+## Documentation Scripts
+
+### update-docs.sh
+
+Updates documentation files like the changelog.
+
+```bash
+./scripts/docs/update-docs.sh
 ```
 
 ## Utilities
