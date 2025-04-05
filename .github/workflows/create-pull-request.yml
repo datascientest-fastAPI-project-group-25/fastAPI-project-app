@@ -1,10 +1,10 @@
 name: Create Pull Request
 
-on:
-  push:
-    branches:
-      - 'feat/*'
-      - 'fix/*'
+# on:
+#   push:
+#     branches:
+#       - 'feat/*'
+#       - 'fix/*'
 
 jobs:
   create_pull_request:
