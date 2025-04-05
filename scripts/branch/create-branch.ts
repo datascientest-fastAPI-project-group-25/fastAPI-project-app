@@ -5,16 +5,9 @@
  * Updated for new workflow (feat/fix → dev → main)
  */
 
-// Try to load dependencies
-let inquirer;
-try {
-  inquirer = require("inquirer");
-} catch (error) {
-  console.log("Inquirer not found, using fallback for non-interactive mode");
-}
-const { execSync } = require("child_process");
-const readline = require("readline");
-
+import { execSync } from 'child_process';
+import readline from 'readline';
+import { paramCase } from '../utils';
 
 // ANSI color codes
 const colors = {
@@ -26,20 +19,6 @@ const colors = {
   magenta: "\x1b[35m",
   cyan: "\x1b[36m",
 };
-
-let chalk;
-try {
-  chalk = require("chalk");
-} catch (error) {
-  chalk = {
-    green: (text) => `${colors.green}${text}${colors.reset}`,
-    yellow: (text) => `${colors.yellow}${text}${colors.reset}`,
-    red: (text) => `${colors.red}${text}${colors.reset}`,
-    blue: (text) => `${colors.blue}${text}${colors.reset}`,
-    magenta: (text) => `${colors.magenta}${text}${colors.reset}`,
-    cyan: (text) => `${colors.cyan}${text}${colors.reset}`,
-  };
-}
 
 // Command line arguments
 const args = process.argv.slice(2);
@@ -69,20 +48,19 @@ const rl = readline.createInterface({
 
 const branchTypes = ["feat", "fix"];
 
-
-function runGitCommand(command) {
+export function runGitCommand(command: string): string {
   try {
     return execSync(command, { encoding: "utf8" }).trim();
   } catch (error) {
     console.error(
       `${colors.red}Error executing git command:${colors.reset}`,
-      error.message,
+      (error as Error).message,
     );
     process.exit(1);
   }
 }
 
-async function updateDevBranch() {
+export async function updateDevBranch(): Promise<boolean> {
   console.log(`${colors.blue}Updating dev branch...${colors.reset}`);
   try {
     runGitCommand("git fetch origin");
@@ -92,7 +70,7 @@ async function updateDevBranch() {
   } catch (error) {
     console.error(
       `${colors.red}Failed to update dev branch:${colors.reset}`,
-      error.message,
+      (error as Error).message,
     );
     console.log(
       `${colors.yellow}Continuing with branch creation anyway...${colors.reset}`,
@@ -101,7 +79,7 @@ async function updateDevBranch() {
   }
 }
 
-function createBranchWithParams(branchType, branchName, automerge) {
+export function createBranchWithParams(branchType: string, branchName: string, automerge: boolean): boolean {
   let fullBranchName = `${branchType}/${branchName}`;
   if (branchType === "fix" && automerge) {
     fullBranchName += "-automerge";
@@ -132,13 +110,13 @@ function createBranchWithParams(branchType, branchName, automerge) {
   } catch (error) {
     console.error(
       `${colors.red}Failed to create branch:${colors.reset}`,
-      error.message,
+      (error as Error).message,
     );
     return false;
   }
 }
 
-async function askBranchType() {
+async function askBranchType(): Promise<string> {
   return new Promise((resolve) => {
     rl.question(`Branch type (${branchTypes.join(", ")}): `, (type) => {
       if (!branchTypes.includes(type)) {
@@ -151,7 +129,11 @@ async function askBranchType() {
   });
 }
 
-async function askBranchName() {
+export function isValidBranchName(name: string): boolean {
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name);
+}
+
+async function askBranchName(): Promise<string> {
   return new Promise((resolve) => {
     rl.question(
       "Branch name (lowercase letters, numbers, and hyphens only): ",
@@ -167,7 +149,7 @@ async function askBranchName() {
   });
 }
 
-async function askAutomerge() {
+async function askAutomerge(): Promise<boolean> {
   return new Promise((resolve) => {
     rl.question("Enable automerge? (y/N): ", (answer) => {
       resolve(answer.toLowerCase() === "y");
@@ -175,18 +157,13 @@ async function askAutomerge() {
   });
 }
 
-async function main() {
+export function normalizeBranchName(name: string): string {
+  return paramCase(name);
+}
+
+async function main(): Promise<boolean> {
   let success = false;
 
-  let normalizeBranchName;
-
-  try {
-    const paramCaseModule = await import('param-case');
-    normalizeBranchName = (name) => paramCaseModule.paramCase(name);
-  } catch (error) {
-    console.error("Failed to import change-case module:", error);
-    process.exit(1);
-  }
   try {
     // Non-interactive mode
     if (branchType && branchName) {
