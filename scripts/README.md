@@ -38,7 +38,7 @@ All scripts have corresponding tests in their respective `__tests__` directories
 
 - **TypeScript/JavaScript**: Vitest for TS/JS files
 - **Python**: unittest for Python files
-- **Shell**: Custom test scripts for shell scripts
+- **Shell**: [Bats](https://github.com/bats-core/bats-core) (Bash Automated Testing System) for shell scripts
 
 To run all tests:
 
@@ -53,6 +53,63 @@ cd scripts
 pnpm test:ts    # Run TypeScript tests
 pnpm test:py    # Run Python tests
 pnpm test:sh    # Run Shell script tests
+```
+
+### Bats Testing for Shell Scripts
+
+[Bats](https://github.com/bats-core/bats-core) is a testing framework for Bash scripts. To use it:
+
+#### Installation
+
+```bash
+# Using Homebrew (macOS)
+brew install bats-core
+
+# Using npm
+npm install -g bats
+
+# Manual installation
+git clone https://github.com/bats-core/bats-core.git
+cd bats-core
+./install.sh /usr/local
+```
+
+#### Running Bats Tests
+
+```bash
+# Run a single test file
+bats scripts/test/__tests__/diagnose-act.bats
+
+# Run all Bats tests
+find scripts -name "*.bats" | xargs bats
+```
+
+#### Bats Test Structure
+
+Each Bats test file follows this structure:
+
+```bash
+#!/usr/bin/env bats
+
+# Setup - runs before each test
+setup() {
+  # Create a temporary test environment
+}
+
+# Teardown - runs after each test
+teardown() {
+  # Clean up the test environment
+}
+
+# Test case
+@test "my script does something correctly" {
+  # Run the script or function
+  run my_script.sh
+
+  # Check the output
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"expected output"* ]]
+}
 ```
 
 ## Branch Management Scripts
