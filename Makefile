@@ -82,7 +82,7 @@ feat:
 		exit 1; \
 	fi; \
 	echo "Creating feature branch: $$branch_name"; \
-	node ./scripts/branch/create-branch.ts --type feat --name "$$branch_name"
+	npx ts-node ./scripts/branch/create-branch.ts --type feat --name "$$branch_name"
 
 fix:
 	@branch_name="$(word 2,$(MAKECMDGOALS))"; \
@@ -91,7 +91,7 @@ fix:
 		exit 1; \
 	fi; \
 	echo "Creating fix branch: $$branch_name"; \
-	node ./scripts/branch/create-branch.ts --type fix --name "$$branch_name"
+	npx ts-node ./scripts/branch/create-branch.ts --type fix --name "$$branch_name"
 
 # Ignore branch name as a make target
 %:
@@ -502,7 +502,7 @@ test-integration: ## Run integration tests (tests API endpoints and database int
 
 test-scripts: ## Run script utils tests
 	@echo "🧪 Running script utils tests..."
-	@cd scripts && pnpm install --save-dev vitest typescript && pnpm test
+	@cd scripts && pnpm install --save-dev vitest typescript ts-node && pnpm test
 	@echo "🧪 Running TypeScript tests..."
 	@cd scripts && pnpm test:ts
 	@echo "🧪 Running Python tests..."
@@ -531,7 +531,7 @@ test-hooks: ## Test git hooks locally
 
 test-workflow: ## Test a GitHub workflow interactively
 	@echo "🔄 Testing GitHub workflow..."
-	@node ./scripts/test/test-workflow-selector.ts
+	@npx ts-node ./scripts/test/test-workflow-selector.ts
 
 test-ci-workflow: ## Test the complete CI/CD workflow pipeline
 	@echo "🔄 Testing CI/CD workflow pipeline..."
@@ -599,7 +599,7 @@ test-all-workflows: ## Test all GitHub workflows with appropriate events
 
 setup-hooks: ## Setup git hooks with pre-commit
 	@echo "🔧 Setting up git hooks..."
-	@node ./scripts/dev/setup-precommit.ts
+	@npx ts-node ./scripts/dev/setup-precommit.ts
 	@echo "✨ Git hooks setup complete!"
 
 #################################################
