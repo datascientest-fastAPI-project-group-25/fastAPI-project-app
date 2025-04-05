@@ -82,7 +82,7 @@ feat:
 		exit 1; \
 	fi; \
 	echo "Creating feature branch: $$branch_name"; \
-	npx ts-node ./scripts/branch/create-branch.ts --type feat --name "$$branch_name"
+	node ./scripts/branch/create-branch.js --type feat --name "$$branch_name"
 
 fix:
 	@branch_name="$(word 2,$(MAKECMDGOALS))"; \
@@ -102,7 +102,7 @@ fix:
 #################################################
 set-permissions: ## Set correct permissions for scripts
 	@echo "🔧 Setting script permissions..."
-	@chmod +x $(BACKEND_DIR)/scripts/*.sh
+	@find scripts -name "*.sh" -exec chmod +x {} \;
 	@echo "✨ Script permissions set!"
 
 setup: env install set-permissions ## Setup the complete project environment
