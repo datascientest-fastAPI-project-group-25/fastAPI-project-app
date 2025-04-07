@@ -28,7 +28,7 @@ jobs:
       - name: Extract source branch and PR info
         shell: bash
         run: |
-          echo "SOURCE_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+          printf 'SOURCE_BRANCH=%s\n' "${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
           echo "PR_TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
           echo "PR_BODY=${{ github.event.pull_request.body }}" >> $GITHUB_ENV
           echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
