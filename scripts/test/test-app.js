@@ -1,29 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * Unified test script for local and CI environments
- * Supports both interactive and non-interactive modes
+ * Test application runner
+ * Provides a unified interface for running tests in local or CI environments
  */
 
-// Try to load dependencies
-let inquirer;
-try {
-  inquirer = require("inquirer");
-} catch (error) {
-  console.log("Inquirer not found, using fallback for non-interactive mode");
-}
-
-const { execSync } = require("child_process");
-const readline = require("readline");
-const path = require("path");
+const { execSync, spawn } = require('child_process');
+const readline = require('readline');
 
 // ANSI color codes
 const colors = {
   reset: "\x1b[0m",
   green: "\x1b[32m",
-  blue: "\x1b[34m",
   yellow: "\x1b[33m",
   red: "\x1b[31m",
+  blue: "\x1b[34m",
   cyan: "\x1b[36m",
 };
 
@@ -54,16 +45,13 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-// Helper function to run commands
-function runCommand(command, options = {}) {
+// Run a command and return its output
+function runCommand(command) {
   try {
-    return execSync(command, {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "pipe"],
-      ...options,
-    }).trim();
+    return execSync(command, { encoding: 'utf8' });
   } catch (error) {
-    console.error(chalk.red(`Error executing command: ${error.message}`));
+    console.error(chalk.red(`Command failed: ${command}`));
+    console.error(chalk.red(error.message));
     throw error;
   }
 }
@@ -71,59 +59,65 @@ function runCommand(command, options = {}) {
 // Check if Docker is available
 async function checkDocker() {
   try {
-    runCommand("docker info");
+    runCommand("docker --version");
     console.log(chalk.green("✓ Docker is available"));
     return true;
   } catch (error) {
-    console.error(chalk.red("Error: Docker is not installed or not running"));
+    console.error(chalk.red("Error: Docker is not available"));
+    console.error(chalk.yellow("Please install Docker and try again"));
     return false;
   }
 }
 
-// Clean up previous test environments
+// Get interactive mode
+async function getInteractiveMode() {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    rl.question(chalk.blue("Select test mode (local/ci): "), (answer) => {
+      rl.close();
+      if (answer === "local" || answer === "ci") {
+        resolve(answer);
+      } else {
+        console.log(chalk.yellow("Invalid mode, defaulting to local"));
+        resolve("local");
+      }
+    });
+  });
+}
+
+// Clean up previous test runs
 async function cleanupPrevious() {
-  console.log(chalk.blue("Cleaning up previous test environments..."));
+  console.log(chalk.blue("Cleaning up previous test runs..."));
   try {
-    runCommand("docker compose down -v --remove-orphans");
-    console.log(chalk.green("✓ Previous environments cleaned up"));
+    runCommand("docker compose down -v");
+    console.log(chalk.green("✓ Previous containers cleaned up"));
   } catch (error) {
-    console.error(chalk.yellow("Warning: Failed to clean up previous environments"));
+    console.log(chalk.yellow("No previous containers to clean up"));
   }
 }
 
-// Clean up Python cache files (Linux only)
+// Clean up Python cache files
 async function cleanupCache() {
-  const platform = process.platform;
-  if (platform === "linux") {
-    console.log(chalk.blue("Removing __pycache__ files..."));
-    try {
-      const cacheDirs = runCommand("find . -type d -name __pycache__", {
-        stdio: ["pipe", "pipe", "ignore"],
-      });
-      if (cacheDirs) {
-        runCommand("find . -type d -name __pycache__ -exec rm -r {} +", {
-          stdio: ["pipe", "pipe", "ignore"],
-        });
-      }
-      console.log(chalk.green("✓ Cache files removed"));
-    } catch (error) {
-      console.error(chalk.yellow("Warning: Failed to remove cache files"));
-    }
+  console.log(chalk.blue("Cleaning up cache files..."));
+  try {
+    runCommand("find . -type d -name __pycache__ -exec rm -rf {} +");
+    runCommand("find . -type d -name .pytest_cache -exec rm -rf {} +");
+    console.log(chalk.green("✓ Cache files cleaned up"));
+  } catch (error) {
+    console.log(chalk.yellow("Error cleaning cache files"));
   }
 }
 
 // Build Docker images
 async function buildImages() {
-  if (process.env.SKIP_BUILD) {
-    console.log(chalk.yellow("Skipping build step (SKIP_BUILD is set)"));
-    console.log(chalk.yellow("Don't forget to run 'docker compose down -v' when you're done"));
-    return;
-  }
-
   console.log(chalk.blue("Building Docker images..."));
   try {
     runCommand("docker compose build");
-    console.log(chalk.green("✓ Docker images built successfully"));
+    console.log(chalk.green("✓ Images built"));
   } catch (error) {
     throw new Error("Failed to build Docker images");
   }
@@ -159,56 +153,28 @@ async function runTests() {
           console.log(chalk.green("✓ Tests completed successfully"));
           resolve();
         } else {
-          console.error(chalk.yellow("Warning: Some tests failed"));
-          console.error(chalk.yellow("Exit code: " + code));
-          resolve(); // Don't reject as this is expected behavior
+          reject(new Error(`Tests failed with exit code ${code}`));
         }
-      });
-
-      testProcess.on('error', (error) => {
-        console.error(chalk.red(`Error running tests: ${error.message}`));
-        reject(error);
       });
     });
   } catch (error) {
-    throw new Error(`Failed to run tests: ${error.message}`);
+    throw new Error("Failed to run tests");
   }
 }
 
 // Clean up after tests
 async function cleanupAfter() {
-  if (process.env.SKIP_CLEANUP) {
-    console.log(chalk.yellow("Skipping cleanup (SKIP_CLEANUP is set)"));
-    return;
+  if (mode === "ci") {
+    console.log(chalk.blue("Cleaning up after tests..."));
+    try {
+      runCommand("docker compose down -v");
+      console.log(chalk.green("✓ Cleanup complete"));
+    } catch (error) {
+      console.log(chalk.yellow("Error during cleanup"));
+    }
+  } else {
+    console.log(chalk.blue("Keeping services running for local development"));
   }
-
-  console.log(chalk.blue("Cleaning up test environment..."));
-  try {
-    runCommand("docker compose down -v --remove-orphans");
-    console.log(chalk.green("✓ Environment cleaned up"));
-  } catch (error) {
-    console.error(chalk.yellow("Warning: Failed to clean up environment"));
-  }
-}
-
-// Interactive mode prompts
-async function getInteractiveMode() {
-  if (!inquirer) {
-    console.log(chalk.yellow("Inquirer not available, using default mode (local)"));
-    return "local";
-  }
-
-  const { mode } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "mode",
-      message: "Select test mode:",
-      choices: ["local", "ci"],
-      default: "local",
-    },
-  ]);
-
-  return mode;
 }
 
 // Main execution

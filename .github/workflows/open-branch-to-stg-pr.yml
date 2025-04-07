@@ -14,6 +14,10 @@ jobs:
   create-pr:
     runs-on: ubuntu-latest
     steps:
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -36,32 +40,10 @@ jobs:
 
       - name: Create Pull Request to staging
         id: create-pr
-        uses: peter-evans/create-pull-request@v5
+        uses: devops-infra/action-pull-request@v0.5.4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: stg
-          title: "${{ env.TYPE }}: ${{ env.BRANCH_NAME }}"
-          body: |
-            ## Automated PR from ${{ env.BRANCH_NAME }}
-
-            This PR was automatically created from branch `${{ env.BRANCH_NAME }}`.
-
-            Branch type: `${{ env.TYPE }}`
-
-            ### Changes
-
-            <!-- Please describe the changes made in this PR -->
-
-            ### Checklist
-
-            - [ ] Tests added/updated
-            - [ ] Documentation updated
-            - [ ] Linting passes
-            - [ ] Security checks pass
-          labels: |
-            automated-pr
-            ${{ env.TYPE }}
-          draft: false
+          github_token: ${{ secrets.MACHINE_USER_TOKEN }}
+          target_branch: stg
 
       - name: PR Details
         if: steps.create-pr.outputs.pull-request-number

@@ -10,7 +10,7 @@
 #   frontend client code for API integration.
 #
 # USAGE:
-#   ./scripts/dev-generate-client.sh
+#   ./scripts/dev/dev-generate-client.sh
 #
 # ENVIRONMENT VARIABLES:
 #   - SKIP_FORMAT: Set to any value to skip code formatting
@@ -26,52 +26,28 @@
 set -e
 
 # Colors for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+GREEN="\033[0;32m"
+BLUE="\033[0;34m"
+YELLOW="\033[1;33m"
+RED="\033[0;31m"
+NC="\033[0m" # No Color
 
 # Function to check if Python is available
 check_python() {
   if ! command -v python &> /dev/null; then
-    echo -e "${RED}Error: Python is not installed or not in PATH${NC}"
-    echo "Please install Python 3.11+ and try again"
+    echo -e "${RED}Error: Python is not installed${NC}"
     exit 1
   fi
-
-  # Check Python version
-  local python_version
-  python_version=$(python --version | awk '{print $2}')
-  local python_major
-  python_major=$(echo $python_version | cut -d. -f1)
-  local python_minor
-  python_minor=$(echo $python_version | cut -d. -f2)
-
-  if [ "$python_major" -lt 3 ] || ([ "$python_major" -eq 3 ] && [ "$python_minor" -lt 11 ]); then
-    echo -e "${RED}Error: Python 3.11+ is required, found $python_version${NC}"
-    echo "Please upgrade Python and try again"
-    exit 1
-  fi
-
-  echo -e "${GREEN}✓ Python $python_version is available${NC}"
+  echo -e "${GREEN}✓ Python is available${NC}"
 }
 
 # Function to check if Node.js is available
 check_node() {
   if ! command -v node &> /dev/null; then
-    echo -e "${RED}Error: Node.js is not installed or not in PATH${NC}"
-    echo "Please install Node.js and try again"
+    echo -e "${RED}Error: Node.js is not installed${NC}"
     exit 1
   fi
-
-  if ! command -v npm &> /dev/null; then
-    echo -e "${RED}Error: npm is not installed or not in PATH${NC}"
-    echo "Please install npm and try again"
-    exit 1
-  fi
-
-  echo -e "${GREEN}✓ Node.js $(node --version) and npm $(npm --version) are available${NC}"
+  echo -e "${GREEN}✓ Node.js is available${NC}"
 }
 
 # Function to check if Biome is available

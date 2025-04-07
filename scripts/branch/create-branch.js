@@ -5,15 +5,8 @@
  * Updated for new workflow (feat/fix → dev → main)
  */
 
-// Try to load dependencies
-let inquirer;
-try {
-  inquirer = require("inquirer");
-} catch (error) {
-  console.log("Inquirer not found, using fallback for non-interactive mode");
-}
-const { execSync } = require("child_process");
-const readline = require("readline");
+const { execSync } = require('child_process');
+const readline = require('readline');
 
 // ANSI color codes
 const colors = {
@@ -25,20 +18,6 @@ const colors = {
   magenta: "\x1b[35m",
   cyan: "\x1b[36m",
 };
-
-let chalk;
-try {
-  chalk = require("chalk");
-} catch (error) {
-  chalk = {
-    green: (text) => `${colors.green}${text}${colors.reset}`,
-    yellow: (text) => `${colors.yellow}${text}${colors.reset}`,
-    red: (text) => `${colors.red}${text}${colors.reset}`,
-    blue: (text) => `${colors.blue}${text}${colors.reset}`,
-    magenta: (text) => `${colors.magenta}${text}${colors.reset}`,
-    cyan: (text) => `${colors.cyan}${text}${colors.reset}`,
-  };
-}
 
 // Command line arguments
 const args = process.argv.slice(2);
@@ -68,8 +47,15 @@ const rl = readline.createInterface({
 
 const branchTypes = ["feat", "fix"];
 
-function isValidBranchName(name) {
-  return /^[a-z0-9-]+$/.test(name);
+// Utility function to convert to param case
+function paramCase(input) {
+  if (!input) return '';
+  return input
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/^-+|-+$/g, '');
 }
 
 function runGitCommand(command) {
@@ -153,6 +139,10 @@ async function askBranchType() {
   });
 }
 
+function isValidBranchName(name) {
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name);
+}
+
 async function askBranchName() {
   return new Promise((resolve) => {
     rl.question(
@@ -179,6 +169,7 @@ async function askAutomerge() {
 
 async function main() {
   let success = false;
+
   try {
     // Non-interactive mode
     if (branchType && branchName) {
@@ -186,13 +177,11 @@ async function main() {
         console.error("Invalid branch type");
         return false;
       }
-      if (!isValidBranchName(branchName)) {
-        console.error("Invalid branch name");
-        return false;
-      }
+
+      const normalizedBranchName = paramCase(branchName);
 
       await updateDevBranch();
-      success = createBranchWithParams(branchType, branchName, automerge);
+      success = createBranchWithParams(branchType, normalizedBranchName, automerge);
       return success;
     }
 
@@ -201,12 +190,14 @@ async function main() {
     branchType = await askBranchType();
     branchName = await askBranchName();
 
+    const normalizedBranchName = paramCase(branchName);
+
     if (branchType === "fix") {
       automerge = await askAutomerge();
     }
 
     await updateDevBranch();
-    success = createBranchWithParams(branchType, branchName, automerge);
+    success = createBranchWithParams(branchType, normalizedBranchName, automerge);
     return success;
   } catch (error) {
     console.error("An error occurred:", error);

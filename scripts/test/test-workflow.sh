@@ -1,4 +1,33 @@
 #!/usr/bin/env bash
+#
+# ===================================================================
+# GITHUB WORKFLOW TESTER
+# ===================================================================
+#
+# PURPOSE:
+#   Tests GitHub Actions workflows locally using act.
+#   Validates that workflow files are working correctly before pushing.
+#
+# USAGE:
+#   ./scripts/test/test-workflow.sh [workflow_file] [event_type] [branch]
+#   ./scripts/test/test-workflow.sh -w workflow_file -e event_type [-b branch]
+#
+# ARGUMENTS:
+#   workflow_file  Path to the workflow file to test
+#   event_type     Event type to trigger (push, pull_request, etc.)
+#   branch         Optional branch name to use for the test
+#
+# OPTIONS:
+#   -w, --workflow  Workflow file to test
+#   -e, --event     Event type to trigger
+#   -b, --branch    Branch name to use for the test
+#   -h, --help      Show help message
+#
+# DEPENDENCIES:
+#   - act (GitHub Actions local runner)
+#   - Docker
+#
+# ===================================================================
 
 # Colors for output
 GREEN="\033[0;32m"
@@ -34,13 +63,13 @@ validate_workflow() {
 
 # Function to validate event type
 validate_event() {
-    local event=$1
-    case $event in
+    local event_type=$1
+    case $event_type in
         push|pull_request|workflow_dispatch)
-            return 0
             ;;
         *)
-            log $RED "Error: Invalid event type. Supported events: push, pull_request, workflow_dispatch"
+            log $RED "Error: Unsupported event type: ${event_type}"
+            log $YELLOW "Supported event types: push, pull_request, workflow_dispatch"
             exit 1
             ;;
     esac

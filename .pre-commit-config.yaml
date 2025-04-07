@@ -53,7 +53,7 @@ repos:
     hooks:
       - id: block-main-push
         name: Block direct pushes to main
-        entry: scripts/block-main-push.py
+        entry: scripts/branch/block-main-push.py
         language: script
         pass_filenames: false
         stages: [pre-push]

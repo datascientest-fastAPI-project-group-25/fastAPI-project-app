@@ -1,20 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Interactive pre-commit setup CLI
- * Supports both interactive and non-interactive modes
+ * Pre-commit setup script
+ * Installs and configures pre-commit hooks for the project
  */
 
-// Try to load dependencies
-let inquirer;
-try {
-  inquirer = require("inquirer");
-} catch (error) {
-  console.log("Inquirer not found, using fallback for non-interactive mode");
-}
-
-const { execSync } = require("child_process");
-const readline = require("readline");
+const { execSync } = require('child_process');
+const readline = require('readline');
 
 // ANSI color codes
 const colors = {
@@ -23,8 +15,6 @@ const colors = {
   yellow: "\x1b[33m",
   red: "\x1b[31m",
   blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
 };
 
 let chalk;
@@ -33,38 +23,22 @@ try {
 } catch (error) {
   chalk = {
     green: (text) => `${colors.green}${text}${colors.reset}`,
+    blue: (text) => `${colors.blue}${text}${colors.reset}`,
     yellow: (text) => `${colors.yellow}${text}${colors.reset}`,
     red: (text) => `${colors.red}${text}${colors.reset}`,
-    blue: (text) => `${colors.blue}${text}${colors.reset}`,
-    magenta: (text) => `${colors.magenta}${text}${colors.reset}`,
-    cyan: (text) => `${colors.cyan}${text}${colors.reset}`,
   };
 }
 
 // Command line arguments
 const args = process.argv.slice(2);
-let force = false;
+const force = args.includes("--force") || args.includes("-f");
 
-// Parse command line arguments
-for (let i = 0; i < args.length; i++) {
-  switch (args[i]) {
-    case "--force":
-      force = true;
-      break;
-  }
-}
-
-// Helper function to run commands
-function runCommand(command, options = {}) {
+// Run a command and return its output
+function runCommand(command) {
   try {
-    return execSync(command, {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "pipe"],
-      ...options,
-    }).trim();
+    return execSync(command, { encoding: 'utf8' });
   } catch (error) {
-    console.error(chalk.red(`Error executing command: ${error.message}`));
-    throw error;
+    throw new Error(`Command failed: ${command}\n${error.message}`);
   }
 }
 
@@ -72,11 +46,27 @@ function runCommand(command, options = {}) {
 async function checkPreCommit() {
   try {
     runCommand("pre-commit --version");
-    console.log(chalk.green("✓ pre-commit is installed"));
+    console.log(chalk.green("✓ pre-commit is already installed"));
     return true;
   } catch (error) {
+    console.log(chalk.yellow("pre-commit is not installed"));
     return false;
   }
+}
+
+// Get interactive mode
+async function getInteractiveMode() {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    rl.question(chalk.blue("Would you like to install pre-commit? (y/N): "), (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === "y");
+    });
+  });
 }
 
 // Install pre-commit using pip
@@ -129,18 +119,6 @@ async function installPreCommit() {
 // Install git hooks
 async function installGitHooks() {
   try {
-    // Check if hooksPath is set
-    const hooksPath = runCommand("git config --get core.hooksPath", {
-      stdio: ["pipe", "pipe", "ignore"],
-      encoding: "utf8"
-    }).trim();
-
-    if (hooksPath) {
-      console.log(chalk.yellow(`Found core.hooksPath: ${hooksPath}`));
-      console.log(chalk.yellow("Unsetting core.hooksPath to install pre-commit hooks..."));
-      runCommand("git config --unset-all core.hooksPath");
-    }
-
     console.log(chalk.blue("Installing git hooks with pre-commit..."));
     runCommand("pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push");
     console.log(chalk.green("✓ Git hooks installed successfully"));
@@ -152,25 +130,6 @@ async function installGitHooks() {
     console.error(chalk.yellow("pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push"));
     return false;
   }
-}
-
-// Interactive mode prompts
-async function getInteractiveMode() {
-  if (!inquirer) {
-    console.log(chalk.yellow("Inquirer not available, using non-interactive mode"));
-    return true;
-  }
-
-  const { proceed } = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "proceed",
-      message: "pre-commit is not installed. Would you like to install it?",
-      default: true,
-    },
-  ]);
-
-  return proceed;
 }
 
 // Main execution

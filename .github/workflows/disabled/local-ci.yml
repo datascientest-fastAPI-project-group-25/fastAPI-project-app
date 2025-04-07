@@ -2,9 +2,9 @@ name: Local CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main, stg ]
   pull_request:
-    branches: [ main, dev ]
+    branches: [ main, stg ]
   workflow_call:
     inputs:
       target:
