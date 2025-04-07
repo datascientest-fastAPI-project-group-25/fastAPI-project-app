@@ -44,6 +44,11 @@ jobs:
         with:
           github_token: ${{ secrets.MACHINE_USER_TOKEN }}
           target_branch: stg
+          title: "${{ env.TYPE }}: Promote ${{ env.BRANCH_NAME }} to stg"
+          body: |
+            This PR promotes branch **${{ env.BRANCH_NAME }}** to **stg**.
+
+            _Automated PR created by workflow._
 
       - name: PR Details
         if: steps.create-pr.outputs.pull-request-number
