@@ -5,13 +5,14 @@
 # Setup - runs before each test
 setup() {
   # Create a temporary directory for test files
-  export TEMP_DIR="$(mktemp -d)"
+  TEMP_DIR="$(mktemp -d)"
+  export TEMP_DIR
 
   # Save the original directory
   export ORIG_DIR="$PWD"
 
   # Change to the temp directory
-  cd "$TEMP_DIR"
+  cd "$TEMP_DIR" || exit
 
   # Create a mock git repository
   git init
@@ -21,8 +22,7 @@ setup() {
   git add README.md
   git commit -m "Initial commit"
 
-  # Create main and stg branches
-  git branch main
+  # Create stg branch (main branch is already created by default in newer Git versions)
   git branch stg
 
   # Create a feature branch
@@ -44,7 +44,7 @@ setup() {
 # Teardown - runs after each test
 teardown() {
   # Return to the original directory
-  cd "$ORIG_DIR"
+  cd "$ORIG_DIR" || exit
 
   # Clean up the temporary directory
   rm -rf "$TEMP_DIR"

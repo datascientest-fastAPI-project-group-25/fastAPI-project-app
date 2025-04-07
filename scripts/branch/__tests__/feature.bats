@@ -5,13 +5,14 @@
 # Setup - runs before each test
 setup() {
   # Create a temporary directory for test files
-  export TEMP_DIR="$(mktemp -d)"
+  TEMP_DIR="$(mktemp -d)"
+  export TEMP_DIR
 
   # Save the original directory
   export ORIG_DIR="$PWD"
 
   # Change to the temp directory
-  cd "$TEMP_DIR"
+  cd "$TEMP_DIR" || exit
 
   # Create a mock git repository
   git init
@@ -21,8 +22,8 @@ setup() {
   git add README.md
   git commit -m "Initial commit"
 
-  # Create main branch
-  git branch -m master main
+  # Create main branch (already created by default in newer Git versions)
+  # No need to rename from master to main
 
   # Create a mock version of the script for testing
   export SCRIPT_PATH="$TEMP_DIR/feature.sh"
@@ -30,13 +31,13 @@ setup() {
   chmod +x "$SCRIPT_PATH"
 
   # Mock external commands
-  mock_command "git" "echo 'Git command executed: $@'; exit 0"
+  mock_command "git" "echo 'Git command executed:' \"\$@\"; exit 0"
 }
 
 # Teardown - runs after each test
 teardown() {
   # Return to the original directory
-  cd "$ORIG_DIR"
+  cd "$ORIG_DIR" || exit
 
   # Clean up the temporary directory
   rm -rf "$TEMP_DIR"
@@ -58,7 +59,23 @@ EOF
 
 # Test branch name validation
 @test "feature.sh validates branch names correctly" {
-  # Extract the validate_branch_name function from the script
+  # Create a modified version of the script with just the validate_branch_name function
+  cat > "$SCRIPT_PATH" << 'EOF'
+#!/bin/bash
+# Function to validate branch name
+validate_branch_name() {
+    local name=$1
+    if [[ ! $name =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+        echo "Invalid branch name. Use lowercase letters, numbers, and hyphens only."
+        return 1
+    fi
+    return 0
+}
+EOF
+  chmod +x "$SCRIPT_PATH"
+
+  # Source the script to get the function
+  # shellcheck source=/dev/null
   source "$SCRIPT_PATH"
 
   # Test valid branch names
@@ -69,14 +86,14 @@ EOF
   [ "$?" -eq 0 ]
 
   # Test invalid branch names
-  validate_branch_name "Feature_Name"
-  [ "$?" -eq 1 ]
+  run validate_branch_name "Feature_Name"
+  [ "$status" -eq 1 ]
 
-  validate_branch_name "feature name"
-  [ "$?" -eq 1 ]
+  run validate_branch_name "feature name"
+  [ "$status" -eq 1 ]
 
-  validate_branch_name "feature_name"
-  [ "$?" -eq 1 ]
+  run validate_branch_name "feature_name"
+  [ "$status" -eq 1 ]
 }
 
 # Test handling unstaged changes
@@ -113,7 +130,7 @@ EOF
 # Test creating dev branch
 @test "feature.sh creates dev branch if it doesn't exist" {
   # Mock git to simulate dev branch not existing
-  mock_command "git" "if [[ \$* == *show-ref* && \$* == *dev* ]]; then exit 1; else echo 'Git command executed: $@'; exit 0; fi"
+  mock_command "git" "if [[ \$* == *show-ref* && \$* == *dev* ]]; then exit 1; else echo 'Git command executed:' \"\$@\"; exit 0; fi"
 
   # Create a modified version of the script for testing
   cat > "$SCRIPT_PATH" << 'EOF'
@@ -198,7 +215,7 @@ EOF
 # Test error when branch already exists
 @test "feature.sh shows error when branch already exists" {
   # Mock git to simulate branch already existing
-  mock_command "git" "if [[ \$* == *show-ref* && \$* == *feat/existing-feature* ]]; then exit 0; else echo 'Git command executed: $@'; exit 0; fi"
+  mock_command "git" "if [[ \$* == *show-ref* && \$* == *feat/existing-feature* ]]; then exit 0; else echo 'Git command executed:' \"\$@\"; exit 0; fi"
 
   # Create a modified version of the script for testing
   cat > "$SCRIPT_PATH" << 'EOF'

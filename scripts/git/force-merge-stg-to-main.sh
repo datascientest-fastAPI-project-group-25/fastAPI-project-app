@@ -74,7 +74,7 @@ success "Force pushed main"
 # Step 5: Clean up branches
 echo -e "${YELLOW}Step 5: Cleaning up branches${NC}"
 # Get all branches except main and stg
-BRANCHES_TO_DELETE=$(git branch | grep -v "main" | grep -v "stg" | grep -v "\*" | tr -d ' ')
+BRANCHES_TO_DELETE=$(git branch | grep -v "main" | grep -v "stg" | grep -v "\*" | sed 's/^[[:space:]]*//')
 
 if [ -z "$BRANCHES_TO_DELETE" ]; then
     warning "No branches to delete"
@@ -101,9 +101,6 @@ fi
 # Step 6: Return to original branch
 echo -e "${YELLOW}Step 6: Returning to original branch${NC}"
 if [ "$CURRENT_BRANCH" != "main" ] && [ "$CURRENT_BRANCH" != "stg" ]; then
-    warning "Original branch $CURRENT_BRANCH might have been deleted"
-    warning "Staying on main branch"
-else
     if ! git checkout "$CURRENT_BRANCH"; then
         error "Failed to checkout original branch: $CURRENT_BRANCH"
         warning "Staying on main branch"
