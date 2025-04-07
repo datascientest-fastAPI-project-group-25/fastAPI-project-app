@@ -1,4 +1,6 @@
-name: Experimental PR Creation - Peter Evans
+name: PR Creation - with Machine User Token
+# This workflow creates a pull request from a feature or fix branch to the staging branch.
+# It is triggered on push events to branches that start with 'feat/' or 'fix/'.
 
 on:
   push:
