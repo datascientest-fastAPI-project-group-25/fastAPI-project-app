@@ -1,0 +1,53 @@
+name: Build and Push Staging Images
+
+on:
+  push:
+    branches:
+      - stg
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  determine-bump-type:
+    runs-on: ubuntu-latest
+    outputs:
+      bump_type: ${{ steps.determine-bump-type.outputs.bump_type }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine bump type from commit message
+        id: determine-bump-type
+        run: |
+          # Get the merge commit message
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+
+          if [[ "$COMMIT_MSG" == *"Merge pull request"* ]]; then
+            PR_BRANCH=$(echo "$COMMIT_MSG" | grep -o "from [^ ]* " | sed 's/from //' | sed 's/ //')
+            echo "PR branch: $PR_BRANCH"
+
+            if [[ "$PR_BRANCH" == feat/* ]]; then
+              echo "bump_type=minor" >> $GITHUB_OUTPUT
+              echo "PR is a feature branch, will bump minor version"
+            elif [[ "$PR_BRANCH" == fix/* ]]; then
+              echo "bump_type=patch" >> $GITHUB_OUTPUT
+              echo "PR is a fix branch, will bump patch version"
+            else
+              echo "bump_type=patch" >> $GITHUB_OUTPUT
+              echo "PR branch type not recognized, defaulting to patch version bump"
+            fi
+          else
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            echo "Not a merge commit, defaulting to patch version bump"
+          fi
+
+  build-stg-images:
+    needs: determine-bump-type
+    uses: ./.github/workflows/build-image.yml
+    with:
+      environment: stg
+      version_bump_type: ${{ needs.determine-bump-type.outputs.bump_type }}
