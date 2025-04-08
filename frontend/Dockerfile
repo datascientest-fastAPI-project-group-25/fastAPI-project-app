@@ -57,8 +57,17 @@ COPY --from=deps /app/frontend/node_modules ./frontend/node_modules
 # Build the application
 WORKDIR /app/frontend
 # Install specific Rollup dependencies for Alpine Linux
-RUN apk add --no-cache python3 make g++
-RUN pnpm install --no-save @rollup/rollup-linux-x64-musl
+RUN apk add --no-cache python3 make g++ curl
+
+# Install uv for faster Python package management
+RUN curl -sSf https://astral.sh/uv/install.sh | sh
+
+# Use pre-built binaries for Rollup when possible
+ENV ROLLUP_SKIP_NODEJS=true
+ENV ROLLUP_NATIVE_BUILD=false
+
+# Install Rollup with optimized settings
+RUN PNPM_CACHE_FOLDER="/tmp/.pnpm-cache" pnpm install --no-save --prefer-offline --ignore-scripts @rollup/rollup-linux-x64-musl
 
 # Install React type declarations and other required packages
 RUN pnpm install --no-save @types/react @vitejs/plugin-react vite
@@ -74,10 +83,10 @@ RUN echo '{"extends": "./tsconfig.json", "compilerOptions": {"skipLibCheck": tru
 RUN echo 'import { defineConfig } from "vite"; import react from "@vitejs/plugin-react"; export default defineConfig({ plugins: [react()], build: { outDir: "dist" } });' > /app/frontend/vite.config.js
 
 # Install all required packages in the frontend directory, skipping husky hooks
-RUN pnpm install --ignore-scripts
+RUN pnpm install --ignore-scripts --prefer-offline --no-optional
 
-# Build using Vite directly, skipping TypeScript type checking
-RUN NODE_ENV=production npx vite build
+# Build using Vite directly with optimized settings
+RUN NODE_ENV=production NODE_OPTIONS="--max-old-space-size=4096" npx vite build --emptyOutDir
 
 # Stage 2: Development stage (used for development)
 FROM --platform=linux/amd64 node:18-alpine AS development
