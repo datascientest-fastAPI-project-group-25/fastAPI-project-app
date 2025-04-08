@@ -3,6 +3,9 @@ FROM --platform=linux/amd64 node:18-alpine AS deps
 
 # Install pnpm and TypeScript globally
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
+# Set up PNPM_HOME and add it to PATH
+ENV PNPM_HOME=/usr/local/bin
+ENV PATH="$PNPM_HOME:$PATH"
 RUN pnpm install -g typescript@latest
 
 # Set environment variables to avoid optional dependency issues
@@ -31,6 +34,9 @@ FROM --platform=linux/amd64 node:18-alpine AS builder
 
 # Install pnpm and TypeScript globally
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
+# Set up PNPM_HOME and add it to PATH
+ENV PNPM_HOME=/usr/local/bin
+ENV PATH="$PNPM_HOME:$PATH"
 RUN pnpm install -g typescript@latest
 
 # Set environment variables
@@ -78,6 +84,9 @@ FROM --platform=linux/amd64 node:18-alpine AS development
 
 # Install pnpm and TypeScript globally
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
+# Set up PNPM_HOME and add it to PATH
+ENV PNPM_HOME=/usr/local/bin
+ENV PATH="$PNPM_HOME:$PATH"
 RUN pnpm install -g typescript@latest
 
 # Set environment variables
@@ -107,7 +116,11 @@ WORKDIR /app
 COPY --from=builder /app/frontend/dist ./frontend/dist
 COPY --from=builder /app/frontend/package.json ./frontend/
 
-# Install only production dependencies
+# Install pnpm and serve
+RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
+# Set up PNPM_HOME and add it to PATH
+ENV PNPM_HOME=/usr/local/bin
+ENV PATH="$PNPM_HOME:$PATH"
 RUN pnpm install -g serve
 
 # Expose port
