@@ -1,0 +1,53 @@
+name: Promote Staging to Main on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - stg
+  push:
+    branches:
+      - stg
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  extract-info:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      pr_title: ${{ steps.extract.outputs.pr_title }}
+      pr_body: ${{ steps.extract.outputs.pr_body }}
+    steps:
+      - name: Extract PR info
+        id: extract
+        run: |
+          {
+            echo 'pr_title<<EOF'
+            echo "${{ github.event.pull_request.title }}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo 'pr_body<<EOF'
+            echo "${{ github.event.pull_request.body }}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+  promote-stg-to-main:
+    needs: extract-info
+    uses: ./.github/workflows/pr-creation.yml
+    with:
+      source_branch: stg
+      target_branch: main
+      pr_title: "Promote staging to main: ${{ needs.extract-info.outputs.pr_title }}"
+      pr_body: |
+        Automated PR to promote changes from **stg** to **main**.
+
+        Original PR:
+
+        ${{ needs.extract-info.outputs.pr_body }}
+    secrets:
+      MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
