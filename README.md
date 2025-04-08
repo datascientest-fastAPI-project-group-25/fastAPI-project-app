@@ -338,7 +338,7 @@ Before running workflow tests, you need to build the custom Docker image used fo
 
 ```bash
 # Build the workflow test Docker image
-docker build -t local/workflow-test:latest -f .github/workflows/utils/Dockerfile.workflow-test .
+docker build -t local/workflow-test:latest -f .github/utils/Dockerfile.workflow-test .
 ```
 
 ## 🔄 CI/CD Pipeline
