@@ -5,6 +5,7 @@ FROM --platform=linux/amd64 node:18-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 # Set up PNPM_HOME and add it to PATH
 ENV PNPM_HOME=/usr/local/bin
+ENV PATH="$PNPM_HOME:$PATH"
 RUN pnpm install -g typescript@latest
 
 # Set environment variables to avoid optional dependency issues
@@ -35,6 +36,7 @@ FROM --platform=linux/amd64 node:18-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 # Set up PNPM_HOME and add it to PATH
 ENV PNPM_HOME=/usr/local/bin
+ENV PATH="$PNPM_HOME:$PATH"
 RUN pnpm install -g typescript@latest
 
 # Set environment variables
@@ -84,6 +86,7 @@ FROM --platform=linux/amd64 node:18-alpine AS development
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 # Set up PNPM_HOME and add it to PATH
 ENV PNPM_HOME=/usr/local/bin
+ENV PATH="$PNPM_HOME:$PATH"
 RUN pnpm install -g typescript@latest
 
 # Set environment variables
@@ -117,6 +120,7 @@ COPY --from=builder /app/frontend/package.json ./frontend/
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 # Set up PNPM_HOME and add it to PATH
 ENV PNPM_HOME=/usr/local/bin
+ENV PATH="$PNPM_HOME:$PATH"
 RUN pnpm install -g serve
 
 # Expose port
