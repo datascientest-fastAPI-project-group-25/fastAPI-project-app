@@ -79,13 +79,21 @@ jobs:
           ENV="${{ inputs.environment }}"
           VERSION="${{ needs.bump-version.outputs.new_version }}"
           PREFIX="${{ inputs.image_tag_prefix }}"
+          SHORT_SHA="$(echo ${{ github.sha }} | cut -c1-7)"
 
           if [ -n "$PREFIX" ]; then
             PREFIX="${PREFIX}-"
           fi
 
-          BACKEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}${ENV},ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}${VERSION}"
-          FRONTEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${PREFIX}${ENV},ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${PREFIX}${VERSION}"
+          if [ "$ENV" == "stg" ]; then
+            # For staging: version+githash
+            BACKEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}${VERSION}-${SHORT_SHA}"
+            FRONTEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${PREFIX}${VERSION}-${SHORT_SHA}"
+          else
+            # For production: only version
+            BACKEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}${VERSION}"
+            FRONTEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${PREFIX}${VERSION}"
+          fi
 
           echo "backend_tags=$BACKEND_TAGS" >> $GITHUB_OUTPUT
           echo "frontend_tags=$FRONTEND_TAGS" >> $GITHUB_OUTPUT
@@ -124,6 +132,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const sha = context.sha;
+            const shortSha = sha.substring(0, 7);
             const version = '${{ needs.bump-version.outputs.new_version }}';
             const bumpType = '${{ needs.bump-version.outputs.bump_type }}';
             const env = '${{ inputs.environment }}';
@@ -139,10 +148,19 @@ jobs:
             }
 
             const envName = env === 'stg' ? 'Staging' : 'Production';
+            let imageTagsMessage = '';
+
+            if (env === 'stg') {
+              // For staging: version+githash
+              imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}-${shortSha}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}-${shortSha}\``;
+            } else {
+              // For production: only version
+              imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}\``;
+            }
 
             github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: sha,
-              body: `## 🚀 ${envName} Images Built and Pushed\n\n${bumpMessage}: **${version}**\n\nImages are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${env}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${env}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}\``
+              body: `## 🚀 ${envName} Images Built and Pushed\n\n${bumpMessage}: **${version}**\n\n${imageTagsMessage}`
             });
