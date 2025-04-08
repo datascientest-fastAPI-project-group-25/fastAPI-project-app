@@ -1,0 +1,25 @@
+name: Feature/Fix to Staging PR Creation
+
+on:
+  push:
+    branches:
+      - 'feat/*'
+      - 'fix/*'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  call-reusable-pr:
+    uses: ./.github/workflows/reusable/pr-creation.yml
+    with:
+      source_branch: ${{ github.ref_name }}
+      target_branch: stg
+      pr_title: "${{ github.ref_name }}: Promote to stg"
+      pr_body: |
+        This PR promotes branch **${{ github.ref_name }}** to **stg**.
+
+        _Automated PR created by workflow._
+    secrets:
+      MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
