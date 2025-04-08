@@ -1,0 +1,17 @@
+name: Build and Push Production Images
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-prod-images:
+    uses: ./.github/workflows/build-image.yml
+    with:
+      environment: prod
+      version_bump_type: patch
