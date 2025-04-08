@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   call-reusable-pr:
-    uses: ./.github/workflows/reusable/pr-creation.yml
+    uses: ./.github/workflows/pr-creation.yml
     with:
       source_branch: ${{ github.ref_name }}
       target_branch: stg
