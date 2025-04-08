@@ -124,12 +124,16 @@ jobs:
 
           if [ "$ENV" == "stg" ]; then
             # For staging: version+githash
-            BACKEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}${VERSION}-${SHORT_SHA}"
-            FRONTEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${PREFIX}${VERSION}-${SHORT_SHA}"
+            REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+            BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}${VERSION}-${SHORT_SHA}"
+            FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}${VERSION}-${SHORT_SHA}"
           else
             # For production: only version
-            BACKEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}${VERSION}"
-            FRONTEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${PREFIX}${VERSION}"
+            REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+            BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}${VERSION}"
+            FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}${VERSION}"
           fi
 
           echo "backend_tags=$BACKEND_TAGS" >> $GITHUB_OUTPUT
@@ -197,20 +201,32 @@ jobs:
           echo "::error::Frontend image build failed"
           exit 1
 
+      - name: Extract backend image tag
+        id: extract-backend-tag
+        run: |
+          BACKEND_TAG="${{ steps.set-tags.outputs.backend_tags }}"
+          echo "image_tag=$BACKEND_TAG" >> $GITHUB_OUTPUT
+
       - name: Run Trivy vulnerability scanner for backend
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: $(echo "${{ steps.set-tags.outputs.backend_tags }}" | cut -d',' -f1)
+          image-ref: ${{ steps.extract-backend-tag.outputs.image_tag }}
           format: 'sarif'
           output: 'trivy-backend-results.sarif'
           severity: 'CRITICAL,HIGH'
           exit-code: '0'  # Don't fail the build, just report
           ignore-unfixed: true
 
+      - name: Extract frontend image tag
+        id: extract-frontend-tag
+        run: |
+          FRONTEND_TAG="${{ steps.set-tags.outputs.frontend_tags }}"
+          echo "image_tag=$FRONTEND_TAG" >> $GITHUB_OUTPUT
+
       - name: Run Trivy vulnerability scanner for frontend
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: $(echo "${{ steps.set-tags.outputs.frontend_tags }}" | cut -d',' -f1)
+          image-ref: ${{ steps.extract-frontend-tag.outputs.image_tag }}
           format: 'sarif'
           output: 'trivy-frontend-results.sarif'
           severity: 'CRITICAL,HIGH'
@@ -255,12 +271,15 @@ jobs:
             const envName = env === 'stg' ? 'Staging' : 'Production';
             let imageTagsMessage = '';
 
+            const repoOwner = context.repo.owner.toLowerCase();
+            const repoName = context.repo.repo.toLowerCase();
+
             if (env === 'stg') {
               // For staging: version+githash
-              imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}-${shortSha}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}-${shortSha}\``;
+              imageTagsMessage = `Images are available at:\n- \`ghcr.io/${repoOwner}/${repoName}-backend:${prefix}${version}-${shortSha}\`\n- \`ghcr.io/${repoOwner}/${repoName}-frontend:${prefix}${version}-${shortSha}\``;
             } else {
               // For production: only version
-              imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}\``;
+              imageTagsMessage = `Images are available at:\n- \`ghcr.io/${repoOwner}/${repoName}-backend:${prefix}${version}\`\n- \`ghcr.io/${repoOwner}/${repoName}-frontend:${prefix}${version}\``;
             }
 
             github.rest.repos.createCommitComment({
