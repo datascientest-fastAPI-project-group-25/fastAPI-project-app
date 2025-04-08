@@ -29,7 +29,7 @@ jobs:
 
   promote-stg-to-main:
     needs: extract-info
-    uses: ./.github/workflows/reusable/pr-creation.yml
+    uses: ./.github/workflows/pr-creation.yml
     with:
       source_branch: stg
       target_branch: main
