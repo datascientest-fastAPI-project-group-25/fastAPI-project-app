@@ -1,0 +1,16 @@
+{
+    "action": "closed",
+    "pull_request": {
+        "merged": true,
+        "title": "Fix bug in API",
+        "body": "This PR fixes a critical bug in the API.",
+        "number": 42,
+        "head": {
+            "ref": "feat/test-feature"
+        }
+    },
+    "repository": {
+        "full_name": "your-org/your-repo"
+    },
+    "ref": "refs/heads/stg"
+}

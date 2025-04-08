@@ -43,7 +43,7 @@ RUN npm install -g pnpm && \
 WORKDIR /workspace
 
 # Copy the entrypoint script
-COPY .github/workflows/utils/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY .github/utils/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Set the entrypoint

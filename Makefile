@@ -529,30 +529,19 @@ test-hooks: ## Test git hooks locally
 	@pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 	@echo "✨ Git hooks setup complete!"
 
-test-workflow: ## Test a GitHub workflow interactively
-	@echo "🔄 Testing GitHub workflow..."
-	@npx ts-node ./scripts/test/test-workflow-selector.ts
-
-test-ci-workflow: ## Test the complete CI/CD workflow pipeline
-	@echo "🔄 Testing CI/CD workflow pipeline..."
-	@./scripts/ci/test-ci-workflow.sh
-
-test-workflow-params: ## Test a specific GitHub workflow
-	@if [ -z "$(workflow)" ] || [ -z "$(event)" ]; then \
-		echo "⚠️  Usage: make test-workflow-params workflow=<workflow-file> event=<event-type>"; \
+test-workflow: ## Test a GitHub workflow with params: workflow=<file> event=<event>
+	@if [ -n "$(workflow)" ] && [ -n "$(event)" ]; then \
+		echo "🔄 Testing workflow $(workflow) with event $(event)..."; \
+		if [ ! -f ".github/test-events/$(event).json" ]; then \
+			echo "⚠️  Event file .github/test-events/$(event).json not found"; \
+			exit 1; \
+		fi; \
+		./scripts/test/test-workflow.sh .github/workflows/$(workflow) $(event); \
+	else \
+		echo "⚠️  Please provide workflow=<file> and event=<event> parameters."; \
 		exit 1; \
 	fi
-	@echo "🔄 Testing workflow $(workflow) with event $(event)..."
-	@echo "ℹ️  Note: Some workflows may fail locally due to missing GitHub context:"
-	@echo "   - PR workflows: Missing PR title, labels, or review data"
-	@echo "   - Branch workflows: Missing branch context or protection rules"
-	@echo "   - These failures are expected locally and will work on GitHub"
-	@echo ""
-	@if [ ! -f ".github/workflows/events/$(event).json" ]; then \
-		echo "⚠️  Event file .github/workflows/events/$(event).json not found"; \
-		exit 1; \
-	fi
-	@./scripts/test/test-workflow.sh .github/workflows/$(workflow) $(event)
+
 
 test-all-workflows: ## Test all GitHub workflows with appropriate events
 	@echo "🔄 Testing all workflows..."
@@ -563,20 +552,9 @@ test-all-workflows: ## Test all GitHub workflows with appropriate events
 		set -e; \
 		FAILED=0; \
 		for workflow_event in \
-			"branch-protection.yml:pull_request" \
-			"linting.yml:workflow_call" \
-			"tests.yml:workflow_call" \
-			"formatting.yml:workflow_call" \
-			"dev-branch-checks.yml:push" \
-			"merge-to-main.yml:pull_request" \
-			"merge-to-staging.yml:pull_request" \
-			"merge-to-stg.yml:pull_request" \
-			"pr-to-main.yml:push" \
-			"pr-to-stg-creation.yml:push" \
-			"approve-pr.yml:pull_request" \
-			"automerge.yml:pull_request" \
-			"feature-branch-pr.yml:push" \
-			"pr-checks.yml:pull_request"; \
+			"pr-checks.yml:pull_request" \
+			"feature-to-staging.yml:push" \
+			"staging-to-main.yml:pull_request"; \
 		do \
 			IFS=: read -r workflow event <<< "$$workflow_event"; \
 			echo "🔄 Testing workflow: $$workflow with event: $$event"; \
