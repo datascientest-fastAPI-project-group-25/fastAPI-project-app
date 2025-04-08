@@ -33,12 +33,12 @@ These rules outline the desired workflow and interaction style.
     *   Ensure the Makefile is the single source of control for setup, development, git management (branches), and CI/CD processes.
 
 6.  **Branching Strategy:**
-    *   We use a `main` branch for production-ready code and a `dev` branch for integration.
+    *   We use a `main` branch for production-ready code and a `stg` branch for integration.
     *   Development happens on short-lived feature (`feat/*`) or fix (`fix/*`) branches, branched from `dev`.
     *   Pushing to a `feat/*` or `fix/*` branch should automatically open a Pull Request (currently non-functional).
     *   All Pull Requests require review before merging.
-    *   Merging a PR to `dev` triggers a new PR to `main`.
-    *   `fix/*automerge` branches are automatically merged to `dev` after review; otherwise, they require approval.
+    *   Merging a PR to `stg` triggers a new PR to `main`.
+    *   `fix/*automerge` branches are automatically merged to `stg` after review; otherwise, they require approval.
     *   Short-lived branches are deleted after merge.
 
 7.  **Git Branch Management:**

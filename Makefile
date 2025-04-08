@@ -39,6 +39,8 @@ help:
 	@echo "  make test-frontend      Run frontend tests (JavaScript/TypeScript with Vitest)"
 	@echo "  make test-e2e           Run end-to-end tests (simulates user interactions)"
 	@echo "  make test-integration   Run integration tests (tests API endpoints and database)"
+	@echo "  make test-scripts       Run script utils tests"
+	@echo "  make test-all           Run all test suites (backend, frontend, scripts)"
 	@echo "  make test-hooks         Test git hooks locally"
 	@echo "  make test-coverage      Run all tests with code coverage reporting"
 	@echo "  make test-backend-coverage  Run backend tests with code coverage reporting"
@@ -49,8 +51,12 @@ help:
 	@echo "  make cd                 Run full CD pipeline (build, deploy)"
 	@echo "  make test-workflow      Test GitHub workflow interactively"
 	@echo "  make test-workflow-params workflow=FILE event=TYPE  Test specific workflow"
-	@echo ""
 	@echo "  make manage-prs        Manage PRs (Dependabot, feature/fix branches)"
+	@echo ""
+	@echo "Branch Management:"
+	@echo "  make feat <branch-name>     Create a new feature branch (auto-formats name)"
+	@echo "  make fix <branch-name>      Create a new fix branch (auto-formats name)"
+	@echo ""
 	@echo "Code Quality Commands:"
 	@echo "  make lint               Run all linting checks"
 	@echo "  make format             Format all code"
@@ -67,11 +73,36 @@ help:
 	@echo "  make clean-all          Remove all generated files and Docker resources"
 
 #################################################
+# Branch Management                             #
+#################################################
+feat:
+	@branch_name="$(word 2,$(MAKECMDGOALS))"; \
+	if [ -z "$$branch_name" ]; then \
+		echo "Usage: make feat <branch-name>"; \
+		exit 1; \
+	fi; \
+	echo "Creating feature branch: $$branch_name"; \
+	node ./scripts/branch/create-branch.js --type feat --name "$$branch_name"
+
+fix:
+	@branch_name="$(word 2,$(MAKECMDGOALS))"; \
+	if [ -z "$$branch_name" ]; then \
+		echo "Usage: make fix <branch-name>"; \
+		exit 1; \
+	fi; \
+	echo "Creating fix branch: $$branch_name"; \
+	npx ts-node ./scripts/branch/create-branch.ts --type fix --name "$$branch_name"
+
+# Ignore branch name as a make target
+%:
+	@:
+
+#################################################
 # Setup and Installation                        #
 #################################################
 set-permissions: ## Set correct permissions for scripts
 	@echo "🔧 Setting script permissions..."
-	@chmod +x $(BACKEND_DIR)/scripts/*.sh
+	@find scripts -name "*.sh" -exec chmod +x {} \;
 	@echo "✨ Script permissions set!"
 
 setup: env install set-permissions ## Setup the complete project environment
@@ -159,6 +190,7 @@ frontend-logs: ## View frontend service logs
 # - Python and pytest must be available for backend tests (will be installed if not available)
 # - Node.js and pnpm must be available for frontend tests (will be installed if not available)
 #################################################
+
 test: ## Run all tests (backend, frontend, e2e, integration)
 	@echo "🧪 Running all tests (backend, frontend, e2e, integration)..."
 	@if ! $(DOCKER_COMPOSE) ps -q | grep -q .; then \
@@ -168,8 +200,8 @@ test: ## Run all tests (backend, frontend, e2e, integration)
 	@$(MAKE) install
 
 	@echo "📋 Checking for test files in all directories..."
-	@BACKEND_TESTS=$$($(DOCKER_COMPOSE) exec -T backend bash -c "find tests -name \"test_*.py\" | wc -l"); \
-	FRONTEND_TESTS=$$($(DOCKER_COMPOSE) exec -T frontend bash -c "find . -name \"*.test.ts\" -o -name \"*.test.tsx\" -o -name \"*.spec.ts\" -o -name \"*.spec.tsx\" | wc -l"); \
+	@BACKEND_TESTS=$$(docker compose exec -T backend bash -c "find tests -name \"test_*.py\" | wc -l"); \
+	FRONTEND_TESTS=$$(docker compose exec -T frontend bash -c "find . -name \"*.test.ts\" -o -name \"*.test.tsx\" -o -name \"*.spec.ts\" -o -name \"*.spec.tsx\" | wc -l"); \
 	echo "Found $$BACKEND_TESTS backend test files and $$FRONTEND_TESTS frontend test files"; \
 	if [ "$$BACKEND_TESTS" -eq 0 ]; then \
 		echo "⚠️ Warning: No backend test files found"; \
@@ -186,19 +218,19 @@ test: ## Run all tests (backend, frontend, e2e, integration)
 	@BACKEND_EXIT=0; \
 	FRONTEND_EXIT=0; \
 	E2E_EXIT=0; \
-	INTEGRATION_EXIT=0; \
+	INTEGRATION_EXIT=0;
 
 	@echo "🧪 Running backend tests..."; \
-	$(MAKE) test-backend || BACKEND_EXIT=$$?; \
+	$(MAKE) test-backend || BACKEND_EXIT=$$?;
 
 	@echo "🧪 Running frontend tests..."; \
-	$(MAKE) test-frontend || FRONTEND_EXIT=$$?; \
+	$(MAKE) test-frontend || FRONTEND_EXIT=$$?;
 
 	@echo "🧪 Running e2e tests..."; \
-	$(MAKE) test-e2e || E2E_EXIT=$$?; \
+	$(MAKE) test-e2e || E2E_EXIT=$$?;
 
 	@echo "🧪 Running integration tests..."; \
-	$(MAKE) test-integration || INTEGRATION_EXIT=$$?; \
+	$(MAKE) test-integration || INTEGRATION_EXIT=$$?;
 
 	@echo ""; \
 	echo "📊 Overall Test Summary:"; \
@@ -207,25 +239,25 @@ test: ## Run all tests (backend, frontend, e2e, integration)
 		echo "✅ Backend tests: PASSED"; \
 	else \
 		echo "❌ Backend tests: FAILED (exit code: $$BACKEND_EXIT)"; \
-	fi; \
+	fi;
 
 	if [ $$FRONTEND_EXIT -eq 0 ]; then \
 		echo "✅ Frontend tests: PASSED"; \
 	else \
 		echo "❌ Frontend tests: FAILED (exit code: $$FRONTEND_EXIT)"; \
-	fi; \
+	fi;
 
 	if [ $$E2E_EXIT -eq 0 ]; then \
 		echo "✅ E2E tests: PASSED"; \
 	else \
 		echo "❌ E2E tests: FAILED (exit code: $$E2E_EXIT)"; \
-	fi; \
+	fi;
 
 	if [ $$INTEGRATION_EXIT -eq 0 ]; then \
 		echo "✅ Integration tests: PASSED"; \
 	else \
 		echo "❌ Integration tests: FAILED (exit code: $$INTEGRATION_EXIT)"; \
-	fi; \
+	fi;
 
 	if [ $$BACKEND_EXIT -ne 0 ] || [ $$FRONTEND_EXIT -ne 0 ] || [ $$E2E_EXIT -ne 0 ] || [ $$INTEGRATION_EXIT -ne 0 ]; then \
 		echo ""; \
@@ -252,13 +284,13 @@ test-backend: ## Run backend tests (Python/pytest)
 
 	@echo "🔍 Checking for test files..."
 	@$(DOCKER_COMPOSE) exec -T backend bash -c "\
-		UNIT_TESTS=\$$(find tests/unit -name \"test_*.py\" | wc -l); \
-		INTEGRATION_TESTS=\$$(find tests/integration -name \"test_*.py\" | wc -l); \
-		API_TESTS=\$$(find tests/api -name \"test_*.py\" | wc -l); \
-		CRUD_TESTS=\$$(find tests/crud -name \"test_*.py\" | wc -l); \
-		echo \"Found \$$UNIT_TESTS unit tests, \$$INTEGRATION_TESTS integration tests, \$$API_TESTS API tests, \$$CRUD_TESTS CRUD tests\"; \
-		TOTAL_TESTS=\$$((UNIT_TESTS + INTEGRATION_TESTS + API_TESTS + CRUD_TESTS)); \
-		if [ \"\$$TOTAL_TESTS\" -eq 0 ]; then \
+		UNIT_TESTS=$$(find tests/unit -name \"test_*.py\" | wc -l); \
+		INTEGRATION_TESTS=$$(find tests/integration -name \"test_*.py\" | wc -l); \
+		API_TESTS=$$(find tests/api -name \"test_*.py\" | wc -l); \
+		CRUD_TESTS=$$(find tests/crud -name \"test_*.py\" | wc -l); \
+		echo \"Found $$UNIT_TESTS unit tests, $$INTEGRATION_TESTS integration tests, $$API_TESTS API tests, $$CRUD_TESTS CRUD tests\"; \
+		TOTAL_TESTS=$$(($$UNIT_TESTS + $$INTEGRATION_TESTS + $$API_TESTS + $$CRUD_TESTS)); \
+		if [ \"$$TOTAL_TESTS\" -eq 0 ]; then \
 			echo \"⚠️ Warning: No test files found in any test directory\"; \
 		fi"
 
@@ -272,21 +304,21 @@ test-backend: ## Run backend tests (Python/pytest)
 			echo \"Running all tests\"; \
 			uv run pytest tests -v | tee test_output.log; \
 		fi; \
-		TEST_EXIT_CODE=\$$?; \
-		FAILURES=\$$(grep -c \"FAILED\" test_output.log || true); \
-		WARNINGS=\$$(grep -c \"warning\" test_output.log || true); \
+		TEST_EXIT_CODE=$$?; \
+		FAILURES=$$(grep -c \"FAILED\" test_output.log || true); \
+		WARNINGS=$$(grep -c \"warning\" test_output.log || true); \
 		echo \"\"; \
 		echo \"📊 Test Summary:\"; \
 		echo \"===================\"; \
-		if [ \$$TEST_EXIT_CODE -ne 0 ]; then \
-			echo \"❌ Tests: FAILED (\$$FAILURES failures, \$$WARNINGS warnings)\"; \
+		if [ $$TEST_EXIT_CODE -ne 0 ]; then \
+			echo \"❌ Tests: FAILED ($$FAILURES failures, $$WARNINGS warnings)\"; \
 		else \
-			echo \"✅ Tests: PASSED (with \$$WARNINGS warnings)\"; \
+			echo \"✅ Tests: PASSED (with $$WARNINGS warnings)\"; \
 		fi; \
-		if [ \$$WARNINGS -gt 0 ]; then \
+		if [ $$WARNINGS -gt 0 ]; then \
 			echo \"⚠️ Warnings detected in tests. Check the output above for details.\"; \
 		fi; \
-		exit \$$TEST_EXIT_CODE"
+		exit $$TEST_EXIT_CODE"
 	@echo "🧪 Backend tests complete!"
 
 test-specific: ## Run specific backend tests (usage: make test-specific TEST_PATH=tests/path/to/test.py)
@@ -319,9 +351,9 @@ test-frontend: ## Run frontend tests (JavaScript/TypeScript with Vitest)
 
 	@echo "🔍 Checking for frontend test files..."
 	@$(DOCKER_COMPOSE) exec -T frontend bash -c "\
-		UNIT_TESTS=\$$(find . -name \"*.test.ts\" -o -name \"*.test.tsx\" -o -name \"*.spec.ts\" -o -name \"*.spec.tsx\" | wc -l); \
-		echo \"Found \$$UNIT_TESTS frontend test files\"; \
-		if [ \"\$$UNIT_TESTS\" -eq 0 ]; then \
+		UNIT_TESTS=$$(find . -name \"*.test.ts\" -o -name \"*.test.tsx\" -o -name \"*.spec.ts\" -o -name \"*.spec.tsx\" | wc -l); \
+		echo \"Found $$UNIT_TESTS frontend test files\"; \
+		if [ \"$$UNIT_TESTS\" -eq 0 ]; then \
 			echo \"⚠️ Warning: No frontend test files found\"; \
 		fi"
 
@@ -329,21 +361,21 @@ test-frontend: ## Run frontend tests (JavaScript/TypeScript with Vitest)
 	@$(DOCKER_COMPOSE) exec -T frontend bash -c "\
 		set +e; \
 		pnpm test | tee test_output.log; \
-		TEST_EXIT_CODE=\$$?; \
-		FAILURES=\$$(grep -c \"FAIL\" test_output.log || true); \
-		WARNINGS=\$$(grep -c \"warning\" test_output.log || true); \
+		TEST_EXIT_CODE=$$?; \
+		FAILURES=$$(grep -c \"FAIL\" test_output.log || true); \
+		WARNINGS=$$(grep -c \"warning\" test_output.log || true); \
 		echo \"\"; \
 		echo \"📊 Frontend Test Summary:\"; \
 		echo \"===================\"; \
-		if [ \$$TEST_EXIT_CODE -ne 0 ]; then \
-			echo \"❌ Tests: FAILED (\$$FAILURES failures, \$$WARNINGS warnings)\"; \
+		if [ $$TEST_EXIT_CODE -ne 0 ]; then \
+			echo \"❌ Tests: FAILED ($$FAILURES failures, $$WARNINGS warnings)"; \
 		else \
-			echo \"✅ Tests: PASSED (with \$$WARNINGS warnings)\"; \
+			echo \"✅ Tests: PASSED (with $$WARNINGS warnings)"; \
 		fi; \
-		if [ \$$WARNINGS -gt 0 ]; then \
+		if [ $$WARNINGS -gt 0 ]; then \
 			echo \"⚠️ Warnings detected in tests. Check the output above for details.\"; \
 		fi; \
-		exit \$$TEST_EXIT_CODE"
+		exit $$TEST_EXIT_CODE"
 	@echo "🧪 Frontend tests complete!"
 
 test-coverage: ## Run all tests with code coverage reporting
@@ -401,9 +433,9 @@ test-e2e: ## Run end-to-end tests (simulates user interactions with the complete
 
 	@echo "🔍 Checking for e2e test files..."
 	@$(DOCKER_COMPOSE) exec -T frontend bash -c "\
-		E2E_TESTS=\$$(find tests -name \"*.spec.ts\" | wc -l); \
-		echo \"Found \$$E2E_TESTS e2e test files\"; \
-		if [ \"\$$E2E_TESTS\" -eq 0 ]; then \
+		E2E_TESTS=$$(find tests -name \"*.spec.ts\" | wc -l); \
+		echo \"Found $$E2E_TESTS e2e test files\"; \
+		if [ \"$$E2E_TESTS\" -eq 0 ]; then \
 			echo \"⚠️ Warning: No e2e test files found\"; \
 		fi"
 
@@ -424,7 +456,7 @@ test-e2e: ## Run end-to-end tests (simulates user interactions with the complete
 		echo "⚠️ Warnings detected in tests. Check the output above for details."; \
 	fi; \
 	echo "🧪 End-to-end tests complete!"; \
-	exit $$TEST_EXIT_CODE
+	exit $$TEST_EXIT_CODE"
 
 test-integration: ## Run integration tests (tests API endpoints and database interactions)
 	@echo "🧪 Running integration tests (tests API endpoints and database interactions)..."
@@ -442,9 +474,9 @@ test-integration: ## Run integration tests (tests API endpoints and database int
 
 	@echo "🔍 Checking for integration test files..."
 	@$(DOCKER_COMPOSE) exec -T backend bash -c "\
-		INTEGRATION_TESTS=\$$(find tests/integration -name \"test_*.py\" | wc -l); \
-		echo \"Found \$$INTEGRATION_TESTS integration test files\"; \
-		if [ \"\$$INTEGRATION_TESTS\" -eq 0 ]; then \
+		INTEGRATION_TESTS=$$(find tests/integration -name \"test_*.py\" | wc -l); \
+		echo \"Found $$INTEGRATION_TESTS integration test files\"; \
+		if [ \"$$INTEGRATION_TESTS\" -eq 0 ]; then \
 			echo \"⚠️ Warning: No integration test files found in tests/integration directory\"; \
 		fi"
 
@@ -452,22 +484,35 @@ test-integration: ## Run integration tests (tests API endpoints and database int
 	@$(DOCKER_COMPOSE) exec -T backend bash -c "\
 		set +e; \
 		uv run pytest /app/backend/tests/integration -v | tee integration_test_output.log; \
-		TEST_EXIT_CODE=\$$?; \
-		FAILURES=\$$(grep -c \"FAILED\" integration_test_output.log || true); \
-		WARNINGS=\$$(grep -c \"warning\" integration_test_output.log || true); \
+		TEST_EXIT_CODE=$$?; \
+		FAILURES=$$(grep -c \"FAILED\" integration_test_output.log || true); \
+		WARNINGS=$$(grep -c \"warning\" integration_test_output.log || true); \
 		echo \"\"; \
 		echo \"📊 Integration Test Summary:\"; \
 		echo \"===================\"; \
-		if [ \$$TEST_EXIT_CODE -ne 0 ]; then \
-			echo \"❌ Tests: FAILED (\$$FAILURES failures, \$$WARNINGS warnings)\"; \
+		if [ $$TEST_EXIT_CODE -ne 0 ]; then \
+			echo \"❌ Tests: FAILED ($$FAILURES failures, $$WARNINGS warnings)\"; \
 		else \
-			echo \"✅ Tests: PASSED (with \$$WARNINGS warnings)\"; \
+			echo \"✅ Tests: PASSED (with $$WARNINGS warnings)\"; \
 		fi; \
-		if [ \$$WARNINGS -gt 0 ]; then \
+		if [ $$WARNINGS -gt 0 ]; then \
 			echo \"⚠️ Warnings detected in tests. Check the output above for details.\"; \
 		fi; \
-		exit \$$TEST_EXIT_CODE"
+		exit $$TEST_EXIT_CODE"
 	@echo "🧪 Integration tests complete!"
+
+test-scripts: ## Run script utils tests
+	@echo "🧪 Running script utils tests..."
+	@cd scripts && pnpm install --save-dev vitest typescript ts-node && pnpm test
+	@echo "🧪 Running TypeScript tests..."
+	@cd scripts && pnpm test:ts
+	@echo "🧪 Running Python tests..."
+	@cd scripts && pnpm test:py
+	@echo "🧪 Running Shell script tests..."
+	@cd scripts && pnpm test:sh
+
+test-all: test-backend test-frontend test-scripts ## Run all test suites
+	@echo "✅ All tests completed"
 
 #################################################
 # CI/CD and Hooks Testing                      #
@@ -481,54 +526,23 @@ cd: ci ## Run full CD pipeline (includes CI)
 
 test-hooks: ## Test git hooks locally
 	@echo "🔄 Testing git hooks..."
-	@pre-commit run --all-files
-	@echo "✨ Hook tests complete!"
+	@git config --unset-all core.hooksPath || true
+	@pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
+	@echo "✨ Git hooks setup complete!"
 
-test-workflow: ## Test a GitHub workflow interactively
-	@echo "🔄 Testing GitHub workflow..."
-	@echo "Available workflows:"
-	@ls -1 .github/workflows/*.yml | sed 's|.github/workflows/||' | nl
-	@echo "Enter the number of the workflow to test: "; \
-	read workflow_num; \
-	workflow=$$(ls -1 .github/workflows/*.yml | sed -n "$$workflow_num p"); \
-	if [ -z "$$workflow" ]; then \
-		echo "Invalid selection"; \
-		exit 1; \
-	fi; \
-	echo "Select event type:"; \
-	echo "1) push"; \
-	echo "2) pull_request"; \
-	echo "3) workflow_call"; \
-	read event_num; \
-	case $$event_num in \
-		1) event="push";; \
-		2) event="pull_request";; \
-		3) event="workflow_call";; \
-		*) echo "Invalid selection"; exit 1;; \
-	esac; \
-	make test-workflow-params workflow=$$(basename $$workflow) event=$$event
-
-test-ci-workflow: ## Test the complete CI/CD workflow pipeline
-	@echo "🔄 Testing CI/CD workflow pipeline..."
-	@./scripts/test-ci-workflow.sh
-
-
-test-workflow-params: ## Test a specific GitHub workflow
-	@if [ -z "$(workflow)" ] || [ -z "$(event)" ]; then \
-		echo "⚠️  Usage: make test-workflow-params workflow=<workflow-file> event=<event-type>"; \
+test-workflow: ## Test a GitHub workflow with params: workflow=<file> event=<event>
+	@if [ -n "$(workflow)" ] && [ -n "$(event)" ]; then \
+		echo "🔄 Testing workflow $(workflow) with event $(event)..."; \
+		if [ ! -f ".github/test-events/$(event).json" ]; then \
+			echo "⚠️  Event file .github/test-events/$(event).json not found"; \
+			exit 1; \
+		fi; \
+		./scripts/test/test-workflow.sh .github/workflows/$(workflow) $(event); \
+	else \
+		echo "⚠️  Please provide workflow=<file> and event=<event> parameters."; \
 		exit 1; \
 	fi
-	@echo "🔄 Testing workflow $(workflow) with event $(event)..."
-	@echo "ℹ️  Note: Some workflows may fail locally due to missing GitHub context:"
-	@echo "   - PR workflows: Missing PR title, labels, or review data"
-	@echo "   - Branch workflows: Missing branch context or protection rules"
-	@echo "   - These failures are expected locally and will work on GitHub"
-	@echo ""
-	@if [ ! -f ".github/workflows/events/$(event).json" ]; then \
-		echo "⚠️  Event file .github/workflows/events/$(event).json not found"; \
-		exit 1; \
-	fi
-	@./scripts/test-workflow.sh .github/workflows/$(workflow) $(event)
+
 
 test-all-workflows: ## Test all GitHub workflows with appropriate events
 	@echo "🔄 Testing all workflows..."
@@ -539,20 +553,9 @@ test-all-workflows: ## Test all GitHub workflows with appropriate events
 		set -e; \
 		FAILED=0; \
 		for workflow_event in \
-			"branch-protection.yml:pull_request" \
-			"linting.yml:workflow_call" \
-			"tests.yml:workflow_call" \
-			"formatting.yml:workflow_call" \
-			"dev-branch-checks.yml:push" \
-			"merge-to-main.yml:pull_request" \
-			"merge-to-staging.yml:pull_request" \
-			"merge-to-stg.yml:pull_request" \
-			"pr-to-main.yml:push" \
-			"pr-to-stg-creation.yml:push" \
-			"approve-pr.yml:pull_request" \
-			"automerge.yml:pull_request" \
-			"feature-branch-pr.yml:push" \
-			"pr-checks.yml:pull_request"; \
+			"pr-checks.yml:pull_request" \
+			"feature-to-staging.yml:push" \
+			"staging-to-main.yml:pull_request"; \
 		do \
 			IFS=: read -r workflow event <<< "$$workflow_event"; \
 			echo "🔄 Testing workflow: $$workflow with event: $$event"; \
@@ -575,8 +578,7 @@ test-all-workflows: ## Test all GitHub workflows with appropriate events
 
 setup-hooks: ## Setup git hooks with pre-commit
 	@echo "🔧 Setting up git hooks..."
-	@git config --unset-all core.hooksPath || true
-	@pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
+	@npx ts-node ./scripts/dev/setup-precommit.ts
 	@echo "✨ Git hooks setup complete!"
 
 #################################################
@@ -606,131 +608,4 @@ security-scan: ## Run security scanning and audits
 	@echo "🔒 Running security scans..."
 	@if ! $(DOCKER_COMPOSE) ps -q | grep -q .; then \
 		echo "Error: Docker containers are not running. Please run 'make dev' to start the containers."; \
-		exit 1; \
 	fi
-	@$(DOCKER_COMPOSE) exec -T backend bash -c "command -v uv >/dev/null 2>&1 && uv pip audit || echo 'UV not available, skipping backend security scanning'"
-	@$(DOCKER_COMPOSE) exec -T frontend pnpm audit
-	@echo "✨ Security scanning complete!"
-
-#################################################
-# Database Commands                            #
-#################################################
-db-init: ## Initialize the database
-	@echo "🗃️  Initializing database..."
-	@$(DOCKER_COMPOSE) exec -T backend bash -c "command -v uv >/dev/null 2>&1 && uv run python /app/backend/app/initial_data.py || echo 'UV not available, skipping database initialization'"
-	@echo "✨ Database initialized!"
-
-db-migrate: ## Run database migrations
-	@echo "🔄 Running database migrations..."
-	@if ! $(DOCKER_COMPOSE) ps -q | grep -q .; then \
-		echo "Error: Docker containers are not running. Please run 'make dev' to start the containers."; \
-		exit 1; \
-	fi
-	@$(DOCKER_COMPOSE) exec -T backend bash -c "command -v uv >/dev/null 2>&1 && (uv pip install alembic && uv run alembic upgrade head) || echo 'UV not available, skipping database migrations'"
-	@echo "✨ Migrations complete!"
-
-db-reset: ## Reset the database (WARNING: destroys data)
-	@echo "⚠️  WARNING: This will destroy all data in the database!"
-	@read -p "Are you sure? [y/N] " confirm && [ "$$confirm" = "y" ]
-	@echo "🗑️  Resetting database..."
-	@$(DOCKER_COMPOSE) down -v
-	@$(DOCKER_COMPOSE) up -d db
-	@$(MAKE) db-migrate
-	@$(MAKE) db-init
-	@echo "✨ Database reset complete!"
-
-#################################################
-# Cleanup Commands                             #
-#################################################
-clean: ## Remove build artifacts and cache files
-	@echo "🧹 Cleaning build artifacts and cache..."
-	@find . -type d -name "__pycache__" -exec rm -rf {} +
-	@find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	@find . -type d -name ".ruff_cache" -exec rm -rf {} +
-	@find . -type d -name ".coverage" -exec rm -rf {} +
-	@find . -type d -name "node_modules" -exec rm -rf {} +
-	@echo "✨ Clean complete!"
-
-clean-docker: ## Remove Docker containers and volumes
-	@echo "🧹 Cleaning Docker resources..."
-	@$(DOCKER_COMPOSE) down -v
-	@echo "✨ Docker cleanup complete!"
-
-clean-all: clean clean-docker ## Remove all generated files and Docker resources
-
-# Mark targets that don't create files
-.PHONY: help setup install env dev stop restart logs backend-logs frontend-logs \
-        test test-backend test-frontend test-e2e test-specific test-integration \
-        test-coverage test-backend-coverage test-frontend-coverage \
-        test-hooks test-workflow test-workflow-params test-all-workflows test-ci-workflow setup-hooks \
-        ci cd lint format security-scan \
-        db-init db-migrate db-reset clean clean-docker clean-all \
-        backend-format backend-security \
-        frontend-install frontend-lint frontend-format frontend-security \
-        merge-stg-to-main
-
-# Format backend code
-backend-format:
-	@echo " Formatting backend code..."
-	@if ! docker compose ps -q | grep -q .; then \
-		echo "Error: Docker containers are not running. Please run 'make dev' to start the containers."; \
-		exit 1; \
-	fi
-	docker compose exec backend bash -c "cd /app && command -v uv >/dev/null 2>&1 && (uv pip install ruff && uv run ruff format app) || echo 'UV not available, skipping backend formatting'"
-	@echo " Backend code formatted!"
-
-# Run backend security checks
-backend-security:
-	@echo " Running backend security checks..."
-	@if ! docker compose ps -q | grep -q .; then \
-		echo "Error: Docker containers are not running. Please run 'make dev' to start the containers."; \
-		exit 1; \
-	fi
-	docker compose exec backend bash -c "cd /app && command -v uv >/dev/null 2>&1 && (uv pip install bandit safety && uv run bandit -r app/ && uv run safety check) || echo 'UV not available, skipping backend security checks'"
-	@echo " Backend security checks complete!"
-
-#################################################
-# Frontend Commands                             #
-#################################################
-# Install frontend dependencies
-frontend-install:
-	@echo " Installing frontend dependencies..."
-	cd $(FRONTEND_DIR) && pnpm install --frozen-lockfile
-	@echo " Frontend dependencies installed!"
-
-# Run frontend linting
-frontend-lint:
-	@echo " Running frontend linting..."
-	cd $(FRONTEND_DIR) && pnpm run lint && pnpm run format:check
-	@echo " Frontend linting complete!"
-
-# Format frontend code
-frontend-format:
-	@echo " Formatting frontend code..."
-	cd $(FRONTEND_DIR) && pnpm run format
-	@echo " Frontend code formatted!"
-
-# Run frontend security checks
-frontend-security:
-	@echo " Running frontend security checks..."
-	cd $(FRONTEND_DIR) && pnpm audit
-	@echo " Frontend security checks complete!"
-
-#################################################
-# Combined Commands                             #
-#################################################
-# Format all code
-format: backend-format frontend-format ## Format all code
-
-#################################################
-# Git and Branch Management                     #
-#################################################
-merge-stg-to-main: ## Merge stg branch into main and clean up branches
-	@echo "🔄 Merging stg branch into main..."
-	@./scripts/merge-stg-to-main.sh
-
-manage-prs: ## Manage PRs (Dependabot, feature/fix branches)
-	@echo "🔄 Managing PRs..."
-	@chmod +x ./scripts/manage-prs.sh
-	@./scripts/manage-prs.sh
-	@echo "✨ Merge complete!"
