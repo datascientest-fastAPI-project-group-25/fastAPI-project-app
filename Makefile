@@ -190,6 +190,7 @@ frontend-logs: ## View frontend service logs
 # - Python and pytest must be available for backend tests (will be installed if not available)
 # - Node.js and pnpm must be available for frontend tests (will be installed if not available)
 #################################################
+
 test: ## Run all tests (backend, frontend, e2e, integration)
 	@echo "🧪 Running all tests (backend, frontend, e2e, integration)..."
 	@if ! $(DOCKER_COMPOSE) ps -q | grep -q .; then \
