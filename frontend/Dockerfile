@@ -67,7 +67,7 @@ ENV ROLLUP_SKIP_NODEJS=true
 ENV ROLLUP_NATIVE_BUILD=false
 
 # Install Rollup with optimized settings
-RUN PNPM_CACHE_FOLDER="/tmp/.pnpm-cache" pnpm install --no-save --prefer-offline --ignore-scripts @rollup/rollup-linux-x64-musl
+RUN PNPM_CACHE_FOLDER="/tmp/.pnpm-cache" pnpm install --prefer-offline --ignore-scripts @rollup/rollup-linux-x64-musl
 
 # Install React type declarations and other required packages
 RUN pnpm install --no-save @types/react @vitejs/plugin-react vite
