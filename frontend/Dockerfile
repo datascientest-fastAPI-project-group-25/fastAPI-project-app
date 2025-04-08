@@ -56,18 +56,22 @@ COPY --from=deps /app/frontend/node_modules ./frontend/node_modules
 
 # Build the application
 WORKDIR /app/frontend
-# Install specific Rollup dependencies for Alpine Linux
+# Install build dependencies for Alpine Linux
 RUN apk add --no-cache python3 make g++ curl
 
-# Install uv for faster Python package management
-RUN curl -sSf https://astral.sh/uv/install.sh | sh
-
-# Use pre-built binaries for Rollup when possible
+# Set environment variables to avoid native build issues
 ENV ROLLUP_SKIP_NODEJS=true
 ENV ROLLUP_NATIVE_BUILD=false
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-# Install Rollup with optimized settings
-RUN PNPM_CACHE_FOLDER="/tmp/.pnpm-cache" pnpm install --no-save --prefer-offline --ignore-scripts @rollup/rollup-linux-x64-musl
+# Create a .npmrc file to configure npm/pnpm
+RUN echo "node-linker=hoisted\nstrict-peer-dependencies=false\nshared-workspace-lockfile=false\nauto-install-peers=true\nprefer-frozen-lockfile=false" > /app/.npmrc
+
+# Skip installing optional dependencies that might cause build issues
+RUN npm config set optional false
+
+# Use npm instead of pnpm for this specific package
+RUN npm install --no-save @rollup/rollup-linux-x64-musl
 
 # Install React type declarations and other required packages
 RUN pnpm install --no-save @types/react @vitejs/plugin-react vite
