@@ -24,8 +24,17 @@ jobs:
       - name: Extract PR info
         id: extract
         run: |
-          echo "pr_title=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
-          echo "pr_body=${{ github.event.pull_request.body }}" >> $GITHUB_OUTPUT
+          {
+            echo 'pr_title<<EOF'
+            echo "${{ github.event.pull_request.title }}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo 'pr_body<<EOF'
+            echo "${{ github.event.pull_request.body }}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
   promote-stg-to-main:
     needs: extract-info
