@@ -5,6 +5,9 @@ on:
     types: [closed]
     branches:
       - stg
+  push:
+    branches:
+      - stg
 
 permissions:
   contents: write
