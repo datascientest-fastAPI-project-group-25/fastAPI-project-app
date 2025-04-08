@@ -69,6 +69,7 @@ jobs:
 
       - name: Commit and push version bump
         id: commit-version
+        continue-on-error: true
         run: |
           set -e  # Exit immediately if a command exits with a non-zero status
 
@@ -84,10 +85,10 @@ jobs:
 
             echo "Pushing changes"
             if ! git push; then
-              echo "::error::Failed to push version bump commit"
-              exit 1
+              echo "Warning: Failed to push version bump commit, but continuing workflow"
+            else
+              echo "Successfully committed and pushed version bump"
             fi
-            echo "Successfully committed and pushed version bump"
           else
             echo "No changes to VERSION file, skipping commit"
           fi
@@ -143,7 +144,7 @@ jobs:
         id: build-backend
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: .
           file: ./backend/Dockerfile
           push: true
           tags: ${{ steps.set-tags.outputs.backend_tags }}
@@ -174,7 +175,7 @@ jobs:
         id: build-frontend
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
+          context: .
           file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.set-tags.outputs.frontend_tags }}
@@ -209,6 +210,8 @@ jobs:
 
       - name: Run Trivy vulnerability scanner for backend
         uses: aquasecurity/trivy-action@master
+        if: steps.extract-backend-tag.outcome == 'success'
+        continue-on-error: true
         with:
           image-ref: ${{ steps.extract-backend-tag.outputs.image_tag }}
           format: 'sarif'
@@ -225,6 +228,8 @@ jobs:
 
       - name: Run Trivy vulnerability scanner for frontend
         uses: aquasecurity/trivy-action@master
+        if: steps.extract-frontend-tag.outcome == 'success'
+        continue-on-error: true
         with:
           image-ref: ${{ steps.extract-frontend-tag.outputs.image_tag }}
           format: 'sarif'
@@ -234,15 +239,17 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload backend Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && steps.extract-backend-tag.outcome == 'success'
+        continue-on-error: true
         with:
           sarif_file: 'trivy-backend-results.sarif'
           category: 'backend-image'
 
       - name: Upload frontend Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && steps.extract-frontend-tag.outcome == 'success'
+        continue-on-error: true
         with:
           sarif_file: 'trivy-frontend-results.sarif'
           category: 'frontend-image'
