@@ -27,7 +27,7 @@ export const passwordRules = (isRequired = true) => {
 }
 
 export const confirmPasswordRules = (
-  getValues: () => Record<string, unknown>,
+  getValues: any, // More generic type to accommodate UseFormGetValues
   isRequired = true,
 ) => {
   const rules: Record<string, unknown> = {

@@ -1,6 +1,6 @@
 import { Box, Button, Container, Heading, VStack } from "@chakra-ui/react"
 import { useMutation } from "@tanstack/react-query"
-import { type SubmitHandler, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { FiLock } from "react-icons/fi"
 
 import { type ApiError, type UpdatePassword, UsersService } from "@/client"
@@ -37,7 +37,7 @@ const ChangePassword = () => {
     },
   })
 
-  const onSubmit: SubmitHandler<UpdatePasswordForm> = async (data) => {
+  const onSubmit = async (data: UpdatePasswordForm) => {
     mutation.mutate(data)
   }
 
