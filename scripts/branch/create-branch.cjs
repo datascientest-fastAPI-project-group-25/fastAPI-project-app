@@ -70,16 +70,16 @@ function runGitCommand(command) {
   }
 }
 
-async function updateDevBranch() {
-  console.log(`${colors.blue}Updating dev branch...${colors.reset}`);
+async function updateMainBranch() {
+  console.log(`${colors.blue}Updating main branch...${colors.reset}`);
   try {
     runGitCommand("git fetch origin");
-    runGitCommand("git checkout dev");
-    runGitCommand("git pull origin dev");
+    runGitCommand("git checkout main");
+    runGitCommand("git pull origin main");
     return true;
   } catch (error) {
     console.error(
-      `${colors.red}Failed to update dev branch:${colors.reset}`,
+      `${colors.red}Failed to update main branch:${colors.reset}`,
       error.message,
     );
     console.log(
@@ -108,12 +108,12 @@ function createBranchWithParams(branchType, branchName, automerge) {
       `3. Push: ${colors.yellow}git push -u origin ${fullBranchName}${colors.reset}`,
     );
     console.log(
-      `4. PR will be auto-created to ${colors.magenta}dev${colors.reset} branch`,
+      `4. PR will be auto-created to ${colors.magenta}stg${colors.reset} branch`,
     );
 
     if (branchType === "fix" && automerge) {
       console.log(
-        `\n${colors.magenta}Automerge:${colors.reset} Will merge to dev after tests pass`,
+        `\n${colors.magenta}Automerge:${colors.reset} Will merge to stg after tests pass`,
       );
     }
     return true;
@@ -180,7 +180,7 @@ async function main() {
 
       const normalizedBranchName = paramCase(branchName);
 
-      await updateDevBranch();
+      await updateMainBranch();
       success = createBranchWithParams(branchType, normalizedBranchName, automerge);
       return success;
     }
@@ -196,7 +196,7 @@ async function main() {
       automerge = await askAutomerge();
     }
 
-    await updateDevBranch();
+    await updateMainBranch();
     success = createBranchWithParams(branchType, normalizedBranchName, automerge);
     return success;
   } catch (error) {
