@@ -1,0 +1,48 @@
+name: Reusable Release Trigger
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+        description: "Version to use for the release (with optional environment suffix)"
+      environment:
+        required: true
+        type: string
+        description: "Environment (stg or prod)"
+      backend_image:
+        required: true
+        type: string
+        description: "Full backend image reference including registry and tag"
+      frontend_image:
+        required: true
+        type: string
+        description: "Full frontend image reference including registry and tag"
+    secrets:
+      MACHINE_USER_TOKEN:
+        required: true
+        description: "Token with permissions to trigger workflows in the release repo"
+
+permissions:
+  contents: write
+
+jobs:
+  trigger-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Release Repository Workflow
+        uses: peter-evans/repository-dispatch@v2
+        env:
+          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+        with:
+          token: ${{ secrets.MACHINE_USER_TOKEN }}
+          repository: datascientest-fastapi-project-group-25/fastAPI-project-release
+          event-type: app-release
+          client-payload: |
+            {
+              "version": "${{ inputs.version }}",
+              "environment": "${{ inputs.environment }}",
+              "backend_image": "${{ inputs.backend_image }}",
+              "frontend_image": "${{ inputs.frontend_image }}"
+            }
