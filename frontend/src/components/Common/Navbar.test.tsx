@@ -4,40 +4,41 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 
 // Mock Chakra UI components
 vi.mock("@chakra-ui/react", () => ({
-  Box: ({ children, bg, borderBottom, borderColor, ...props }: any) => (
+  Box: ({ children }: any) => (
     <div data-testid="chakra-box">{children}</div>
   ),
-  Flex: ({
-    children,
-    alignItems,
-    justifyContent,
-    maxW,
-    mx,
-    px,
-    h,
-    flex,
-    justify,
-    ...props
-  }: any) => <div data-testid="chakra-flex">{children}</div>,
-  Link: ({ children, href, ...props }: any) => (
+  Flex: ({ children }: any) => <div data-testid="chakra-flex">{children}</div>,
+  Link: ({ children, href }: any) => (
     <a data-testid="chakra-link" href={href}>
       {children}
     </a>
   ),
-  Image: ({ alt, src, h, display }: any) => (
+  Image: ({ alt, src }: any) => (
     <img
       data-testid="chakra-image"
       alt={alt || "Descriptive alt text for image"}
       src={src}
     />
   ),
+  Button: ({ children, onClick, ...props }: any) => (
+    <button data-testid="chakra-button" onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
+  useColorMode: vi.fn(() => ({ colorMode: 'light', toggleColorMode: vi.fn() })),
+  useTheme: vi.fn(() => ({ colors: { gray: { '800': '#1A202C' } } })),
+  IconButton: ({ children, 'aria-label': ariaLabel, onClick }: any) => (
+    <button aria-label={ariaLabel} onClick={onClick} data-testid="chakra-iconbutton">
+      {children}
+    </button>
+  ),
   useBreakpointValue: () => "flex",
 }))
 
 // Mock TanStack Router
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children, to, ...props }: any) => (
-    <a href={to} data-testid="router-link" {...props}>
+  Link: ({ children, to }: any) => (
+    <a href={to} data-testid="router-link">
       {children}
     </a>
   ),

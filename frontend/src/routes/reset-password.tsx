@@ -1,7 +1,7 @@
 import { Container, Heading, Text } from "@chakra-ui/react"
 import { useMutation } from "@tanstack/react-query"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
-import { type SubmitHandler, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { FiLock } from "react-icons/fi"
 
 import { type ApiError, LoginService, type NewPassword } from "@/client"
@@ -63,18 +63,19 @@ function ResetPassword() {
     },
   })
 
-  const onSubmit: SubmitHandler<NewPasswordForm> = async (data) => {
+  const onSubmit = async (data: NewPasswordForm) => {
     mutation.mutate(data)
   }
 
   return (
     <Container
-      as="form"
+      as="main"
+      maxW="md"
       onSubmit={handleSubmit(onSubmit)}
       h="100vh"
-      maxW="sm"
       alignItems="stretch"
       justifyContent="center"
+      py={{ base: "12", md: "24" }}
       gap={4}
       centerContent
     >

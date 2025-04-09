@@ -61,9 +61,7 @@ export const createChakraMock = () => {
   const Image: FC<{
     alt?: string
     src?: string
-    h?: string
-    display?: string
-  }> = ({ alt, src, h, display }) => (
+  }> = ({ alt, src }) => (
     <img
       data-testid="chakra-image"
       alt={alt || "Descriptive alt text for image"}

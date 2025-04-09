@@ -1,10 +1,21 @@
 import { Container, Heading, Stack } from "@chakra-ui/react"
-import { useTheme } from "next-themes"
+import { useState, useEffect } from "react"
 
 import { Radio, RadioGroup } from "@/components/ui/radio"
 
 const Appearance = () => {
-  const { theme, setTheme } = useTheme()
+  const [theme, setTheme] = useState<string>(
+    localStorage.getItem("theme") || "system",
+  )
+
+  useEffect(() => {
+    const root = window.document.documentElement
+    root.classList.remove("light", "dark")
+    root.classList.add(theme)
+
+    // Save theme preference to localStorage
+    localStorage.setItem("theme", theme)
+  }, [theme])
 
   return (
     <>
@@ -14,7 +25,11 @@ const Appearance = () => {
         </Heading>
 
         <RadioGroup
-          onValueChange={(e) => setTheme(e.value)}
+          onValueChange={(e) => {
+            if (e && e.value) {
+              setTheme(e.value)
+            }
+          }}
           value={theme}
           colorPalette="teal"
         >
