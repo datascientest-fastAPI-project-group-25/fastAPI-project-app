@@ -1,0 +1,115 @@
+name: Create GitHub Release
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Production Images"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Get current version
+        id: get-version
+        run: |
+          VERSION=$(python version.py get)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+          # Check if this is a prerelease version (contains hyphen)
+          if [[ "$VERSION" == *"-"* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "This is a prerelease version"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "This is a stable release version"
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag if it exists
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            # If no previous tag, get all commits
+            echo "No previous tag found, including all commits in changelog"
+            CHANGELOG=$(git log --pretty=format:"* %s (%h)" --reverse)
+          else
+            # Get commits since the last tag
+            echo "Previous tag: $PREV_TAG"
+            CHANGELOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"* %s (%h)" --reverse)
+          fi
+
+          # Save changelog to a file
+          echo "$CHANGELOG" > changelog.md
+
+          # Set changelog output
+          {
+            echo 'changelog<<EOF'
+            echo "$CHANGELOG"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Get repository info
+        id: repo-info
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          if [ -z "$REPO_NAME" ]; then
+            REPO_NAME=$(basename ${{ github.repository }} | tr '[:upper:]' '[:lower:]')
+          fi
+          echo "repo_owner=$REPO_OWNER" >> $GITHUB_OUTPUT
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.get-version.outputs.version }}
+          name: Release v${{ steps.get-version.outputs.version }}
+          body: |
+            ## Release v${{ steps.get-version.outputs.version }}
+
+            ### Docker Images
+            The following Docker images are available for this release:
+
+            - Backend: `ghcr.io/${{ steps.repo-info.outputs.repo_owner }}/${{ steps.repo-info.outputs.repo_name }}-backend:${{ steps.get-version.outputs.version }}`
+            - Frontend: `ghcr.io/${{ steps.repo-info.outputs.repo_owner }}/${{ steps.repo-info.outputs.repo_name }}-frontend:${{ steps.get-version.outputs.version }}`
+
+            ### Changelog
+            ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: ${{ steps.get-version.outputs.is_prerelease }}
+          generate_release_notes: true
+
+      - name: Trigger Release Repository Workflow
+        if: ${{ steps.get-version.outputs.is_prerelease == 'false' }}
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.RELEASE_REPO_ACCESS_TOKEN }}
+          repository: datascientest-fastapi-project-group-25/fastAPI-project-release
+          event-type: app-release
+          client-payload: |
+            {
+              "version": "${{ steps.get-version.outputs.version }}",
+              "environment": "prod",
+              "backend_image": "ghcr.io/${{ steps.repo-info.outputs.repo_owner }}/${{ steps.repo-info.outputs.repo_name }}-backend:${{ steps.get-version.outputs.version }}",
+              "frontend_image": "ghcr.io/${{ steps.repo-info.outputs.repo_owner }}/${{ steps.repo-info.outputs.repo_name }}-frontend:${{ steps.get-version.outputs.version }}"
+            }
