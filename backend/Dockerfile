@@ -34,12 +34,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=ghcr.io/astral-sh/uv:0.4.15 /uv /usr/local/bin/
 
 # Copy dependency definition files
-COPY pyproject.toml uv.lock ./
+# When using backend directory as context, these files should be at the root
+COPY pyproject.toml ./
+COPY uv.lock ./
 
 # Build the virtual environment
 RUN uv pip sync --system uv.lock
 
 # Copy application code
+# When using backend directory as context, this copies everything from the backend dir
 COPY . .
 
 # Make scripts executable (adjust path if needed)
