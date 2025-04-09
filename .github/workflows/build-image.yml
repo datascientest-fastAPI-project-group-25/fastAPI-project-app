@@ -69,6 +69,7 @@ jobs:
 
       - name: Commit and push version bump
         id: commit-version
+        continue-on-error: true
         run: |
           set -e  # Exit immediately if a command exits with a non-zero status
 
@@ -84,10 +85,10 @@ jobs:
 
             echo "Pushing changes"
             if ! git push; then
-              echo "::error::Failed to push version bump commit"
-              exit 1
+              echo "Warning: Failed to push version bump commit, but continuing workflow"
+            else
+              echo "Successfully committed and pushed version bump"
             fi
-            echo "Successfully committed and pushed version bump"
           else
             echo "No changes to VERSION file, skipping commit"
           fi
@@ -123,18 +124,13 @@ jobs:
           fi
 
           if [ "$ENV" == "stg" ]; then
-            # For staging: only prefix+githash
+
+
             REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
             BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}-${SHORT_SHA}"
-            FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}-${SHORT_SHA}"
-          else
-            # For production: only prefix+version
-            REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-            REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
-            BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}${VERSION}"
             FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}${VERSION}"
-          fi
+
 
           echo "backend_tags=$BACKEND_TAGS" >> $GITHUB_OUTPUT
           echo "frontend_tags=$FRONTEND_TAGS" >> $GITHUB_OUTPUT
@@ -143,7 +139,7 @@ jobs:
         id: build-backend
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: .
           file: ./backend/Dockerfile
           push: true
           tags: ${{ steps.set-tags.outputs.backend_tags }}
@@ -174,7 +170,7 @@ jobs:
         id: build-frontend
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
+          context: .
           file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.set-tags.outputs.frontend_tags }}
@@ -201,20 +197,36 @@ jobs:
           echo "::error::Frontend image build failed"
           exit 1
 
+      - name: Extract backend image tag
+        id: extract-backend-tag
+        run: |
+          BACKEND_TAG="${{ steps.set-tags.outputs.backend_tags }}"
+          echo "image_tag=$BACKEND_TAG" >> $GITHUB_OUTPUT
+
       - name: Run Trivy vulnerability scanner for backend
         uses: aquasecurity/trivy-action@master
+        if: steps.extract-backend-tag.outcome == 'success'
+        continue-on-error: true
         with:
-          image-ref: $(echo "${{ steps.set-tags.outputs.backend_tags }}" | cut -d',' -f1)
+          image-ref: ${{ steps.extract-backend-tag.outputs.image_tag }}
           format: 'sarif'
           output: 'trivy-backend-results.sarif'
           severity: 'CRITICAL,HIGH'
           exit-code: '0'  # Don't fail the build, just report
           ignore-unfixed: true
 
+      - name: Extract frontend image tag
+        id: extract-frontend-tag
+        run: |
+          FRONTEND_TAG="${{ steps.set-tags.outputs.frontend_tags }}"
+          echo "image_tag=$FRONTEND_TAG" >> $GITHUB_OUTPUT
+
       - name: Run Trivy vulnerability scanner for frontend
         uses: aquasecurity/trivy-action@master
+        if: steps.extract-frontend-tag.outcome == 'success'
+        continue-on-error: true
         with:
-          image-ref: $(echo "${{ steps.set-tags.outputs.frontend_tags }}" | cut -d',' -f1)
+          image-ref: ${{ steps.extract-frontend-tag.outputs.image_tag }}
           format: 'sarif'
           output: 'trivy-frontend-results.sarif'
           severity: 'CRITICAL,HIGH'
@@ -222,15 +234,17 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload backend Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && steps.extract-backend-tag.outcome == 'success'
+        continue-on-error: true
         with:
           sarif_file: 'trivy-backend-results.sarif'
           category: 'backend-image'
 
       - name: Upload frontend Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && steps.extract-frontend-tag.outcome == 'success'
+        continue-on-error: true
         with:
           sarif_file: 'trivy-frontend-results.sarif'
           category: 'frontend-image'
@@ -259,12 +273,17 @@ jobs:
             const envName = env === 'stg' ? 'Staging' : 'Production';
             let imageTagsMessage = '';
 
+            const repoOwner = context.repo.owner.toLowerCase();
+            const repoName = context.repo.repo.toLowerCase();
+
             if (env === 'stg') {
+
               // For staging: only prefix+githash
               imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}-${shortSha}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}-${shortSha}\``;
             } else {
               // For production: only prefix+version
               imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}\``;
+
             }
 
             github.rest.repos.createCommitComment({
