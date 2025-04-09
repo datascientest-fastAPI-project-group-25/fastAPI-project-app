@@ -12,9 +12,9 @@ WORKDIR /app
 FROM base AS deps
 
 # Copy dependency definition files
-# Need root package.json for workspace definition and frontend package.json
-COPY package.json pnpm-lock.yaml* ./
-COPY frontend/package.json ./frontend/
+# When using frontend directory as context, paths are relative to that directory
+COPY package.json pnpm-lock.yaml* ../
+COPY package.json ./
 
 # Fetch production dependencies using the lockfile
 # This leverages pnpm's content-addressable store for caching
@@ -28,19 +28,20 @@ FROM base AS builder
 COPY --from=deps /app/.pnpm-store /.pnpm-store
 
 # Copy dependency files again (needed for install command)
-COPY package.json pnpm-lock.yaml* ./
-COPY frontend/package.json ./frontend/
+COPY package.json pnpm-lock.yaml* ../
+COPY package.json ./
 
 # Install only production dependencies, using the offline store
 # --ignore-scripts to prevent husky, etc.
 RUN pnpm install --frozen-lockfile --offline --ignore-scripts
 
 # Copy frontend source code
-# Ensure backend or other unrelated files are not copied if present in root
-COPY ./frontend ./frontend
+# When using frontend directory as context, copy everything from current directory
+COPY . .
 
 # Build the frontend application
-WORKDIR /app/frontend
+# Already in the frontend directory when using frontend as context
+WORKDIR /app
 RUN pnpm run build
 
 # --- Final/Production Stage --- #
@@ -56,7 +57,7 @@ ENV NODE_ENV=production
 RUN pnpm add -g serve
 
 # Copy built artifacts from the builder stage
-COPY --from=builder /app/frontend/dist ./frontend/dist
+COPY --from=builder /app/dist ./dist
 
 # Expose the port the app runs on
 EXPOSE 5173
