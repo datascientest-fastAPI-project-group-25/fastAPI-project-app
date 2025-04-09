@@ -33,7 +33,7 @@ COPY frontend/package.json ./frontend/
 
 # Install only production dependencies, using the offline store
 # --ignore-scripts to prevent husky, etc.
-RUN pnpm install --prod --frozen-lockfile --offline --ignore-scripts
+RUN pnpm install --frozen-lockfile --offline --ignore-scripts
 
 # Copy frontend source code
 # Ensure backend or other unrelated files are not copied if present in root
