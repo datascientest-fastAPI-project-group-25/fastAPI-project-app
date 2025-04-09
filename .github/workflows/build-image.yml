@@ -123,13 +123,17 @@ jobs:
           fi
 
           if [ "$ENV" == "stg" ]; then
-            # For staging: version+githash
-            BACKEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}-${SHORT_SHA}"
-            FRONTEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${PREFIX}-${SHORT_SHA}"
+            # For staging: only prefix+githash
+            REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+            BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}-${SHORT_SHA}"
+            FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}-${SHORT_SHA}"
           else
-            # For production: only version
-            BACKEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}${VERSION}"
-            FRONTEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${PREFIX}${VERSION}"
+            # For production: only prefix+version
+            REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+            BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}${VERSION}"
+            FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}${VERSION}"
           fi
 
           echo "backend_tags=$BACKEND_TAGS" >> $GITHUB_OUTPUT
@@ -256,10 +260,10 @@ jobs:
             let imageTagsMessage = '';
 
             if (env === 'stg') {
-              // For staging: version+githash
-              imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}-${shortSha}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}-${shortSha}\``;
+              // For staging: only prefix+githash
+              imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}-${shortSha}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}-${shortSha}\``;
             } else {
-              // For production: only version
+              // For production: only prefix+version
               imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}\``;
             }
 
@@ -267,5 +271,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: sha,
-              body: `## 🚀 ${envName} Images Built and Pushed\n\n${bumpMessage}: **${version}**\n\n${imageTagsMessage}\n\n### Security Scanning\nVulnerability scanning was performed on both images. Check the GitHub Security tab for detailed results.\n\n### Image Labels\nImages include standard OCI labels for better traceability and management.`
+              body: `## ${envName} Images Built and Pushed\n\n${bumpMessage}: **${version}**\n\n${imageTagsMessage}\n\n### Security Scanning\nVulnerability scanning was performed on both images. Check the GitHub Security tab for detailed results.\n\n### Image Labels\nImages include standard OCI labels for better traceability and management.`
             });
