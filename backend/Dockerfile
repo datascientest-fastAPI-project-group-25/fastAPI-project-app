@@ -1,53 +1,70 @@
+# syntax=docker/dockerfile:1
+
+# --- Base Stage --- #
+FROM python:3.11-slim-bookworm as base
+
 # Accept build arguments for versioning
-ARG GIT_HASH="dev"
+ARG GIT_HASH="unknown"
 ARG BRANCH_TYPE="local"
+ENV GIT_HASH=${GIT_HASH} \
+    BRANCH_TYPE=${BRANCH_TYPE}
 
-FROM python:3.11-slim-bookworm as development
+# Set base environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH="/app" \
+    APP_HOME="/app"
+WORKDIR $APP_HOME
 
-WORKDIR /app
+# Create a non-root user and group
+RUN groupadd --system --gid 1001 appuser && \
+    useradd --system --uid 1001 --gid appuser --home-dir $APP_HOME --no-create-home appuser
 
-# Set build arguments as environment variables
-ARG GIT_HASH
-ARG BRANCH_TYPE
-ENV GIT_HASH=${GIT_HASH}
-ENV BRANCH_TYPE=${BRANCH_TYPE}
+# --- Builder Stage --- #
+FROM base as builder
 
-# Install system dependencies
+# Install system build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     curl \
-    procps \
-    postgresql-client \
-    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy uv from the official image (best practice according to docs)
-COPY --from=ghcr.io/astral-sh/uv:0.4.15 /uv /uvx /bin/
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:0.4.15 /uv /usr/local/bin/
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=off \
-    PIP_DISABLE_PIP_VERSION_CHECK=on \
-    PIP_DEFAULT_TIMEOUT=100 \
-    PYTHONPATH="/app/backend" \
-    BACKEND_DIR="/app/backend"
+# Copy dependency definition files
+COPY pyproject.toml uv.lock ./
 
-# Create backend directory structure
-RUN mkdir -p /app/backend/app /app/backend/alembic/versions /app/backend/tests
+# Build the virtual environment
+RUN uv pip sync --system uv.lock
 
-# Copy the application files
-COPY backend/ /app/backend/
+# Copy application code
+COPY . .
 
-# Make scripts executable
-RUN chmod +x /app/backend/scripts/*.sh
+# Make scripts executable (adjust path if needed)
+RUN chmod +x ./scripts/*.sh
 
-# Install dependencies with uv using pyproject.toml
-WORKDIR /app/backend
-RUN uv pip install --system -e .
+# Ensure ownership is correct for builder stage (optional but good practice)
+RUN chown -R appuser:appuser $APP_HOME
 
-# Install additional dependencies explicitly
-RUN uv pip install --system psycopg2-binary python-jose passlib python-multipart email-validator
+# --- Final Stage --- #
+FROM base as final
 
-CMD ["/app/backend/scripts/prestart.sh"]
+# Install runtime system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed Python environment from builder
+COPY --from=builder /usr/local /usr/local
+
+# Copy application code from builder
+COPY --from=builder --chown=appuser:appuser $APP_HOME $APP_HOME
+
+# Switch to the non-root user
+USER appuser
+
+# Define the command to run the application
+CMD ["./scripts/prestart.sh"]
