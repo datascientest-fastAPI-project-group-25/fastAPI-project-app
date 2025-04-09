@@ -125,10 +125,12 @@ jobs:
 
           if [ "$ENV" == "stg" ]; then
             # For staging: version+githash
+
             REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
-            BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}${VERSION}-${SHORT_SHA}"
-            FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}${VERSION}-${SHORT_SHA}"
+            BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}-${SHORT_SHA}"
+            FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}${VERSION}"
+
           else
             # For production: only version
             REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')

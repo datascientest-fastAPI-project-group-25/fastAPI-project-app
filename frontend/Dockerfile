@@ -1,145 +1,66 @@
-# Stage 0: Dependencies stage
-FROM --platform=linux/amd64 node:18-alpine AS deps
+# syntax=docker/dockerfile:1
 
-# Install pnpm and TypeScript globally
-RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
-# Set up PNPM_HOME and add it to PATH
-ENV PNPM_HOME=/usr/local/bin
-ENV PATH="$PNPM_HOME:$PATH"
-RUN pnpm install -g typescript@latest
+# --- Base Stage --- #
+FROM --platform=linux/amd64 node:18-alpine AS base
 
-# Set environment variables to avoid optional dependency issues
-ENV ROLLUP_SKIP_NODEJS=true
-ENV NODE_OPTIONS="--max-old-space-size=2048"
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Set up workspace
 WORKDIR /app
 
-# Copy package.json files
+# --- Dependencies Stage --- #
+FROM base AS deps
+
+# Copy dependency definition files
+# Need root package.json for workspace definition and frontend package.json
 COPY package.json pnpm-lock.yaml* ./
 COPY frontend/package.json ./frontend/
 
-# Install root dependencies
-RUN pnpm install --frozen-lockfile --prefer-offline --no-optional --force
+# Fetch production dependencies using the lockfile
+# This leverages pnpm's content-addressable store for caching
+RUN pnpm fetch --prod
 
-# Ensure frontend dependencies are installed
-WORKDIR /app/frontend
-RUN pnpm install --prefer-offline --no-optional --force
+# --- Builder Stage --- #
+FROM base AS builder
 
-# Switch back to root workspace
-WORKDIR /app
+# Install production dependencies using the offline cache from 'deps' stage
+# Copy the full pnpm virtual store
+COPY --from=deps /app/.pnpm-store /.pnpm-store
 
-# Stage 1: Builder stage
-FROM --platform=linux/amd64 node:18-alpine AS builder
-
-# Install pnpm and TypeScript globally
-RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
-# Set up PNPM_HOME and add it to PATH
-ENV PNPM_HOME=/usr/local/bin
-ENV PATH="$PNPM_HOME:$PATH"
-RUN pnpm install -g typescript@latest
-
-# Set environment variables
-ENV NODE_ENV=production
-ENV NODE_OPTIONS="--max-old-space-size=8192"
-ENV ROLLUP_SKIP_NODEJS=true
-
-# Set up workspace
-WORKDIR /app
-
-# Copy source files first (excluding node_modules)
-COPY . .
-
-# Now copy the dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/frontend/node_modules ./frontend/node_modules
-
-# Build the application
-WORKDIR /app/frontend
-# Install build dependencies for Alpine Linux
-RUN apk add --no-cache python3 make g++ curl
-
-# Set environment variables to avoid native build issues
-ENV ROLLUP_SKIP_NODEJS=true
-ENV ROLLUP_NATIVE_BUILD=false
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-
-# Create a .npmrc file to configure npm/pnpm
-RUN echo "node-linker=hoisted\nstrict-peer-dependencies=false\nshared-workspace-lockfile=false\nauto-install-peers=true\nprefer-frozen-lockfile=false" > /app/.npmrc
-
-# Skip installing optional dependencies that might cause build issues
-RUN npm config set optional false
-
-# Use npm instead of pnpm for this specific package
-RUN npm install --no-save @rollup/rollup-linux-x64-musl
-
-# Install React type declarations and other required packages
-RUN pnpm install --no-save @types/react @vitejs/plugin-react vite
-
-# Create comprehensive declaration file for missing modules
-RUN echo 'declare module "*.svg" { const content: string; export default content; }' > /app/frontend/src/types.d.ts && \
-    echo 'declare module "react/jsx-runtime" { import * as React from "react"; export const jsx: any; export const jsxs: any; export const Fragment: React.FC; }' >> /app/frontend/src/types.d.ts
-
-# Create a temporary tsconfig.json that skips type checking
-RUN echo '{"extends": "./tsconfig.json", "compilerOptions": {"skipLibCheck": true, "noEmit": true}}' > /app/frontend/tsconfig.build.json
-
-# Create a simplified vite.config.js file
-RUN echo 'import { defineConfig } from "vite"; import react from "@vitejs/plugin-react"; export default defineConfig({ plugins: [react()], build: { outDir: "dist" } });' > /app/frontend/vite.config.js
-
-# Install all required packages in the frontend directory, skipping husky hooks
-RUN pnpm install --ignore-scripts --prefer-offline --no-optional
-
-# Build using Vite directly with optimized settings
-RUN NODE_ENV=production NODE_OPTIONS="--max-old-space-size=4096" npx vite build --emptyOutDir
-
-# Stage 2: Development stage (used for development)
-FROM --platform=linux/amd64 node:18-alpine AS development
-
-# Install pnpm and TypeScript globally
-RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
-# Set up PNPM_HOME and add it to PATH
-ENV PNPM_HOME=/usr/local/bin
-ENV PATH="$PNPM_HOME:$PATH"
-RUN pnpm install -g typescript@latest
-
-# Set environment variables
-ENV NODE_OPTIONS="--max-old-space-size=2048"
-ENV PNPM_CACHE_FOLDER="/app/.pnpm-cache"
-
-# Set up workspace
-WORKDIR /app
-
-# Copy package files and install dependencies
+# Copy dependency files again (needed for install command)
 COPY package.json pnpm-lock.yaml* ./
 COPY frontend/package.json ./frontend/
 
-# Create empty directories for mounting
-RUN mkdir -p /app/frontend
+# Install only production dependencies, using the offline store
+# --ignore-scripts to prevent husky, etc.
+RUN pnpm install --prod --frozen-lockfile --offline --ignore-scripts
 
-# Stage 3: Production stage
-FROM --platform=linux/amd64 node:18-alpine AS production
+# Copy frontend source code
+# Ensure backend or other unrelated files are not copied if present in root
+COPY ./frontend ./frontend
 
-# Set environment variables
-ENV NODE_ENV=production
+# Build the frontend application
+WORKDIR /app/frontend
+RUN pnpm run build
 
-# Set up workspace
+# --- Final/Production Stage --- #
+FROM base AS final
+
 WORKDIR /app
 
-# Copy built application from builder stage
+# Set NODE_ENV for production
+ENV NODE_ENV=production
+
+# Install 'serve' for serving static files
+# We only need serve in the final image
+RUN pnpm add -g serve
+
+# Copy built artifacts from the builder stage
 COPY --from=builder /app/frontend/dist ./frontend/dist
-COPY --from=builder /app/frontend/package.json ./frontend/
 
-# Install pnpm and serve
-RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
-# Set up PNPM_HOME and add it to PATH
-ENV PNPM_HOME=/usr/local/bin
-ENV PATH="$PNPM_HOME:$PATH"
-RUN pnpm install -g serve
-
-# Expose port
+# Expose the port the app runs on
 EXPOSE 5173
 
-# Start command
+# Start command using serve
+# Adjust the path if the dist directory structure is different
 CMD ["serve", "-s", "frontend/dist", "-l", "5173"]
-
-# End of Dockerfile
