@@ -15,6 +15,13 @@ jobs:
     outputs:
       bump_type: ${{ steps.determine-bump-type.outputs.bump_type }}
     steps:
+      # Install git if running locally via act, as the base ubuntu image might not have it
+      - name: Install Git (for act)
+        if: env.ACT == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends git
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
