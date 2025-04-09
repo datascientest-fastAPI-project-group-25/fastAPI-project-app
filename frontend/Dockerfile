@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# --- Base Stage --- #
+# --- Base Stage (Common Setup) ---
 FROM --platform=linux/amd64 node:18-alpine AS base
 
 # Install pnpm
@@ -12,51 +12,22 @@ ENV PNPM_HOME=/usr/local/bin \
 
 WORKDIR /app
 
-# --- Dependencies Stage --- #
-FROM base AS deps
-
-# Copy dependency definition files
-# When using frontend directory as context, paths are relative to that directory
-COPY package.json ../
-COPY pnpm-lock.yaml ..//
-COPY package.json ./
-
-# Fetch production dependencies using the lockfile
-# This leverages pnpm's content-addressable store for caching
-RUN pnpm fetch --prod
-
-# Store pnpm store path for later stages
-RUN echo $(pnpm store path) > /tmp/pnpm-store-path
-
-# --- Builder Stage --- #
+# --- Builder Stage ---
 FROM base AS builder
 
-# Install production dependencies using the offline cache from 'deps' stage
-# Copy the full pnpm virtual store (using the correct path from deps stage)
-COPY --from=deps /tmp/pnpm-store-path /tmp/pnpm-store-path
-RUN mkdir -p $(cat /tmp/pnpm-store-path)
-COPY --from=deps $(cat /tmp/pnpm-store-path) $(cat /tmp/pnpm-store-path)
-
-# Copy dependency files again (needed for install command)
-# Fix the path syntax for multiple files
-COPY package.json ../
-COPY pnpm-lock.yaml ..//
+# Copy only package.json first to leverage Docker cache
 COPY package.json ./
 
-# Install only production dependencies, using the offline store
-# --ignore-scripts to prevent husky, etc.
-RUN pnpm install --frozen-lockfile --offline --ignore-scripts || pnpm install --frozen-lockfile --ignore-scripts
+# Install ALL dependencies (including devDependencies needed for build)
+RUN pnpm install
 
-# Copy frontend source code
-# When using frontend directory as context, copy everything from current directory
+# Copy the rest of the frontend source code
 COPY . .
 
 # Build the frontend application
-# Already in the frontend directory when using frontend as context
-WORKDIR /app
 RUN pnpm run build
 
-# --- Final/Production Stage --- #
+# --- Final/Production Stage ---
 FROM base AS final
 
 WORKDIR /app
@@ -64,16 +35,16 @@ WORKDIR /app
 # Set NODE_ENV for production
 ENV NODE_ENV=production
 
-# Install 'serve' for serving static files
-# We only need serve in the final image
+# Install 'serve' globally for serving static files
 RUN pnpm install -g serve
 
 # Copy built artifacts from the builder stage
+# Ensure the source path in the builder stage is correct (/app/dist)
 COPY --from=builder /app/dist ./dist/
 
 # Expose the port the app runs on
 EXPOSE 5173
 
-# Start command using serve
-# Adjust the path if the dist directory structure is different
-CMD ["serve", "-s", "frontend/dist", "-l", "5173"]
+# Command to run the application using serve
+# Serve the 'dist' directory from the current working directory (/app)
+CMD ["serve", "-s", "dist", "-l", "5173"]
