@@ -48,6 +48,6 @@ WORKDIR /app/backend
 RUN uv pip install --system -e .
 
 # Install additional dependencies explicitly
-RUN uv pip install --system psycopg2-binary python-jose passlib python-multipart email-validator
+# RUN uv pip install --system psycopg2-binary python-jose passlib python-multipart email-validator
 
 CMD ["/app/backend/scripts/prestart.sh"]
