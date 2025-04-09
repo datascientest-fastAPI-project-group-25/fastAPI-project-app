@@ -62,7 +62,18 @@ echo ""
 build_backend() {
   echo -e "${GREEN}Building backend image...${NC}"
 
-  # Test with repository root as context (current workflow approach)
+  # Debug: Check if uv.lock exists
+  echo -e "${YELLOW}Checking for uv.lock file...${NC}"
+  if [ -f "$PROJECT_ROOT/backend/uv.lock" ]; then
+    echo -e "${GREEN}✓ uv.lock file found in backend directory${NC}"
+    ls -la "$PROJECT_ROOT/backend/uv.lock"
+  else
+    echo -e "${RED}✗ uv.lock file NOT found in backend directory${NC}"
+    echo "Listing backend directory contents:"
+    ls -la "$PROJECT_ROOT/backend/"
+  fi
+
+  # Test with repository root as context (original workflow approach)
   echo -e "${YELLOW}Testing build with repository root context...${NC}"
   docker build \
     --build-arg APP_VERSION="$VERSION" \
@@ -80,7 +91,25 @@ build_backend() {
 
   # Test with backend directory as context (new workflow approach)
   echo -e "${YELLOW}Testing build with backend directory context...${NC}"
+  echo "Verifying uv.lock is in the context directory..."
+  ls -la "$PROJECT_ROOT/backend/uv.lock" || echo "uv.lock not found!"
+
+  # First, let's try a very simple test to see if we can copy the uv.lock file at all
+  echo -e "${YELLOW}Creating a test Dockerfile to debug the copy issue...${NC}"
+  cat > "$PROJECT_ROOT/backend/Dockerfile.test" << 'EOF'
+FROM python:3.11-slim
+WORKDIR /app
+COPY uv.lock /app/
+RUN ls -la /app/uv.lock
+CMD ["echo", "Success!"]
+EOF
+
+  echo -e "${YELLOW}Testing with simplified Dockerfile...${NC}"
+  docker build -t backend-test-simple:latest -f "$PROJECT_ROOT/backend/Dockerfile.test" "$PROJECT_ROOT/backend"
+
+  echo -e "${YELLOW}Now testing with the actual Dockerfile...${NC}"
   docker build \
+    --debug \
     --build-arg APP_VERSION="$VERSION" \
     --build-arg GIT_HASH="$GIT_HASH" \
     --build-arg BRANCH_TYPE="$ENVIRONMENT" \
@@ -117,6 +146,9 @@ build_frontend() {
 
   # Test with frontend directory as context (new workflow approach)
   echo -e "${YELLOW}Testing build with frontend directory context...${NC}"
+  echo "Verifying package.json is in the context directory..."
+  ls -la "$PROJECT_ROOT/frontend/package.json" || echo "package.json not found!"
+
   docker build \
     --build-arg APP_VERSION="$VERSION" \
     --build-arg GIT_HASH="$GIT_HASH" \
