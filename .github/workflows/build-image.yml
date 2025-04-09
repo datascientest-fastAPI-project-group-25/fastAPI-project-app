@@ -124,8 +124,8 @@ jobs:
 
           if [ "$ENV" == "stg" ]; then
             # For staging: version+githash
-            BACKEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}${VERSION}-${SHORT_SHA}"
-            FRONTEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${PREFIX}${VERSION}-${SHORT_SHA}"
+            BACKEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}-${SHORT_SHA}"
+            FRONTEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-frontend:${PREFIX}-${SHORT_SHA}"
           else
             # For production: only version
             BACKEND_TAGS="ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}-backend:${PREFIX}${VERSION}"

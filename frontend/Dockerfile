@@ -68,7 +68,7 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN echo "node-linker=hoisted\nstrict-peer-dependencies=false\nshared-workspace-lockfile=false\nauto-install-peers=true\nprefer-frozen-lockfile=false" > /app/.npmrc
 
 # Skip installing optional dependencies that might cause build issues
-RUN npm config set optional false
+# RUN npm config set optional false
 
 # Use npm instead of pnpm for this specific package
 RUN npm install --no-save @rollup/rollup-linux-x64-musl
