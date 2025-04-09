@@ -102,6 +102,8 @@ jobs:
       - name: Trigger Release Repository Workflow
         if: ${{ steps.get-version.outputs.is_prerelease == 'false' }}
         uses: peter-evans/repository-dispatch@v2
+        env:
+          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
         with:
           token: ${{ secrets.MACHINE_USER_TOKEN }}
           repository: datascientest-fastapi-project-group-25/fastAPI-project-release
