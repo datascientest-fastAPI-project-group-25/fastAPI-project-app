@@ -37,9 +37,7 @@ export const Link: React.FC<any> = ({ children, ...props }) => (
 export const Image: React.FC<{
   alt?: string
   src?: string
-  h?: string
-  display?: string
-}> = ({ alt, src, h, display }) => (
+}> = ({ alt, src }) => (
   <img
     alt={alt || "Descriptive alt text for image"}
     src={src}

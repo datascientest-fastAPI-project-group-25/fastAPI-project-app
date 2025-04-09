@@ -124,13 +124,18 @@ jobs:
           fi
 
           if [ "$ENV" == "stg" ]; then
-
-
             REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
-            BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}-${SHORT_SHA}"
-            FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}${VERSION}"
-
+            # Staging: Both use stg-SHA
+            BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}stg-${SHORT_SHA}"
+            FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}stg-${SHORT_SHA}"
+          else # Assume prod or other environments
+            REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+            # Production: Use version and latest
+            BACKEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}${VERSION},ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:latest"
+            FRONTEND_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}${VERSION},ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:latest"
+          fi
 
           echo "backend_tags=$BACKEND_TAGS" >> $GITHUB_OUTPUT
           echo "frontend_tags=$FRONTEND_TAGS" >> $GITHUB_OUTPUT
@@ -139,7 +144,7 @@ jobs:
         id: build-backend
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./backend
           file: ./backend/Dockerfile
           push: true
           tags: ${{ steps.set-tags.outputs.backend_tags }}
@@ -170,7 +175,7 @@ jobs:
         id: build-frontend
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./frontend
           file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.set-tags.outputs.frontend_tags }}
@@ -277,13 +282,13 @@ jobs:
             const repoName = context.repo.repo.toLowerCase();
 
             if (env === 'stg') {
-
-              // For staging: only prefix+githash
-              imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}-${shortSha}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}-${shortSha}\``;
+              // For staging: both use stg-SHA
+              // Using single quotes to avoid JSON escaping issues with backticks
+              imageTagsMessage = 'Images are available at:\n- `ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}stg-${shortSha}`\n- `ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}stg-${shortSha}`';
             } else {
-              // For production: only prefix+version
-              imageTagsMessage = `Images are available at:\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}\`\n- \`ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}\``;
-
+              // For production: both use version
+              // Using single quotes to avoid JSON escaping issues with backticks
+              imageTagsMessage = 'Images are available at:\n- `ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}`\n- `ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}`';
             }
 
             github.rest.repos.createCommitComment({
