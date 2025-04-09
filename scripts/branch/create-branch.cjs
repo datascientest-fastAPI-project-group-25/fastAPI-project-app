@@ -108,12 +108,12 @@ function createBranchWithParams(branchType, branchName, automerge) {
       `3. Push: ${colors.yellow}git push -u origin ${fullBranchName}${colors.reset}`,
     );
     console.log(
-      `4. PR will be auto-created to ${colors.magenta}main${colors.reset} branch`,
+      `4. PR will be auto-created to ${colors.magenta}stg${colors.reset} branch`,
     );
 
     if (branchType === "fix" && automerge) {
       console.log(
-        `\n${colors.magenta}Automerge:${colors.reset} Will merge to main after tests pass`,
+        `\n${colors.magenta}Automerge:${colors.reset} Will merge to stg after tests pass`,
       );
     }
     return true;
