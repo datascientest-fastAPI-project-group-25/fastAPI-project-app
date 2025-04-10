@@ -1,4 +1,4 @@
-name: Promote Staging to Main on PR Merge
+name: CD - Auto-PR Staging to Main Branch
 
 on:
   pull_request:
