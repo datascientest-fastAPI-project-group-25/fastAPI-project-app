@@ -19,6 +19,10 @@ on:
         required: true
         type: string
         description: "Full frontend image reference including registry and tag"
+      semantic_version:
+        required: false
+        type: string
+        description: "Semantic version (without environment suffix) for use in Helm charts"
     secrets:
       MACHINE_USER_TOKEN:
         required: true
@@ -44,5 +48,6 @@ jobs:
               "version": "${{ inputs.version }}",
               "environment": "${{ inputs.environment }}",
               "backend_image": "${{ inputs.backend_image }}",
-              "frontend_image": "${{ inputs.frontend_image }}"
+              "frontend_image": "${{ inputs.frontend_image }}",
+              "semantic_version": "${{ inputs.semantic_version }}"
             }
