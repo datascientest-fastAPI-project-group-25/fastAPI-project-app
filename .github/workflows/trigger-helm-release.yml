@@ -35,6 +35,44 @@ jobs:
   trigger-release:
     runs-on: ubuntu-latest
     steps:
+      - name: Heal or validate semantic version for production
+        id: heal_version
+        run: |
+          VERSION_INPUT="${{ inputs.version }}"
+          ENVIRONMENT="${{ inputs.environment }}"
+          SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+$'
+
+          if [[ "$ENVIRONMENT" == "prod" ]]; then
+            if [[ ! "$VERSION_INPUT" =~ $SEMVER_REGEX ]]; then
+              echo "Input version '$VERSION_INPUT' is not a valid semantic version. Attempting to heal..."
+
+              # Try to read from VERSION file if present
+              if [ -f VERSION ]; then
+                VERSION_FILE=$(cat VERSION | grep -Eo "$SEMVER_REGEX" | head -n1)
+                if [[ "$VERSION_FILE" =~ $SEMVER_REGEX ]]; then
+                  echo "Healed version from VERSION file: $VERSION_FILE"
+                  VERSION_INPUT="$VERSION_FILE"
+                fi
+              fi
+
+              # Try to extract a semver from the input string
+              if [[ ! "$VERSION_INPUT" =~ $SEMVER_REGEX ]]; then
+                EXTRACTED=$(echo "$VERSION_INPUT" | grep -Eo "$SEMVER_REGEX" | head -n1)
+                if [[ "$EXTRACTED" =~ $SEMVER_REGEX ]]; then
+                  echo "Healed version by extracting from input: $EXTRACTED"
+                  VERSION_INPUT="$EXTRACTED"
+                fi
+              fi
+
+              # If still invalid, fail
+              if [[ ! "$VERSION_INPUT" =~ $SEMVER_REGEX ]]; then
+                echo "::error::Production releases must use a valid semantic version (e.g., 1.2.3). Healing failed."
+                exit 1
+              fi
+            fi
+          fi
+
+          echo "version=$VERSION_INPUT" >> $GITHUB_OUTPUT
       - name: Trigger Release Repository Workflow
         uses: peter-evans/repository-dispatch@v2
         env:
@@ -45,7 +83,7 @@ jobs:
           event-type: app-release
           client-payload: |
             {
-              "version": "${{ inputs.version }}",
+              "version": "${{ steps.heal_version.outputs.version || inputs.version }}",
               "environment": "${{ inputs.environment }}",
               "backend_image": "${{ inputs.backend_image }}",
               "frontend_image": "${{ inputs.frontend_image }}",
