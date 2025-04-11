@@ -1,4 +1,4 @@
-name: Feature/Fix to Staging PR Creation
+name: CI - Auto-PR Feature to Staging Branch
 
 on:
   push:

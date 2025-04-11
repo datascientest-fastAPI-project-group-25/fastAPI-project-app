@@ -1,4 +1,4 @@
-name: Reusable PR Creation
+name: Reusable - Pull Request Creation Workflow
 
 on:
   workflow_call:
