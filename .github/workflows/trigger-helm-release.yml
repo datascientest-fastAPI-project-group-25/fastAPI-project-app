@@ -139,6 +139,22 @@ jobs:
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           fi
 
+          # Ensure semantic_version is always a valid semver (X.Y.Z)
+          SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+$'
+          if [[ ! "$SEMVER" =~ $SEMVER_REGEX ]]; then
+            echo "Semantic version '$SEMVER' is not a valid X.Y.Z format"
+            # Try to extract a valid semver from it
+            EXTRACTED_SEMVER=$(echo "$SEMVER" | grep -Eo "$SEMVER_REGEX" || echo '')
+            if [[ -n "$EXTRACTED_SEMVER" ]]; then
+              echo "Extracted valid semantic version: $EXTRACTED_SEMVER"
+              SEMVER="$EXTRACTED_SEMVER"
+            else
+              # Default to a fixed version if we can't extract one
+              SEMVER="0.1.0"
+              echo "Using default semantic version: $SEMVER"
+            fi
+          fi
+
           echo "semantic_version=$SEMVER" >> $GITHUB_OUTPUT
 
       - name: Trigger Release Repository Workflow
