@@ -45,9 +45,18 @@ jobs:
           LABEL="promote-to-${{ inputs.target_branch }}"
           echo "Ensuring label '$LABEL' exists..."
 
+          # Choose color based on target branch
+          if [[ "${{ inputs.target_branch }}" == "main" ]]; then
+            # Orange color for staging to main (more cautionary)
+            LABEL_COLOR="D93F0B"
+          else
+            # Green color for feature to staging
+            LABEL_COLOR="0E8A16"
+          fi
+
           # Try to create the label, ignore error if it already exists
           gh label create "$LABEL" \
-            --color "0E8A16" \
+            --color "$LABEL_COLOR" \
             --description "PR to promote changes to ${{ inputs.target_branch }} branch" \
             || true
 
