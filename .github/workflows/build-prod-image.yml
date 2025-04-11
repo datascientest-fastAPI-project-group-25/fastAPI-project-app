@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-prod-images:
-    uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/build-image.yml@main
+    uses: ./.github/workflows/build-image.yml
     with:
       environment: prod
       version_bump_type: patch
@@ -19,11 +19,12 @@ jobs:
   trigger-release:
     needs: build-prod-images
     if: success()
-    uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/trigger-helm-release.yml@main
+    uses: ./.github/workflows/trigger-helm-release.yml
     with:
-      version: ${{ needs.build-prod-images.outputs.new_version }}
+      version: ${{ needs.build-prod-images.outputs.new_version }}  # Used for both version and image tags
       environment: prod
       backend_image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ needs.build-prod-images.outputs.new_version }}
       frontend_image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ needs.build-prod-images.outputs.new_version }}
+      semantic_version: ${{ needs.build-prod-images.outputs.new_version }}  # Same as version for prod, ensures proper Helm versioning
     secrets:
       MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
