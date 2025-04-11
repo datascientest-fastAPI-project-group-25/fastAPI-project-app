@@ -111,6 +111,36 @@ jobs:
 
           echo "Final version to be used: $VERSION_INPUT"
           echo "version=$VERSION_INPUT" >> $GITHUB_OUTPUT
+      - name: Prepare payload for release repository
+        id: prepare_payload
+        run: |
+          VERSION="${{ steps.heal_version.outputs.version }}"
+          ENVIRONMENT="${{ inputs.environment }}"
+          SEMVER="$VERSION"
+
+          # For staging, modify the version to include the semantic version
+          if [[ "$ENVIRONMENT" == "stg" ]]; then
+            # Extract git hash from the version (assuming format stg-HASH)
+            GIT_HASH=$(echo "${{ inputs.version }}" | grep -o '[a-f0-9]\{7,40\}' || echo '')
+
+            if [[ -n "$GIT_HASH" && -n "$SEMVER" ]]; then
+              # Use first 7 characters of git hash
+              SHORT_HASH="${GIT_HASH:0:7}"
+              # Create a version that includes both semver and hash
+              MODIFIED_VERSION="stg-$SEMVER-$SHORT_HASH"
+              echo "Modified version for staging: $MODIFIED_VERSION"
+              echo "version=$MODIFIED_VERSION" >> $GITHUB_OUTPUT
+            else
+              echo "Using original version: $VERSION"
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Using original version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+          echo "semantic_version=$SEMVER" >> $GITHUB_OUTPUT
+
       - name: Trigger Release Repository Workflow
         uses: peter-evans/repository-dispatch@v2
         env:
@@ -121,9 +151,9 @@ jobs:
           event-type: app-release
           client-payload: |
             {
-              "version": "${{ steps.heal_version.outputs.version }}",
+              "version": "${{ steps.prepare_payload.outputs.version }}",
               "environment": "${{ inputs.environment }}",
               "backend_image": "${{ inputs.backend_image }}",
               "frontend_image": "${{ inputs.frontend_image }}",
-              "semantic_version": "${{ steps.heal_version.outputs.version }}"
+              "semantic_version": "${{ steps.prepare_payload.outputs.semantic_version }}"
             }
