@@ -47,7 +47,7 @@ jobs:
 
   build-stg-images:
     needs: determine-bump-type
-    uses: ./.github/workflows/build-image.yml
+    uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/build-image.yml@stg
     with:
       environment: stg
       version_bump_type: ${{ needs.determine-bump-type.outputs.bump_type }}
@@ -55,7 +55,7 @@ jobs:
   trigger-release:
     needs: [determine-bump-type, build-stg-images]
     if: success()
-    uses: ./.github/workflows/trigger-helm-release.yml
+    uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/trigger-helm-release.yml@stg
     with:
       version: stg-${{ github.sha }}
       environment: stg
