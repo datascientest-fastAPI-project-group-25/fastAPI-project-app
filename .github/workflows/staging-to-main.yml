@@ -5,9 +5,11 @@ on:
     types: [closed]
     branches:
       - stg
-  push:
-    branches:
-      - stg
+
+  # Remove push trigger to prevent duplicate runs
+  # push:
+  #   branches:
+  #     - stg
 
 permissions:
   contents: write
@@ -15,28 +17,52 @@ permissions:
 
 jobs:
   extract-info:
-    if: github.event.pull_request.merged == true
+    # Only run on PR merge, not on direct push
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
-      pr_title: ${{ steps.extract.outputs.pr_title }}
+      pr_title: ${{ steps.format.outputs.pr_title }}
       pr_body: ${{ steps.extract.outputs.pr_body }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Extract PR info
         id: extract
         run: |
-          {
-            echo 'pr_title<<EOF'
-            # Remove "Promote to stg" or "Promote to staging" (case-insensitive) and any trailing punctuation/whitespace
-            CLEANED_TITLE=$(echo "${{ github.event.pull_request.title }}" | sed -E 's/^[Pp]romote to stg(ing)?[: -]*//')
-            echo "$CLEANED_TITLE"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
-
+          # Extract PR body
           {
             echo 'pr_body<<EOF'
             echo "${{ github.event.pull_request.body }}"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
+
+          # Extract original branch name from PR title if possible
+          ORIGINAL_TITLE="${{ github.event.pull_request.title }}"
+          echo "Original PR title: $ORIGINAL_TITLE"
+
+          # Try to extract branch name from PR title
+          if [[ "$ORIGINAL_TITLE" == *":"* ]]; then
+            # If title has a colon, extract the part after it (usually the branch name)
+            BRANCH_PART=$(echo "$ORIGINAL_TITLE" | cut -d':' -f2- | xargs)
+            echo "Extracted branch part: $BRANCH_PART"
+          else
+            # Otherwise use the whole title
+            BRANCH_PART="$ORIGINAL_TITLE"
+          fi
+
+          # Store for use in the next step
+          echo "branch_part=$BRANCH_PART" >> $GITHUB_OUTPUT
+
+      - name: Format PR title
+        id: format
+        run: |
+          chmod +x .github/scripts/format-pr-title.sh
+          PR_TITLE=$(.github/scripts/format-pr-title.sh "stg" "main")
+          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+          echo "Formatted PR title: $PR_TITLE"
 
   promote-stg-to-main:
     needs: extract-info
@@ -44,9 +70,13 @@ jobs:
     with:
       source_branch: stg
       target_branch: main
-      pr_title: "Promote staging to main: ${{ needs.extract-info.outputs.pr_title }}"
+      pr_title: "${{ needs.extract-info.outputs.pr_title }}"
       pr_body: |
-        Automated PR to promote changes from **stg** to **main**.
+        # Promote Staging to Main
+
+        This PR promotes changes from **staging** to **main**.
+
+        ## Original Changes
 
         Original PR:
 
