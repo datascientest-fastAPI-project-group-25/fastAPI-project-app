@@ -35,7 +35,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.MACHINE_USER_TOKEN }}
           fetch-depth: 0
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+        run: |
+          LABEL="promote-to-${{ inputs.target_branch }}"
+          echo "Ensuring label '$LABEL' exists..."
+
+          # Try to create the label, ignore error if it already exists
+          gh label create "$LABEL" \
+            --color "0E8A16" \
+            --description "PR to promote changes to ${{ inputs.target_branch }} branch" \
+            || true
 
       - name: Create or Update Pull Request
         env:
@@ -52,6 +66,9 @@ jobs:
             pr_number=$(basename "$pr_url" | cut -d'/' -f1)
             echo "pull-request-url=$pr_url" >> $GITHUB_OUTPUT
             echo "pull-request-number=$pr_number" >> $GITHUB_OUTPUT
+
+            # Add label to existing PR if needed
+            gh pr edit "$pr_number" --add-label "promote-to-${{ inputs.target_branch }}" || true
             exit 0
           fi
 
@@ -59,12 +76,11 @@ jobs:
             --base "${{ inputs.target_branch }}" \
             --head "${{ inputs.source_branch }}" \
             --title "${{ inputs.pr_title }}" \
-            --body "${{ inputs.pr_body }}")
+            --body "${{ inputs.pr_body }}" \
+            --label "promote-to-${{ inputs.target_branch }}")
 
           echo "PR URL: $pr_url"
-
           pr_number=$(basename "$pr_url" | cut -d'/' -f1)
-
           echo "pull-request-url=$pr_url" >> $GITHUB_OUTPUT
           echo "pull-request-number=$pr_number" >> $GITHUB_OUTPUT
 

@@ -5,9 +5,11 @@ on:
     types: [closed]
     branches:
       - stg
-  push:
-    branches:
-      - stg
+
+  # Remove push trigger to prevent duplicate runs
+  # push:
+  #   branches:
+  #     - stg
 
 permissions:
   contents: write
@@ -15,7 +17,10 @@ permissions:
 
 jobs:
   extract-info:
-    if: github.event.pull_request.merged == true
+    # Only run on PR merge, not on direct push
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
       pr_title: ${{ steps.extract.outputs.pr_title }}
@@ -44,9 +49,13 @@ jobs:
     with:
       source_branch: stg
       target_branch: main
-      pr_title: "Promote staging to main: ${{ needs.extract-info.outputs.pr_title }}"
+      pr_title: "${{ needs.extract-info.outputs.pr_title }}"
       pr_body: |
-        Automated PR to promote changes from **stg** to **main**.
+        # Promote Staging to Main
+
+        This PR promotes changes from **staging** to **main**.
+
+        ## Original Changes
 
         Original PR:
 
