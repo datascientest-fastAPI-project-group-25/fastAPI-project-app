@@ -21,6 +21,7 @@ on:
 permissions:
   contents: write
   packages: write
+  security-events: write
 
 jobs:
   bump-version:
@@ -218,7 +219,6 @@ jobs:
         with:
           sarif_file: 'trivy-${{ matrix.app_component }}-results.sarif'
           category: '${{ matrix.app_component }}-image'
-          token: ${{ secrets.MACHINE_USER_TOKEN }}
 
       - name: Set workflow outputs
         id: workflow_outputs
