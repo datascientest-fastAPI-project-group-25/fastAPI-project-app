@@ -127,10 +127,22 @@ jobs:
           elif [[ "$VERSION" =~ $SEMVER_REGEX ]]; then
             SEMVER="${BASH_REMATCH[0]}"
             echo "Extracted semantic version from VERSION: $SEMVER"
-          # For staging, we can use a default version
+          # For staging, try to read from VERSION file
           elif [[ "$ENVIRONMENT" == "stg" ]]; then
-            SEMVER="0.1.0"
-            echo "Using default semantic version for staging: $SEMVER"
+            # Try to read from VERSION file
+            if [ -f VERSION ]; then
+              VERSION_FILE=$(cat VERSION | grep -Eo "$SEMVER_REGEX" | head -n1)
+              if [[ "$VERSION_FILE" =~ $SEMVER_REGEX ]]; then
+                SEMVER="$VERSION_FILE"
+                echo "Using version from VERSION file for staging: $SEMVER"
+              else
+                SEMVER="0.1.0"
+                echo "Invalid version in VERSION file, using default: $SEMVER"
+              fi
+            else
+              SEMVER="0.1.0"
+              echo "No VERSION file found, using default semantic version for staging: $SEMVER"
+            fi
           # For production, we should already have a valid semver from heal_version
           else
             SEMVER="$VERSION"
@@ -151,10 +163,14 @@ jobs:
             if [[ -n "$GIT_HASH" ]]; then
               # Use first 7 characters of git hash
               SHORT_HASH="${GIT_HASH:0:7}"
-              # Create a version that includes both semver and hash
+              # Create a version that includes just the hash for the image tag
               MODIFIED_VERSION="stg-$SHORT_HASH"
-              echo "Modified version for staging: $MODIFIED_VERSION"
+              echo "Modified version for staging image tag: $MODIFIED_VERSION"
               echo "version=$MODIFIED_VERSION" >> $GITHUB_OUTPUT
+
+              # For semantic version, append -stg to the semver
+              SEMVER="${SEMVER}-stg"
+              echo "Modified semantic version for staging: $SEMVER"
             else
               echo "Using original version: $VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT
