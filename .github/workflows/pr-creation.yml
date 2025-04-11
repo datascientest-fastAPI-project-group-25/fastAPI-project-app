@@ -35,6 +35,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.MACHINE_USER_TOKEN }}
           fetch-depth: 0
 
       - name: Create or Update Pull Request
@@ -43,7 +44,6 @@ jobs:
         run: |
           echo "Source branch: ${{ inputs.source_branch }}"
           echo "Target branch: ${{ inputs.target_branch }}"
-
           existing_pr_url=$(gh pr list --head "${{ inputs.source_branch }}" --base "${{ inputs.target_branch }}" --state open --json url --jq '.[0].url')
 
           if [ -n "$existing_pr_url" ]; then
@@ -54,20 +54,16 @@ jobs:
             echo "pull-request-number=$pr_number" >> $GITHUB_OUTPUT
             exit 0
           fi
-
           pr_url=$(gh pr create \
             --base "${{ inputs.target_branch }}" \
             --head "${{ inputs.source_branch }}" \
             --title "${{ inputs.pr_title }}" \
-            --body "${{ inputs.pr_body }}")
-
+            --body "${{ inputs.pr_body }}" \
+            --label "promote-to-${{ inputs.target_branch }}")
           echo "PR URL: $pr_url"
-
           pr_number=$(basename "$pr_url" | cut -d'/' -f1)
-
           echo "pull-request-url=$pr_url" >> $GITHUB_OUTPUT
           echo "pull-request-number=$pr_number" >> $GITHUB_OUTPUT
-
       - name: PR Details
         if: success()
         run: |
