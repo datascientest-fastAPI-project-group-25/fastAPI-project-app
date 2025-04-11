@@ -1,5 +1,5 @@
 name: Build and Push Production Images
-
+# Added comment to trigger rebuild and validate workflow
 on:
   push:
     branches:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-prod-images:
-    uses: ./.github/workflows/build-image.yml
+    uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/build-image.yml@main
     with:
       environment: prod
       version_bump_type: patch
@@ -19,7 +19,7 @@ jobs:
   trigger-release:
     needs: build-prod-images
     if: success()
-    uses: ./.github/workflows/trigger-helm-release.yml
+    uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/trigger-helm-release.yml@main
     with:
       version: ${{ needs.build-prod-images.outputs.new_version }}
       environment: prod
