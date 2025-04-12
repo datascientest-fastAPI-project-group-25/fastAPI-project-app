@@ -1,6 +1,10 @@
+import os
+from datetime import datetime
+
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 
 from app.api.main import api_router
@@ -42,5 +46,41 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# Add health check endpoints directly to the main app (no authentication required)
+@app.get("/health", tags=["Health"], status_code=status.HTTP_200_OK)
+async def health_check():
+    """Basic health check endpoint for monitoring and orchestration systems."""
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": os.environ.get("APP_VERSION", "unknown"),
+            "environment": settings.ENVIRONMENT,
+        },
+    )
+
+@app.get("/health/readiness", tags=["Health"], status_code=status.HTTP_200_OK)
+async def readiness_check():
+    """Readiness check for orchestration systems like Kubernetes."""
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "status": "ready",
+            "timestamp": datetime.now().isoformat(),
+        },
+    )
+
+@app.get("/health/liveness", tags=["Health"], status_code=status.HTTP_200_OK)
+async def liveness_check():
+    """Liveness check for orchestration systems like Kubernetes."""
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "status": "alive",
+            "timestamp": datetime.now().isoformat(),
+        },
+    )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
