@@ -1,6 +1,8 @@
 import os
+import time
 from datetime import datetime
 
+import psutil
 import sentry_sdk
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,36 +53,112 @@ app.add_middleware(
 @app.get("/health", tags=["Health"], status_code=status.HTTP_200_OK)
 async def health_check():
     """Basic health check endpoint for monitoring and orchestration systems."""
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "status": "healthy",
-            "timestamp": datetime.now().isoformat(),
-            "version": os.environ.get("APP_VERSION", "unknown"),
-            "environment": settings.ENVIRONMENT,
-        },
-    )
+    try:
+        # Get system metrics
+        import psutil
+        memory_usage = psutil.virtual_memory().percent
+        cpu_usage = psutil.cpu_percent(interval=0.1)
+        disk_usage = psutil.disk_usage('/').percent
+
+        # Check if resource usage is within acceptable limits
+        resource_status = "healthy"
+        if memory_usage > 90 or cpu_usage > 90 or disk_usage > 90:
+            resource_status = "degraded"
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "healthy",
+                "timestamp": datetime.now().isoformat(),
+                "version": os.environ.get("APP_VERSION", "unknown"),
+                "environment": settings.ENVIRONMENT,
+                "git_hash": os.environ.get("GIT_HASH", "unknown"),
+                "system": {
+                    "status": resource_status,
+                    "memory_usage_percent": memory_usage,
+                    "cpu_usage_percent": cpu_usage,
+                    "disk_usage_percent": disk_usage,
+                }
+            },
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "unhealthy",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+            },
+        )
 
 @app.get("/health/readiness", tags=["Health"], status_code=status.HTTP_200_OK)
 async def readiness_check():
-    """Readiness check for orchestration systems like Kubernetes."""
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "status": "ready",
-            "timestamp": datetime.now().isoformat(),
-        },
-    )
+    """Readiness check for orchestration systems like Kubernetes.
+    
+    Verifies if the application is ready to handle traffic.
+    """
+    try:
+        # Check database connectivity
+        from app.db.session import engine
+        from sqlalchemy import text as sql_text
+        
+        db_status = "error"
+        with engine.connect() as connection:
+            result = connection.execute(sql_text("SELECT 1"))
+            if result.scalar() == 1:
+                db_status = "connected"
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "ready",
+                "timestamp": datetime.now().isoformat(),
+                "database": db_status,
+                "dependencies": {
+                    "database": db_status == "connected"
+                }
+            },
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "not ready",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+                "dependencies": {
+                    "database": False
+                }
+            },
+        )
 
 @app.get("/health/liveness", tags=["Health"], status_code=status.HTTP_200_OK)
 async def liveness_check():
-    """Liveness check for orchestration systems like Kubernetes."""
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "status": "alive",
-            "timestamp": datetime.now().isoformat(),
-        },
-    )
+    """Liveness check for orchestration systems like Kubernetes.
+    
+    Verifies if the application is running and not deadlocked.
+    """
+    try:
+        # Check basic application functionality
+        uptime_seconds = int(time.time() - psutil.boot_time())
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "alive",
+                "timestamp": datetime.now().isoformat(),
+                "uptime_seconds": uptime_seconds,
+                "process_id": os.getpid(),
+            },
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "not alive",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+            },
+        )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
