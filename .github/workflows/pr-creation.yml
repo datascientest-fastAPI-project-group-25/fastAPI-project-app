@@ -30,14 +30,6 @@ jobs:
   create-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Skip on Merge Commits
-        run: |
-          commit_message=$(git log -1 --pretty=%B)
-          echo "Latest commit message: $commit_message"
-          if [[ "$commit_message" == Merge* ]]; then
-            echo "Merge commit detected, skipping PR creation."
-            exit 0
-          fi
       - name: Install GitHub CLI
         run: |
           sudo apt-get update
@@ -48,6 +40,15 @@ jobs:
         with:
           token: ${{ secrets.MACHINE_USER_TOKEN }}
           fetch-depth: 0
+
+      - name: Skip on Merge Commits
+        run: |
+          commit_message=$(git log -1 --pretty=%B)
+          echo "Latest commit message: $commit_message"
+          if [[ "$commit_message" == Merge* ]]; then
+            echo "Merge commit detected, skipping PR creation."
+            exit 0
+          fi
 
       - name: Ensure labels exist
         env:
