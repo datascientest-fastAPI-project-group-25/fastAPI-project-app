@@ -67,7 +67,9 @@ async def health_check():
             import psutil
             memory_usage = psutil.virtual_memory().percent
             cpu_usage = psutil.cpu_percent(interval=0.1)
-            disk_usage = psutil.disk_usage('/').percent
+            # Use a fixed, safe path for disk usage check
+            safe_path = os.path.abspath(os.sep)
+            disk_usage = psutil.disk_usage(safe_path).percent
 
             # Check if resource usage is within acceptable limits
             resource_status = "healthy"
