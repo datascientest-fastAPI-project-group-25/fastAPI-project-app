@@ -99,19 +99,4 @@ jobs:
           prerelease: ${{ steps.get-version.outputs.is_prerelease }}
           generate_release_notes: true
 
-      - name: Trigger Release Repository Workflow
-        if: ${{ steps.get-version.outputs.is_prerelease == 'false' }}
-        uses: peter-evans/repository-dispatch@v2
-        env:
-          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
-        with:
-          token: ${{ secrets.MACHINE_USER_TOKEN }}
-          repository: datascientest-fastapi-project-group-25/fastAPI-project-release
-          event-type: app-release
-          client-payload: |
-            {
-              "version": "${{ steps.get-version.outputs.version }}",
-              "environment": "prod",
-              "backend_image": "ghcr.io/${{ steps.repo-info.outputs.repo_owner }}/${{ steps.repo-info.outputs.repo_name }}-backend:${{ steps.get-version.outputs.version }}",
-              "frontend_image": "ghcr.io/${{ steps.repo-info.outputs.repo_owner }}/${{ steps.repo-info.outputs.repo_name }}-frontend:${{ steps.get-version.outputs.version }}"
-            }
+      # Note: Release repo is triggered by trigger-helm-release.yml to ensure consistent flow for both stg and prod

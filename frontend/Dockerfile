@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Base Stage (Common Setup) ---
-FROM --platform=linux/amd64 node:18-alpine AS base
+FROM node:18-alpine AS base
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate

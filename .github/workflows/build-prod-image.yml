@@ -1,5 +1,5 @@
 name: Build and Push Production Images
-
+# Added comment to trigger rebuild and validate workflow
 on:
   push:
     branches:
@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   packages: write
+  security-events: write
 
 jobs:
   build-prod-images:
@@ -16,14 +17,42 @@ jobs:
       environment: prod
       version_bump_type: patch
 
-  trigger-release:
+  debug-outputs:
     needs: build-prod-images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Debug outputs from build-prod-images
+        run: |
+          echo "build-prod-images outputs:"
+          echo "new_version: '${{ needs.build-prod-images.outputs.new_version }}'"
+          echo "bump_type: '${{ needs.build-prod-images.outputs.bump_type }}'"
+
+      - name: Check VERSION file
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read VERSION file
+        id: read_version
+        run: |
+          if [ -f VERSION ]; then
+            VERSION=$(cat VERSION)
+            echo "VERSION file exists with content: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION file does not exist"
+            echo "version=0.1.0" >> $GITHUB_OUTPUT
+          fi
+
+  trigger-release:
+    needs: [build-prod-images, debug-outputs]
     if: success()
     uses: ./.github/workflows/trigger-helm-release.yml
     with:
-      version: ${{ needs.build-prod-images.outputs.new_version }}
+      version: ${{ needs.build-prod-images.outputs.new_version || needs.debug-outputs.outputs.version }}  # Used for both version and image tags
       environment: prod
-      backend_image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ needs.build-prod-images.outputs.new_version }}
-      frontend_image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ needs.build-prod-images.outputs.new_version }}
+      backend_image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ needs.build-prod-images.outputs.new_version || needs.debug-outputs.outputs.version }}
+      frontend_image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ needs.build-prod-images.outputs.new_version || needs.debug-outputs.outputs.version }}
+      semantic_version: ${{ needs.build-prod-images.outputs.new_version || needs.debug-outputs.outputs.version }}  # Same as version for prod, ensures proper Helm versioning
     secrets:
       MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}

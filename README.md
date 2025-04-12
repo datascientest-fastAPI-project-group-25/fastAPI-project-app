@@ -355,9 +355,22 @@ graph LR
     F -->|Pass| E
     E --> G{Main Branch Checks}
     G -->|Pass| H[Create Release]
-    H --> I[Push to GHCR]
-    style I fill:#2496ED,stroke:#fff,stroke-width:2px
+    H --> I[Parallel Image Builds]
+    I --> J[Push to GHCR]
+    J --> K[Trigger Helm Release]
+    K --> L[ArgoCD Sync]
+    style J fill:#2496ED,stroke:#fff,stroke-width:2px
+    style L fill:#EF7B4D,stroke:#fff,stroke-width:2px
 ```
+
+### Optimized Build Pipeline
+
+Our build pipeline features several optimizations for faster builds and deployments:
+
+- **Parallel Image Building**: Frontend and backend images are built simultaneously using GitHub Actions matrix strategy
+- **Component-Specific Caching**: Each component has dedicated cache scopes for faster builds
+- **Semantic Versioning**: Robust version handling across environments
+- **Automated Security Scanning**: All images are scanned for vulnerabilities before deployment
 
 ### GitHub Container Registry (GHCR) Configuration
 
@@ -565,3 +578,4 @@ The application uses a subdomain-based routing approach for different services:
 3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feat/amazing-feature`)
 5. Open a Pull Request to the `dev` branch
+##trying to trigger the version

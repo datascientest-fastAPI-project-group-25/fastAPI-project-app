@@ -19,6 +19,10 @@ on:
         required: true
         type: string
         description: "Full frontend image reference including registry and tag"
+      semantic_version:
+        required: false
+        type: string
+        description: "Semantic version (without environment suffix) for use in Helm charts"
     secrets:
       MACHINE_USER_TOKEN:
         required: true
@@ -31,6 +35,154 @@ jobs:
   trigger-release:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Debug inputs
+        run: |
+          echo "Input version: '${{ inputs.version }}'"
+          echo "Input environment: '${{ inputs.environment }}'"
+          echo "Input semantic_version: '${{ inputs.semantic_version }}'"
+          echo "Input backend_image: '${{ inputs.backend_image }}'"
+          echo "Input frontend_image: '${{ inputs.frontend_image }}'"
+
+      - name: Heal or validate semantic version for production
+        id: heal_version
+        run: |
+          VERSION_INPUT="${{ inputs.version }}"
+          ENVIRONMENT="${{ inputs.environment }}"
+          SEMANTIC_VERSION="${{ inputs.semantic_version }}"
+          SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+$'
+
+          # First check if semantic_version is provided and valid
+          if [[ -n "$SEMANTIC_VERSION" && "$SEMANTIC_VERSION" =~ $SEMVER_REGEX ]]; then
+            echo "Using provided semantic version: $SEMANTIC_VERSION"
+            VERSION_INPUT="$SEMANTIC_VERSION"
+          elif [[ "$ENVIRONMENT" == "prod" ]]; then
+            # For production, we need a valid semantic version
+            if [[ ! "$VERSION_INPUT" =~ $SEMVER_REGEX ]]; then
+              echo "Input version '$VERSION_INPUT' is not a valid semantic version. Attempting to heal..."
+
+              # Try to read from VERSION file if present
+              if [ -f VERSION ]; then
+                echo "VERSION file exists, trying to read from it"
+                cat VERSION
+                VERSION_FILE=$(cat VERSION | grep -Eo "$SEMVER_REGEX" | head -n1)
+                if [[ "$VERSION_FILE" =~ $SEMVER_REGEX ]]; then
+                  echo "Healed version from VERSION file: $VERSION_FILE"
+                  VERSION_INPUT="$VERSION_FILE"
+                else
+                  echo "Could not extract valid version from VERSION file"
+                fi
+              else
+                echo "VERSION file not found"
+              fi
+
+              # Try to extract a semver from the input string
+              if [[ ! "$VERSION_INPUT" =~ $SEMVER_REGEX ]]; then
+                EXTRACTED=$(echo "$VERSION_INPUT" | grep -Eo "$SEMVER_REGEX" | head -n1)
+                if [[ "$EXTRACTED" =~ $SEMVER_REGEX ]]; then
+                  echo "Healed version by extracting from input: $EXTRACTED"
+                  VERSION_INPUT="$EXTRACTED"
+                fi
+              fi
+
+              # If still invalid, try to get the current version from version.py
+              if [[ ! "$VERSION_INPUT" =~ $SEMVER_REGEX ]] && [ -f "version.py" ]; then
+                echo "Trying to get version from version.py"
+                if python version.py get 2>/dev/null; then
+                  VERSION_PY=$(python version.py get)
+                  if [[ "$VERSION_PY" =~ $SEMVER_REGEX ]]; then
+                    echo "Healed version from version.py: $VERSION_PY"
+                    VERSION_INPUT="$VERSION_PY"
+                  fi
+                fi
+              fi
+
+              # If still invalid, fail
+              if [[ ! "$VERSION_INPUT" =~ $SEMVER_REGEX ]]; then
+                echo "::error::Production releases must use a valid semantic version (e.g., 1.2.3). Healing failed."
+                exit 1
+              fi
+            fi
+          fi
+
+          echo "Final version to be used: $VERSION_INPUT"
+          echo "version=$VERSION_INPUT" >> $GITHUB_OUTPUT
+      - name: Prepare payload for release repository
+        id: prepare_payload
+        run: |
+          VERSION="${{ steps.heal_version.outputs.version }}"
+          ENVIRONMENT="${{ inputs.environment }}"
+          SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+$'
+
+          # First, determine the semantic version
+          # Check if inputs.semantic_version is provided and valid
+          if [[ -n "${{ inputs.semantic_version }}" && "${{ inputs.semantic_version }}" =~ $SEMVER_REGEX ]]; then
+            SEMVER="${{ inputs.semantic_version }}"
+            echo "Using provided semantic version: $SEMVER"
+          # Try to extract from VERSION if it contains a semantic version
+          elif [[ "$VERSION" =~ $SEMVER_REGEX ]]; then
+            SEMVER="${BASH_REMATCH[0]}"
+            echo "Extracted semantic version from VERSION: $SEMVER"
+          # For staging, try to read from VERSION file
+          elif [[ "$ENVIRONMENT" == "stg" ]]; then
+            # Try to read from VERSION file
+            if [ -f VERSION ]; then
+              VERSION_FILE=$(cat VERSION | grep -Eo "$SEMVER_REGEX" | head -n1)
+              if [[ "$VERSION_FILE" =~ $SEMVER_REGEX ]]; then
+                SEMVER="$VERSION_FILE"
+                echo "Using version from VERSION file for staging: $SEMVER"
+              else
+                SEMVER="0.1.0"
+                echo "Invalid version in VERSION file, using default: $SEMVER"
+              fi
+            else
+              SEMVER="0.1.0"
+              echo "No VERSION file found, using default semantic version for staging: $SEMVER"
+            fi
+          # For production, we should already have a valid semver from heal_version
+          else
+            SEMVER="$VERSION"
+            echo "Using VERSION as semantic version: $SEMVER"
+
+            # Final check to ensure it's valid
+            if [[ ! "$SEMVER" =~ $SEMVER_REGEX ]]; then
+              echo "::warning::No valid semantic version found, using default 0.1.0"
+              SEMVER="0.1.0"
+            fi
+          fi
+
+          # Now handle the version output based on environment
+          if [[ "$ENVIRONMENT" == "stg" ]]; then
+            # Extract git hash from the version (assuming format stg-HASH)
+            GIT_HASH=$(echo "${{ inputs.version }}" | grep -o '[a-f0-9]\{7,40\}' || echo '')
+
+            if [[ -n "$GIT_HASH" ]]; then
+              # Use first 7 characters of git hash
+              SHORT_HASH="${GIT_HASH:0:7}"
+              # Create a version that includes just the hash for the image tag
+              MODIFIED_VERSION="stg-$SHORT_HASH"
+              echo "Modified version for staging image tag: $MODIFIED_VERSION"
+              echo "version=$MODIFIED_VERSION" >> $GITHUB_OUTPUT
+
+              # For semantic version, append -stg to the semver
+              SEMVER="${SEMVER}-stg"
+              echo "Modified semantic version for staging: $SEMVER"
+            else
+              echo "Using original version: $VERSION"
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Using original version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+          # Output the semantic version
+          echo "semantic_version=$SEMVER" >> $GITHUB_OUTPUT
+
       - name: Trigger Release Repository Workflow
         uses: peter-evans/repository-dispatch@v2
         env:
@@ -41,8 +193,9 @@ jobs:
           event-type: app-release
           client-payload: |
             {
-              "version": "${{ inputs.version }}",
+              "version": "${{ steps.prepare_payload.outputs.version }}",
               "environment": "${{ inputs.environment }}",
               "backend_image": "${{ inputs.backend_image }}",
-              "frontend_image": "${{ inputs.frontend_image }}"
+              "frontend_image": "${{ inputs.frontend_image }}",
+              "semantic_version": "${{ steps.prepare_payload.outputs.semantic_version }}"
             }
