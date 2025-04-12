@@ -2,7 +2,6 @@ import os
 import time
 from datetime import datetime
 
-import psutil
 import sentry_sdk
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,32 +53,44 @@ app.add_middleware(
 async def health_check():
     """Basic health check endpoint for monitoring and orchestration systems."""
     try:
-        # Get system metrics
-        import psutil
-        memory_usage = psutil.virtual_memory().percent
-        cpu_usage = psutil.cpu_percent(interval=0.1)
-        disk_usage = psutil.disk_usage('/').percent
+        # Basic health check information
+        health_data = {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": os.environ.get("APP_VERSION", "unknown"),
+            "environment": settings.ENVIRONMENT,
+            "git_hash": os.environ.get("GIT_HASH", "unknown"),
+        }
+        
+        # Try to get system metrics if psutil is available
+        try:
+            import psutil
+            memory_usage = psutil.virtual_memory().percent
+            cpu_usage = psutil.cpu_percent(interval=0.1)
+            disk_usage = psutil.disk_usage('/').percent
 
-        # Check if resource usage is within acceptable limits
-        resource_status = "healthy"
-        if memory_usage > 90 or cpu_usage > 90 or disk_usage > 90:
-            resource_status = "degraded"
+            # Check if resource usage is within acceptable limits
+            resource_status = "healthy"
+            if memory_usage > 90 or cpu_usage > 90 or disk_usage > 90:
+                resource_status = "degraded"
+
+            # Add system metrics to the response
+            health_data["system"] = {
+                "status": resource_status,
+                "memory_usage_percent": memory_usage,
+                "cpu_usage_percent": cpu_usage,
+                "disk_usage_percent": disk_usage,
+            }
+        except ImportError:
+            # If psutil is not available, just provide basic health check
+            health_data["system"] = {
+                "status": "unknown",
+                "message": "Detailed system metrics not available (psutil not installed)",
+            }
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={
-                "status": "healthy",
-                "timestamp": datetime.now().isoformat(),
-                "version": os.environ.get("APP_VERSION", "unknown"),
-                "environment": settings.ENVIRONMENT,
-                "git_hash": os.environ.get("GIT_HASH", "unknown"),
-                "system": {
-                    "status": resource_status,
-                    "memory_usage_percent": memory_usage,
-                    "cpu_usage_percent": cpu_usage,
-                    "disk_usage_percent": disk_usage,
-                }
-            },
+            content=health_data,
         )
     except Exception as e:
         return JSONResponse(
@@ -139,17 +150,23 @@ async def liveness_check():
     Verifies if the application is running and not deadlocked.
     """
     try:
-        # Check basic application functionality
-        uptime_seconds = int(time.time() - psutil.boot_time())
+        liveness_data = {
+            "status": "alive",
+            "timestamp": datetime.now().isoformat(),
+            "process_id": os.getpid(),
+        }
+        
+        # Try to get uptime if psutil is available
+        try:
+            import psutil
+            uptime_seconds = int(time.time() - psutil.boot_time())
+            liveness_data["uptime_seconds"] = uptime_seconds
+        except ImportError:
+            liveness_data["uptime"] = "unknown (psutil not installed)"
         
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={
-                "status": "alive",
-                "timestamp": datetime.now().isoformat(),
-                "uptime_seconds": uptime_seconds,
-                "process_id": os.getpid(),
-            },
+            content=liveness_data,
         )
     except Exception as e:
         return JSONResponse(
