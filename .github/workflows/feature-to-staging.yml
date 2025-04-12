@@ -35,10 +35,11 @@ jobs:
     with:
       source_branch: ${{ github.ref_name }}
       target_branch: stg
-      pr_title: "${{ needs.format-pr-title.outputs.pr_title }}"
+      pr_title: "Promote ${{ github.ref_name }} to stg"
       pr_body: |
-        This PR promotes branch **${{ github.ref_name }}** to **stg**.
+        This PR promotes branch **${{ github.ref_name }}** into **stg**.
 
         _Automated PR created by workflow._
+      pr_label: promote-to-stg
     secrets:
       MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
