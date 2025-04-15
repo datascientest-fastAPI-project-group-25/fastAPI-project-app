@@ -15,6 +15,9 @@ on:
       pr_body:
         required: true
         type: string
+      pr_label:
+        required: false
+        type: string
     secrets:
       MACHINE_USER_TOKEN:
         required: true
@@ -37,6 +40,15 @@ jobs:
         with:
           token: ${{ secrets.MACHINE_USER_TOKEN }}
           fetch-depth: 0
+
+      - name: Skip on Merge Commits
+        run: |
+          commit_message=$(git log -1 --pretty=%B)
+          echo "Latest commit message: $commit_message"
+          if [[ "$commit_message" == Merge* ]]; then
+            echo "Merge commit detected, skipping PR creation."
+            exit 0
+          fi
 
       - name: Ensure labels exist
         env:
@@ -61,9 +73,11 @@ jobs:
             || true
 
       - name: Create or Update Pull Request
+        id: create-pr
         env:
           GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
         run: |
+          echo "Promoting '${{ inputs.source_branch }}' into '${{ inputs.target_branch }}'"
           echo "Source branch: ${{ inputs.source_branch }}"
           echo "Target branch: ${{ inputs.target_branch }}"
 
@@ -75,23 +89,27 @@ jobs:
             pr_number=$(basename "$pr_url" | cut -d'/' -f1)
             echo "pull-request-url=$pr_url" >> $GITHUB_OUTPUT
             echo "pull-request-number=$pr_number" >> $GITHUB_OUTPUT
-
-            # Add label to existing PR if needed
-            gh pr edit "$pr_number" --add-label "promote-to-${{ inputs.target_branch }}" || true
-            exit 0
+          else
+            pr_url=$(gh pr create \
+              --base "${{ inputs.target_branch }}" \
+              --head "${{ inputs.source_branch }}" \
+              --title "${{ inputs.pr_title }}" \
+              --body "${{ inputs.pr_body }}")
+            echo "PR URL: $pr_url"
+            pr_number=$(basename "$pr_url" | cut -d'/' -f1)
+            echo "pull-request-url=$pr_url" >> $GITHUB_OUTPUT
+            echo "pull-request-number=$pr_number" >> $GITHUB_OUTPUT
           fi
 
-          pr_url=$(gh pr create \
-            --base "${{ inputs.target_branch }}" \
-            --head "${{ inputs.source_branch }}" \
-            --title "${{ inputs.pr_title }}" \
-            --body "${{ inputs.pr_body }}" \
-            --label "promote-to-${{ inputs.target_branch }}")
+          echo "pr_number=$pr_number" >> $GITHUB_ENV
 
-          echo "PR URL: $pr_url"
-          pr_number=$(basename "$pr_url" | cut -d'/' -f1)
-          echo "pull-request-url=$pr_url" >> $GITHUB_OUTPUT
-          echo "pull-request-number=$pr_number" >> $GITHUB_OUTPUT
+      - name: Add PR Label
+        if: ${{ inputs.pr_label != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+        run: |
+          echo "Adding label '${{ inputs.pr_label }}' to PR #${{ env.pr_number }}"
+          gh pr edit ${{ env.pr_number }} --add-label "${{ inputs.pr_label }}"
 
       - name: PR Details
         if: success()

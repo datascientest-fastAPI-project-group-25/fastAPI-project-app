@@ -17,7 +17,10 @@ on:
         type: string
         default: ""
         description: "Optional prefix for image tags"
-
+    outputs:
+      new_version:
+        description: "The new version after bumping"
+        value: ${{ jobs.bump-version.outputs.new_version }}
 permissions:
   contents: write
   packages: write

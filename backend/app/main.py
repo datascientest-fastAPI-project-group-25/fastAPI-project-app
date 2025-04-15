@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 import sentry_sdk
-from fastapi import FastAPI, status
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
@@ -14,6 +14,48 @@ from app.core.config import settings
 
 def custom_generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
+
+
+class RequestLoggingMiddleware:
+    """Middleware for logging request details."""
+    
+    async def __call__(self, request: Request, call_next):
+        # Record request start time
+        start_time = time.time()
+        
+        # Get request details
+        method = request.method
+        url = request.url.path
+        query_params = str(request.query_params)
+        client_host = request.client.host if request.client else "unknown"
+        
+        # Process the request
+        response = await call_next(request)
+        
+        # Calculate processing time
+        process_time = time.time() - start_time
+        
+        # Log request details
+        log_msg = (
+            f"Request: {method} {url} | "
+            f"Query: {query_params} | "
+            f"Client: {client_host} | "
+            f"Status: {response.status_code} | "
+            f"Time: {process_time:.3f}s"
+        )
+        
+        # Log based on status code
+        if response.status_code >= 500:
+            # Server errors
+            print(f"ERROR: {log_msg}")
+        elif response.status_code >= 400:
+            # Client errors
+            print(f"WARNING: {log_msg}")
+        else:
+            # Success responses
+            print(f"INFO: {log_msg}")
+        
+        return response
 
 
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
@@ -47,6 +89,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# Add request logging middleware
+app.add_middleware(RequestLoggingMiddleware)
 
 # Add health check endpoints directly to the main app (no authentication required)
 @app.get("/health", tags=["Health"], status_code=status.HTTP_200_OK)
