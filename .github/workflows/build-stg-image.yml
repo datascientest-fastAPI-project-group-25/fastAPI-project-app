@@ -11,57 +11,103 @@ permissions:
   security-events: write
 
 jobs:
-  determine-bump-type:
+  get-version:
     runs-on: ubuntu-latest
     outputs:
-      bump_type: ${{ steps.determine-bump-type.outputs.bump_type }}
+      version: ${{ steps.get-version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Determine bump type from commit message
-        id: determine-bump-type
+      - name: Get version from VERSION file
+        id: get-version
         run: |
-          # Get the merge commit message
-          COMMIT_MSG=$(git log -1 --pretty=%B)
-          echo "Commit message: $COMMIT_MSG"
-
-          if [[ "$COMMIT_MSG" == *"Merge pull request"* ]]; then
-            PR_BRANCH=$(echo "$COMMIT_MSG" | grep -o "from [^ ]* " | sed 's/from //' | sed 's/ //')
-            echo "PR branch: $PR_BRANCH"
-
-            if [[ "$PR_BRANCH" == feat/* ]]; then
-              echo "bump_type=minor" >> $GITHUB_OUTPUT
-              echo "PR is a feature branch, will bump minor version"
-            elif [[ "$PR_BRANCH" == fix/* ]]; then
-              echo "bump_type=patch" >> $GITHUB_OUTPUT
-              echo "PR is a fix branch, will bump patch version"
-            else
-              echo "bump_type=patch" >> $GITHUB_OUTPUT
-              echo "PR branch type not recognized, defaulting to patch version bump"
-            fi
+          # Read the current version from VERSION file
+          if [ -f "VERSION" ]; then
+            VERSION=$(cat VERSION)
+            echo "Current version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
-            echo "bump_type=patch" >> $GITHUB_OUTPUT
-            echo "Not a merge commit, defaulting to patch version bump"
+            echo "::error::VERSION file not found"
+            exit 1
           fi
 
   build-stg-images:
-    needs: determine-bump-type
-    uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/build-image.yml@stg
+    needs: get-version
+    uses: ./.github/workflows/build-image.yml
     with:
       environment: stg
-      version_bump_type: ${{ needs.determine-bump-type.outputs.bump_type }}
+      semantic_version: ${{ needs.get-version.outputs.version }}
 
   trigger-release:
-    needs: [determine-bump-type, build-stg-images]
+    needs: [get-version, build-stg-images]
     if: success()
-    uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/trigger-helm-release.yml@stg
+    uses: ./.github/workflows/trigger-helm-release.yml
     with:
-      version: stg-${{ github.sha }}
+      version: stg-${{ github.sha }} # Keep using SHA for the release name consistency in ArgoCD/Helm repo
       environment: stg
-      backend_image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:stg-${{ github.sha }}
-      frontend_image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:stg-${{ github.sha }}
-      semantic_version: ${{ needs.build-stg-images.outputs.new_version }}
+      backend_image: ${{ needs.build-stg-images.outputs.backend_image_tag_hash }} # Pass backend SHA tag
+      frontend_image: ${{ needs.build-stg-images.outputs.frontend_image_tag_hash }} # Pass frontend SHA tag
+      semantic_version: ${{ needs.get-version.outputs.version }} # Pass the actual SemVer for Helm charts
     secrets:
       MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+
+  create-stg-prerelease:
+    needs: [get-version, build-stg-images]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required for softprops/action-gh-release
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for changelog generation
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the latest tag (prod or stg)
+          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "Latest tag: $LATEST_TAG"
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous tag found, including all commits in changelog"
+            CHANGELOG=$(git log --pretty=format:"* %s (%h)" --reverse)
+          else
+            echo "Generating changelog since tag $LATEST_TAG"
+            CHANGELOG=$(git log ${LATEST_TAG}..HEAD --pretty=format:"* %s (%h)" --reverse)
+          fi
+
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="No changes detected since last tag ($LATEST_TAG)."
+          fi
+
+          # Save changelog to a file for debugging
+          echo "$CHANGELOG" > changelog-stg.md
+
+          # Set changelog output
+          {
+            echo 'changelog<<EOF'
+            echo "$CHANGELOG"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create Staging Pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.get-version.outputs.version }}-stg
+          name: Pre-release v${{ needs.get-version.outputs.version }}-stg
+          body: |
+            ## Staging Pre-release v${{ needs.get-version.outputs.version }}-stg
+
+            This pre-release contains changes merged into the `stg` branch.
+
+            ### What's Changed
+            ${{ steps.changelog.outputs.changelog }}
+
+            ### Docker Images
+            - Backend: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app-backend:stg-${{ needs.get-version.outputs.version }}`
+            - Frontend: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app-frontend:stg-${{ needs.get-version.outputs.version }}`
+          prerelease: true
+          generate_release_notes: false

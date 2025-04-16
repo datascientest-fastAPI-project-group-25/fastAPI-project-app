@@ -1,0 +1,137 @@
+name: Bump Version on PR Creation
+
+on:
+  pull_request:
+    types: [opened]
+    branches:
+      - stg
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    # Only run on PRs from feature branches, not on PRs from forks
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (startsWith(github.head_ref, 'feat/') || startsWith(github.head_ref, 'fix/')) &&
+      !contains(github.event.pull_request.title, 'promote-to-stg')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }} # Checkout the PR branch
+          fetch-depth: 0 # Full history for version tools
+          token: ${{ secrets.MACHINE_USER_TOKEN }} # Use machine user token for push permissions
+
+      - name: Determine bump type from branch name
+        id: determine-bump-type
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
+        run: |
+          echo "Branch name: $BRANCH_NAME"
+
+          if [[ "$BRANCH_NAME" == feat/* ]]; then
+            echo "bump_type=minor" >> $GITHUB_OUTPUT
+            echo "PR is a feature branch, will bump minor version"
+          elif [[ "$BRANCH_NAME" == fix/* ]]; then
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            echo "PR is a fix branch, will bump patch version"
+          else
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            echo "Branch type not recognized, defaulting to patch version bump"
+          fi
+
+      - name: Check if VERSION file exists
+        id: check-version
+        run: |
+          if [ ! -f "VERSION" ]; then
+            echo "VERSION file not found, creating with initial version 0.1.0"
+            echo "0.1.0" > VERSION
+            echo "created=true" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION file exists"
+            echo "created=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version
+        id: bump-version
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BUMP_TYPE: ${{ steps.determine-bump-type.outputs.bump_type }}
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(cat VERSION)
+          echo "Current version: $CURRENT_VERSION"
+
+          # Parse the version components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # Bump the version based on the bump type
+          if [[ "$BUMP_TYPE" == "major" ]]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [[ "$BUMP_TYPE" == "minor" ]]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+
+          # Create the new version string
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version would be: $NEW_VERSION"
+
+          # Check if we already bumped the version in this PR
+          if [[ "$PR_TITLE" =~ \(v[0-9]+\.[0-9]+\.[0-9]+\) ]]; then
+            echo "PR title already contains a version tag, skipping bump"
+            echo "bumped=false" >> $GITHUB_OUTPUT
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Actually update the version file
+          echo "$NEW_VERSION" > VERSION
+          echo "bumped=true" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Configure Git
+        if: steps.bump-version.outputs.bumped == 'true' || steps.check-version.outputs.created == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Commit version bump
+        if: steps.bump-version.outputs.bumped == 'true' || steps.check-version.outputs.created == 'true'
+        run: |
+          git add VERSION
+          git commit -m "chore(version): Bump version to ${{ steps.bump-version.outputs.new_version }}"
+          git push
+
+      - name: Update PR title with version
+        if: steps.bump-version.outputs.bumped == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const newVersion = '${{ steps.bump-version.outputs.new_version }}';
+            const prNumber = context.issue.number;
+            const prTitle = context.payload.pull_request.title;
+
+            // Remove any existing version tags from the title
+            let cleanTitle = prTitle.replace(/\s*\(v\d+\.\d+\.\d+\)/g, '');
+
+            // Add the new version tag
+            const newTitle = `${cleanTitle} (v${newVersion})`;
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              title: newTitle
+            });
+
+            console.log(`Updated PR title to: ${newTitle}`);
