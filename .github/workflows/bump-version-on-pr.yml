@@ -28,10 +28,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install and cache uv
-        uses: yezz123/setup-uv@v4
-        with:
-          uv-version: 'latest'
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Install bumpver
         run: uv pip install bumpver
