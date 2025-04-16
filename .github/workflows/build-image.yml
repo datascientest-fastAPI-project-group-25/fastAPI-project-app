@@ -124,10 +124,14 @@ jobs:
     needs: bump-version
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.workflow_outputs.outputs.version }}
-      environment: ${{ steps.workflow_outputs.outputs.environment }}
-      image_tag_hash: ${{ steps.workflow_outputs.outputs.image_tag_hash }}
-      image_tag_semver: ${{ steps.workflow_outputs.outputs.image_tag_semver }}
+      version: ${{ needs.bump-version.outputs.new_version }}
+      environment: ${{ inputs.environment }}
+      backend_image_tag_hash: ${{ steps.workflow_outputs_backend.outputs.image_tag_hash }}
+      backend_image_tag_semver: ${{ steps.workflow_outputs_backend.outputs.image_tag_semver }}
+      backend_image_tag_latest: ${{ steps.workflow_outputs_backend.outputs.image_tag_latest }}
+      frontend_image_tag_hash: ${{ steps.workflow_outputs_frontend.outputs.image_tag_hash }}
+      frontend_image_tag_semver: ${{ steps.workflow_outputs_frontend.outputs.image_tag_semver }}
+      frontend_image_tag_latest: ${{ steps.workflow_outputs_frontend.outputs.image_tag_latest }}
     strategy:
       matrix:
         app_component: [backend, frontend]
@@ -226,18 +230,19 @@ jobs:
           echo "::error::${{ matrix.app_component }} image build failed"
           exit 1
 
-      - name: Extract image tag
-        id: extract-image-tag
+      - name: Expose component-specific outputs
+        id: workflow_outputs_${{ matrix.app_component }}
         run: |
-          IMAGE_TAG="${{ steps.set-tags.outputs.image_tags }}"
-          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image_tag_hash=${{ steps.set-tags.outputs.image_tag_hash }}" >> $GITHUB_OUTPUT
+          echo "image_tag_semver=${{ steps.set-tags.outputs.image_tag_semver }}" >> $GITHUB_OUTPUT
+          echo "image_tag_latest=${{ steps.set-tags.outputs.image_tag_latest }}" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
-        if: steps.extract-image-tag.outcome == 'success'
+        if: steps.build-image.outcome == 'success'
         continue-on-error: true
         with:
-          image-ref: ${{ steps.extract-image-tag.outputs.image_tag }}
+          image-ref: ${{ steps.set-tags.outputs.image_tags }}
           format: 'sarif'
           output: 'trivy-${{ matrix.app_component }}-results.sarif'
           severity: 'CRITICAL,HIGH'
@@ -246,30 +251,43 @@ jobs:
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && steps.extract-image-tag.outcome == 'success'
+        if: always() && steps.build-image.outcome == 'success'
         continue-on-error: true
         with:
           sarif_file: 'trivy-${{ matrix.app_component }}-results.sarif'
           category: '${{ matrix.app_component }}-image'
 
-      - name: Set workflow outputs
-        id: workflow_outputs
-        run: |
-          echo "version=${{ needs.bump-version.outputs.new_version }}" >> $GITHUB_OUTPUT
-          echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
-          echo "image_tag_hash=${{ steps.set-tags.outputs.image_tag_hash }}" >> $GITHUB_OUTPUT
-          echo "image_tag_semver=${{ steps.set-tags.outputs.image_tag_semver }}" >> $GITHUB_OUTPUT
+  collect-outputs:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ needs.build-and-push.outputs.version }}
+      environment: ${{ needs.build-and-push.outputs.environment }}
+      backend_image_tag_hash: ${{ needs.build-and-push.outputs.backend_image_tag_hash }}
+      backend_image_tag_semver: ${{ needs.build-and-push.outputs.backend_image_tag_semver }}
+      backend_image_tag_latest: ${{ needs.build-and-push.outputs.backend_image_tag_latest }}
+      frontend_image_tag_hash: ${{ needs.build-and-push.outputs.frontend_image_tag_hash }}
+      frontend_image_tag_semver: ${{ needs.build-and-push.outputs.frontend_image_tag_semver }}
+      frontend_image_tag_latest: ${{ needs.build-and-push.outputs.frontend_image_tag_latest }}
+    steps:
+      - name: Consolidate outputs
+        run: echo "Outputs collected from matrix jobs"
 
-      - name: Comment on commit
-        uses: actions/github-script@v7
+  # Comment on commit
+  comment-on-commit:
+    needs: [bump-version, collect-outputs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const { context } = require('@actions/github');
             const sha = context.sha;
             const shortSha = sha.substring(0, 7);
-            const version = '${{ needs.bump-version.outputs.new_version }}';
+            const version = '${{ needs.collect-outputs.outputs.version }}';
             const bumpType = '${{ needs.bump-version.outputs.bump_type }}';
-            const env = '${{ inputs.environment }}';
+            const env = '${{ needs.collect-outputs.outputs.environment }}';
             const prefix = '${{ inputs.image_tag_prefix }}' ? '${{ inputs.image_tag_prefix }}-' : '';
 
             let bumpMessage = '';
@@ -289,6 +307,9 @@ jobs:
 
             if (env === 'stg') {
               // For staging: include both stg-SHA and stg-SemVer formats
+              // IMPORTANT: The stg-SHA format must be maintained exactly as "stg-{hash}" with no other prefix/suffix
+              // The release repository expects this exact format for staging images
+              // We also add a semver tag for better traceability
               imageTagsMessage = 'Images are available at:\n' +
                 '- Backend:\n' +
                 '  - `ghcr.io/' + repoOwner + '/' + repoName + '-backend:' + prefix + 'stg-' + shortSha + '` (SHA tag)\n' +

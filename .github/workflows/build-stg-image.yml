@@ -58,10 +58,77 @@ jobs:
     if: success()
     uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/trigger-helm-release.yml@stg
     with:
-      version: stg-${{ github.sha }}
+      version: stg-${{ github.sha }} # Keep using SHA for the release name consistency in ArgoCD/Helm repo
       environment: stg
-      backend_image: ${{ needs.build-stg-images.outputs.image_tag_hash }}
-      frontend_image: ${{ needs.build-stg-images.outputs.image_tag_hash }}
-      semantic_version: ${{ needs.build-stg-images.outputs.new_version }}
+      backend_image: ${{ needs.build-stg-images.outputs.backend_image_tag_hash }} # Pass backend SHA tag
+      frontend_image: ${{ needs.build-stg-images.outputs.frontend_image_tag_hash }} # Pass frontend SHA tag
+      semantic_version: ${{ needs.build-stg-images.outputs.version }} # Pass the actual SemVer
     secrets:
       MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+
+  create-stg-prerelease:
+    needs: [determine-bump-type, build-stg-images]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required for softprops/action-gh-release
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for changelog generation
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the latest tag (prod or stg)
+          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "Latest tag: $LATEST_TAG"
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous tag found, including all commits in changelog"
+            CHANGELOG=$(git log --pretty=format:"* %s (%h)" --reverse)
+          else
+            echo "Generating changelog since tag $LATEST_TAG"
+            CHANGELOG=$(git log ${LATEST_TAG}..HEAD --pretty=format:"* %s (%h)" --reverse)
+          fi
+
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="No changes detected since last tag ($LATEST_TAG)."
+          fi
+
+          # Save changelog to a file for debugging
+          echo "$CHANGELOG" > changelog-stg.md
+
+          # Set changelog output
+          {
+            echo 'changelog<<EOF'
+            echo "$CHANGELOG"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create Staging Pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build-stg-images.outputs.version }}-stg
+          name: Pre-release v${{ needs.build-stg-images.outputs.version }}-stg
+          body: |
+            ## Staging Pre-release v${{ needs.build-stg-images.outputs.version }}-stg
+
+            This pre-release contains changes merged into the `stg` branch.
+
+            ### Docker Images
+
+            The following Docker images have been built for staging:
+
+            - Backend (SHA tag): `${{ needs.build-stg-images.outputs.backend_image_tag_hash }}`
+            - Backend (SemVer tag): `${{ needs.build-stg-images.outputs.backend_image_tag_semver }}`
+            - Frontend (SHA tag): `${{ needs.build-stg-images.outputs.frontend_image_tag_hash }}`
+            - Frontend (SemVer tag): `${{ needs.build-stg-images.outputs.frontend_image_tag_semver }}`
+
+            These images are deployed to the staging environment.
+
+            ### Changelog
+
+            ${{ steps.changelog.outputs.changelog }}
+          prerelease: true
+          generate_release_notes: false # We are providing our own body

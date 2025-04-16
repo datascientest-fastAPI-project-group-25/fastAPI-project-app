@@ -15,7 +15,7 @@
    - [x] FIXED: The commit comment now includes both tags for better traceability.
 
 3. **GitHub Release Creation**:
-   - [ ] No pre-release is being created in the app repo with the staging images attached.
+   - [x] A pre-release is being created in the app repo with the staging images attached.
 
 4. **Payload Dispatch**:
    - [x] The `trigger-release` job is executed, which calls the `trigger-helm-release.yml` workflow.
@@ -53,11 +53,11 @@
    - [x] FIXED: When merging to `main`, we now retag the existing `stg-<SHORTHASH>` images with `<SemVer>` rather than rebuilding.
    - [x] FIXED: This ensures the exact same image that was tested in staging is promoted to production.
 
-4. [ ] **GitHub Release Creation**:
+4. [x] **GitHub Release Creation**:
    - [x] FIXED: We now create a proper release when merging to `main`.
-   - [ ] We still need to create a pre-release when merging to `stg`.
+   - [x] Create a pre-release when merging to `stg`.
 
-5. [ ] **Payload Consistency**:
+5. [x] **Payload Consistency**:
    - [x] FIXED: The payload sent to the release repository now contains the correct SemVer and image references.
    - [x] FIXED: We ensure consistent image references for both `stg` and `prod`.
 
@@ -98,9 +98,9 @@
 
 ### 4. Fix GitHub Release Creation
 
-1. [ ] Create a new workflow or modify `build-stg-image.yml` to:
-   - [ ] Create a pre-release when merging to `stg`.
-   - [ ] Include links to the staging Docker images.
+1. [x] Create a new workflow or modify `build-stg-image.yml` to:
+   - [x] Create a pre-release when merging to `stg`.
+   - [x] Include links to the staging Docker images.
 
 ### 5. Ensure Payload Consistency
 
@@ -113,6 +113,6 @@
 1. [x] Implement the changes to the version bump process.
 2. [x] Implement the Docker image tagging strategy.
 3. [x] Implement the image retagging for production.
-4. [ ] Implement the next improvement: Create a pre-release when merging to `stg`.
+4. [x] Implement the next improvement: Create a pre-release when merging to `stg`.
 5. [x] Ensure payload consistency.
 6. [ ] Test the full workflow with a new feature branch.
