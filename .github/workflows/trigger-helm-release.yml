@@ -205,10 +205,20 @@ jobs:
           # Output the semantic version for use in the release repository
           echo "semantic_version=$SEMVER" >> $GITHUB_OUTPUT
 
+          # Also output the clean semantic version (without -stg suffix)
+          # This is important for the release repository to handle version comparisons correctly
+          if [[ "$SEMVER" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-stg$ ]]; then
+            CLEAN_SEMVER="${BASH_REMATCH[1]}"
+            echo "clean_semver=$CLEAN_SEMVER" >> $GITHUB_OUTPUT
+          else
+            echo "clean_semver=$SEMVER" >> $GITHUB_OUTPUT
+          fi
+
           echo "\n✅ Final payload values:"
           echo "- version: $VERSION"
           echo "- environment: $ENVIRONMENT"
           echo "- semantic_version: $SEMVER"
+          echo "- clean_semver: $(cat $GITHUB_OUTPUT | grep clean_semver= | cut -d= -f2)"
 
       - name: Trigger Release Repository Workflow
         uses: peter-evans/repository-dispatch@v2
@@ -224,5 +234,6 @@ jobs:
               "environment": "${{ inputs.environment }}",
               "backend_image": "${{ inputs.backend_image }}",
               "frontend_image": "${{ inputs.frontend_image }}",
-              "semantic_version": "${{ steps.prepare_payload.outputs.semantic_version }}"
+              "semantic_version": "${{ steps.prepare_payload.outputs.semantic_version }}",
+              "clean_semver": "${{ steps.prepare_payload.outputs.clean_semver }}"
             }

@@ -85,9 +85,8 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "Version successfully bumped to $NEW_VERSION"
 
-      - name: Commit and push version bump
+      - name: Commit version bump
         id: commit-version
-        continue-on-error: true
         run: |
           set -e  # Exit immediately if a command exits with a non-zero status
 
@@ -100,20 +99,68 @@ jobs:
             echo "::warning::VERSION file does not exist, creating it"
             echo "${{ steps.bump-version.outputs.new_version }}" > VERSION
             git add VERSION
+            echo "has_changes=true" >> $GITHUB_OUTPUT
           elif ! git diff --quiet VERSION; then
             echo "Changes detected in VERSION file, committing"
             git add VERSION
+
+            # Create a new branch for the version bump
+            TIMESTAMP=$(date +%Y%m%d%H%M%S)
+            BRANCH_NAME="version-bump-${{ steps.bump-version.outputs.new_version }}-${TIMESTAMP}"
+            echo "Creating new branch: $BRANCH_NAME"
+            git checkout -b "$BRANCH_NAME"
+
+            # Commit the changes
             git commit -m "chore: bump version to ${{ steps.bump-version.outputs.new_version }} [skip ci]"
 
-            echo "Pushing changes"
-            if ! git push; then
-              echo "Warning: Failed to push version bump commit, but continuing workflow"
+            # Push the branch
+            if git push origin "$BRANCH_NAME"; then
+              echo "Successfully pushed version bump to branch $BRANCH_NAME"
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+              echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+              # Determine the target branch
+              if [[ "${{ inputs.environment }}" == "stg" ]]; then
+                TARGET_BRANCH="stg"
+              else
+                TARGET_BRANCH="main"
+              fi
+              echo "target_branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
             else
-              echo "Successfully committed and pushed version bump"
+              echo "::error::Failed to push version bump branch"
+              exit 1
             fi
           else
             echo "No changes to VERSION file, skipping commit"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Create Pull Request for Version Bump
+        if: steps.commit-version.outputs.has_changes == 'true' && steps.commit-version.outputs.branch_name != ''
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ github.token }}
+          commit-message: "chore: bump version to ${{ steps.bump-version.outputs.new_version }}"
+          branch: ${{ steps.commit-version.outputs.branch_name }}
+          base: ${{ steps.commit-version.outputs.target_branch }}
+          title: "Bump version to ${{ steps.bump-version.outputs.new_version }}"
+          body: |
+            ## Version Bump
+
+            This PR updates the VERSION file to ${{ steps.bump-version.outputs.new_version }}.
+
+            ### Details
+            - Environment: ${{ inputs.environment }}
+            - Bump Type: ${{ inputs.version_bump_type }}
+            - Previous Version: $(cat VERSION)
+            - New Version: ${{ steps.bump-version.outputs.new_version }}
+
+            This PR was automatically created by the build-image workflow.
+          labels: |
+            automated-pr
+            version-bump
+            env/${{ inputs.environment }}
+          delete-branch: true
 
   build-and-push:
     needs: bump-version
