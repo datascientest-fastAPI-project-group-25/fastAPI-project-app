@@ -35,7 +35,7 @@ jobs:
 
   build-stg-images:
     needs: get-version
-    uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/build-image.yml@stg
+    uses: ./.github/workflows/build-image.yml
     with:
       environment: stg
       semantic_version: ${{ needs.get-version.outputs.version }}
@@ -45,13 +45,13 @@ jobs:
   trigger-release:
     needs: [get-version, build-stg-images]
     if: success()
-    uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/trigger-helm-release.yml@stg
+    uses: ./.github/workflows/trigger-helm-release.yml
     with:
       version: stg-${{ github.sha }} # Keep using SHA for the release name consistency in ArgoCD/Helm repo
       environment: stg
       backend_image: ${{ needs.build-stg-images.outputs.backend_image_tag_hash }} # Pass backend SHA tag
       frontend_image: ${{ needs.build-stg-images.outputs.frontend_image_tag_hash }} # Pass frontend SHA tag
-      semantic_version: ${{ needs.get-version.outputs.version }} # Pass the actual SemVer
+      semantic_version: ${{ needs.get-version.outputs.version }} # Pass the actual SemVer for Helm charts
     secrets:
       MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
 
