@@ -105,19 +105,11 @@ jobs:
 
             This pre-release contains changes merged into the `stg` branch.
 
-            ### Docker Images
-
-            The following Docker images have been built for staging:
-
-            - Backend (SHA tag): `${{ needs.build-stg-images.outputs.backend_image_tag_hash }}`
-            - Backend (SemVer tag): `${{ needs.build-stg-images.outputs.backend_image_tag_semver }}`
-            - Frontend (SHA tag): `${{ needs.build-stg-images.outputs.frontend_image_tag_hash }}`
-            - Frontend (SemVer tag): `${{ needs.build-stg-images.outputs.frontend_image_tag_semver }}`
-
-            These images are deployed to the staging environment.
-
-            ### Changelog
-
+            ### What's Changed
             ${{ steps.changelog.outputs.changelog }}
+
+            ### Docker Images
+            - Backend: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app-backend:stg-${{ needs.get-version.outputs.version }}`
+            - Frontend: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app-frontend:stg-${{ needs.get-version.outputs.version }}`
           prerelease: true
-          generate_release_notes: false # We are providing our own body
+          generate_release_notes: false

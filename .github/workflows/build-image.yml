@@ -50,24 +50,16 @@ permissions:
   security-events: write
 
 jobs:
-  build-and-push:
+  build-images:
     runs-on: ubuntu-latest
-    outputs:
-      environment: ${{ inputs.environment }}
-      backend_image_tag_hash: ${{ steps.workflow_outputs.outputs.backend_image_tag_hash }}
-      backend_image_tag_semver: ${{ steps.workflow_outputs.outputs.backend_image_tag_semver }}
-      backend_image_tag_latest: ${{ steps.workflow_outputs.outputs.backend_image_tag_latest }}
-      frontend_image_tag_hash: ${{ steps.workflow_outputs.outputs.frontend_image_tag_hash }}
-      frontend_image_tag_semver: ${{ steps.workflow_outputs.outputs.frontend_image_tag_semver }}
-      frontend_image_tag_latest: ${{ steps.workflow_outputs.outputs.frontend_image_tag_latest }}
     strategy:
       matrix:
         app_component: [backend, frontend]
-      fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          fetch-depth: 0 # Required for git describe
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -76,7 +68,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set image tags
@@ -86,8 +78,6 @@ jobs:
           ENV="${{ inputs.environment }}"
           # Optional prefix for image tags
           PREFIX="${{ inputs.image_tag_prefix }}"
-          # First 7 characters of the git commit SHA
-          SHORT_SHA="$(echo ${{ github.sha }} | cut -c1-7)"
           # Current component (backend or frontend)
           COMPONENT="${{ matrix.app_component }}"
           # Optional semantic version for SemVer tagging
@@ -95,134 +85,125 @@ jobs:
 
           # Add hyphen to prefix if it exists
           if [ -n "$PREFIX" ]; then
-            PREFIX="${PREFIX}-"
+            PREFIX="$PREFIX-"
           fi
 
-          # Convert repository owner and name to lowercase for Docker image naming
-          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          # Get short SHA for image tag
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "Short SHA: $SHORT_SHA"
 
-          # Set image tags based on environment
-          if [ "$ENV" == "stg" ]; then
-            # Staging: use both stg-SHA and stg-SemVer formats
-            # IMPORTANT: The stg-SHA format must be maintained exactly as "stg-{hash}" with no other prefix/suffix
-            # The release repository expects this exact format for staging images
-            # We also add a semver tag for better traceability
-            if [ -n "$SEMANTIC_VERSION" ]; then
-              IMAGE_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${SHORT_SHA},ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${SEMANTIC_VERSION}"
-              echo "Creating staging image tags: ${PREFIX}stg-${SHORT_SHA} and ${PREFIX}stg-${SEMANTIC_VERSION}"
-            else
-              IMAGE_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${SHORT_SHA}"
-              echo "Creating staging image tag: ${PREFIX}stg-${SHORT_SHA}"
-            fi
+          # Set base image name
+          BASE_IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-$COMPONENT"
+          echo "Base image name: $BASE_IMAGE_NAME"
 
-            # Store both tags separately for later use
-            echo "image_tag_hash=ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${SHORT_SHA}" >> $GITHUB_OUTPUT
-            if [ -n "$SEMANTIC_VERSION" ]; then
-              echo "image_tag_semver=ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${SEMANTIC_VERSION}" >> $GITHUB_OUTPUT
-            fi
+          # Set SHA-based tag (always created)
+          if [ "$ENV" = "prod" ]; then
+            # For production, no environment in tag
+            IMAGE_TAG_HASH="${PREFIX}${SHORT_SHA}"
           else
-            # Production: Use semantic version and latest tag
-            # For production, we use the semantic version directly with no prefix/suffix
-            if [ -n "$SEMANTIC_VERSION" ]; then
-              IMAGE_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}${SEMANTIC_VERSION},ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:latest"
-              echo "Creating production image tags: ${PREFIX}${SEMANTIC_VERSION} and latest"
-              echo "image_tag_semver=ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}${SEMANTIC_VERSION}" >> $GITHUB_OUTPUT
-              echo "image_tag_latest=ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:latest" >> $GITHUB_OUTPUT
+            # For staging, include environment in tag
+            IMAGE_TAG_HASH="${PREFIX}${ENV}-${SHORT_SHA}"
+          fi
+          echo "SHA-based tag: $IMAGE_TAG_HASH"
+          echo "image_tag_hash=$IMAGE_TAG_HASH" >> $GITHUB_OUTPUT
+          echo "base_image_name=$BASE_IMAGE_NAME" >> $GITHUB_OUTPUT
+
+          # Set SemVer-based tag (if version provided)
+          if [ -n "$SEMANTIC_VERSION" ]; then
+            if [ "$ENV" = "prod" ]; then
+              # For production, no environment in tag
+              IMAGE_TAG_SEMVER="${PREFIX}${SEMANTIC_VERSION}"
             else
-              IMAGE_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:latest"
-              echo "Creating production image tag: latest"
-              echo "image_tag_latest=ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:latest" >> $GITHUB_OUTPUT
+              # For staging, include environment in tag
+              IMAGE_TAG_SEMVER="${PREFIX}${ENV}-${SEMANTIC_VERSION}"
             fi
+            echo "SemVer-based tag: $IMAGE_TAG_SEMVER"
+            echo "image_tag_semver=$IMAGE_TAG_SEMVER" >> $GITHUB_OUTPUT
+          else
+            echo "No semantic version provided, skipping SemVer tag"
+            echo "image_tag_semver=" >> $GITHUB_OUTPUT
           fi
 
-          echo "image_tags=$IMAGE_TAGS" >> $GITHUB_OUTPUT
+          # Set 'latest' tag (for production only)
+          if [ "$ENV" = "prod" ]; then
+            IMAGE_TAG_LATEST="${PREFIX}latest"
+            echo "Latest tag: $IMAGE_TAG_LATEST"
+            echo "image_tag_latest=$IMAGE_TAG_LATEST" >> $GITHUB_OUTPUT
+          else
+            echo "Not production, skipping 'latest' tag"
+            echo "image_tag_latest=" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Build and push ${{ matrix.app_component }} image
-        id: build-image
-        uses: docker/build-push-action@v6
+      - name: Build and push
+        uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.app_component }}
-          file: ./${{ matrix.app_component }}/Dockerfile
           push: true
-          tags: ${{ steps.set-tags.outputs.image_tags }}
-          cache-from: type=gha,scope=${{ matrix.app_component }}-${{ inputs.environment }}
-          cache-to: type=gha,scope=${{ matrix.app_component }}-${{ inputs.environment }},mode=max
-          build-args: |
-            GIT_HASH=${{ github.sha }}
-            BRANCH_TYPE=${{ inputs.environment }}
-          # Enable provenance attestation for supply chain security
-          provenance: true
-          # Add labels for better image management
-          labels: |
-            org.opencontainers.image.title=${{ matrix.app_component }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ github.event.repository.updated_at }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.environment=${{ inputs.environment }}
-
-      - name: Verify ${{ matrix.app_component }} image build
-        if: steps.build-image.outcome != 'success'
-        run: |
-          echo "::error::${{ matrix.app_component }} image build failed"
-          exit 1
-
-      - name: Expose component-specific outputs
-        id: workflow_outputs
-        run: |
-          # Store the component name for reference in the outputs
-          COMPONENT="${{ matrix.app_component }}"
-          echo "component=$COMPONENT" >> $GITHUB_OUTPUT
-          echo "${COMPONENT}_image_tag_hash=${{ steps.set-tags.outputs.image_tag_hash }}" >> $GITHUB_OUTPUT
-          echo "${COMPONENT}_image_tag_semver=${{ steps.set-tags.outputs.image_tag_semver }}" >> $GITHUB_OUTPUT
-          echo "${COMPONENT}_image_tag_latest=${{ steps.set-tags.outputs.image_tag_latest }}" >> $GITHUB_OUTPUT
+          tags: |
+            ${{ steps.set-tags.outputs.base_image_name }}:${{ steps.set-tags.outputs.image_tag_hash }}
+            ${{ steps.set-tags.outputs.base_image_name }}:${{ steps.set-tags.outputs.image_tag_semver != '' && steps.set-tags.outputs.image_tag_semver || steps.set-tags.outputs.image_tag_hash }}
+            ${{ steps.set-tags.outputs.image_tag_latest != '' && format('{0}:{1}', steps.set-tags.outputs.base_image_name, steps.set-tags.outputs.image_tag_latest) || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
-        if: steps.build-image.outcome == 'success'
-        continue-on-error: true
         with:
-          image-ref: ${{ steps.set-tags.outputs.image_tags }}
+          image-ref: ${{ steps.set-tags.outputs.base_image_name }}:${{ steps.set-tags.outputs.image_tag_hash }}
           format: 'sarif'
-          output: 'trivy-results.sarif'
+          output: 'trivy-results-${{ matrix.app_component }}.sarif'
           severity: 'CRITICAL,HIGH'
-          exit-code: '0'  # Don't fail the build, just report
-          ignore-unfixed: true
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && steps.build-image.outcome == 'success'
-        continue-on-error: true
         with:
-          sarif_file: 'trivy-results.sarif'
-          category: '${{ matrix.app_component }}-image'
+          sarif_file: 'trivy-results-${{ matrix.app_component }}.sarif'
+          category: 'trivy-${{ matrix.app_component }}'
 
   collect-outputs:
-    needs: build-and-push
+    needs: build-images
     runs-on: ubuntu-latest
     outputs:
-      environment: ${{ needs.build-and-push.outputs.environment }}
-      backend_image_tag_hash: ${{ needs.build-and-push.outputs.backend_image_tag_hash }}
-      backend_image_tag_semver: ${{ needs.build-and-push.outputs.backend_image_tag_semver }}
-      backend_image_tag_latest: ${{ needs.build-and-push.outputs.backend_image_tag_latest }}
-      frontend_image_tag_hash: ${{ needs.build-and-push.outputs.frontend_image_tag_hash }}
-      frontend_image_tag_semver: ${{ needs.build-and-push.outputs.frontend_image_tag_semver }}
-      frontend_image_tag_latest: ${{ needs.build-and-push.outputs.frontend_image_tag_latest }}
+      environment: ${{ steps.collect-outputs.outputs.environment }}
+      backend_image_tag_hash: ${{ steps.collect-outputs.outputs.backend_image_tag_hash }}
+      backend_image_tag_semver: ${{ steps.collect-outputs.outputs.backend_image_tag_semver }}
+      backend_image_tag_latest: ${{ steps.collect-outputs.outputs.backend_image_tag_latest }}
+      frontend_image_tag_hash: ${{ steps.collect-outputs.outputs.frontend_image_tag_hash }}
+      frontend_image_tag_semver: ${{ steps.collect-outputs.outputs.frontend_image_tag_semver }}
+      frontend_image_tag_latest: ${{ steps.collect-outputs.outputs.frontend_image_tag_latest }}
     steps:
-      - name: Consolidate outputs
+      - name: Collect outputs
+        id: collect-outputs
         run: |
-          echo "Outputs collected from matrix jobs"
-          echo "Backend image tag hash: ${{ needs.build-and-push.outputs.backend_image_tag_hash }}"
-          echo "Backend image tag semver: ${{ needs.build-and-push.outputs.backend_image_tag_semver }}"
-          echo "Frontend image tag hash: ${{ needs.build-and-push.outputs.frontend_image_tag_hash }}"
-          echo "Frontend image tag semver: ${{ needs.build-and-push.outputs.frontend_image_tag_semver }}"
+          echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+          echo "backend_image_tag_hash=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}${{ inputs.environment == 'prod' && '' || format('{0}-', inputs.environment) }}$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "frontend_image_tag_hash=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}${{ inputs.environment == 'prod' && '' || format('{0}-', inputs.environment) }}$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-  # Comment on commit
-  comment-on-commit:
-    needs: [collect-outputs]
+          if [ -n "${{ inputs.semantic_version }}" ]; then
+            echo "backend_image_tag_semver=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}${{ inputs.environment == 'prod' && '' || format('{0}-', inputs.environment) }}${{ inputs.semantic_version }}" >> $GITHUB_OUTPUT
+            echo "frontend_image_tag_semver=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}${{ inputs.environment == 'prod' && '' || format('{0}-', inputs.environment) }}${{ inputs.semantic_version }}" >> $GITHUB_OUTPUT
+          else
+            echo "backend_image_tag_semver=" >> $GITHUB_OUTPUT
+            echo "frontend_image_tag_semver=" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "${{ inputs.environment }}" = "prod" ]; then
+            echo "backend_image_tag_latest=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}latest" >> $GITHUB_OUTPUT
+            echo "frontend_image_tag_latest=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}latest" >> $GITHUB_OUTPUT
+          else
+            echo "backend_image_tag_latest=" >> $GITHUB_OUTPUT
+            echo "frontend_image_tag_latest=" >> $GITHUB_OUTPUT
+          fi
+
+  add-comment:
+    needs: collect-outputs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v7
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Add comment with image tags
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -230,7 +211,7 @@ jobs:
             const sha = context.sha;
             const shortSha = sha.substring(0, 7);
             const env = '${{ needs.collect-outputs.outputs.environment }}';
-            const prefix = '${{ inputs.image_tag_prefix }}' ? '${{ inputs.image_tag_prefix }}-' : '';
+            const prefix = '${{ inputs.image_tag_prefix }}' ? '${{ inputs.image_tag_prefix }}: ' : '';
 
             let envName = env === 'stg' ? 'Staging' : 'Production';
             let imageTagsMessage = '';
@@ -239,10 +220,6 @@ jobs:
             const repoName = context.repo.repo.toLowerCase();
 
             if (env === 'stg') {
-              // For staging: include both stg-SHA and stg-SemVer formats
-              // IMPORTANT: The stg-SHA format must be maintained exactly as "stg-{hash}" with no other prefix/suffix
-              // The release repository expects this exact format for staging images
-              // We also add a semver tag for better traceability
               imageTagsMessage = 'Images are available at:\n' +
                 '- Backend:\n' +
                 '  - `ghcr.io/' + repoOwner + '/' + repoName + '-backend:' + prefix + 'stg-' + shortSha + '` (SHA tag)\n' +
@@ -260,6 +237,6 @@ jobs:
             github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              commit_sha: sha,
-              body: '## ' + envName + ' Images Built and Pushed\n\n' + imageTagsMessage + '\n\n### Security Scanning\nVulnerability scanning was performed on both images. Check the GitHub Security tab for detailed results.\n\n### Image Labels\nImages include standard OCI labels for better traceability and management.'
+              commit_sha: context.sha,
+              body: `## ${envName} Images Built\n\n${imageTagsMessage}`
             });
