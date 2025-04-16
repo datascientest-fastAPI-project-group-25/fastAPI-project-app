@@ -18,9 +18,33 @@ on:
         default: ""
         description: "Optional prefix for image tags"
     outputs:
+      version:
+        description: "The new version after bumping"
+        value: ${{ jobs.collect-outputs.outputs.version }}
       new_version:
         description: "The new version after bumping"
-        value: ${{ jobs.bump-version.outputs.new_version }}
+        value: ${{ jobs.collect-outputs.outputs.version }}
+      environment:
+        description: "The environment the image was built for"
+        value: ${{ jobs.collect-outputs.outputs.environment }}
+      backend_image_tag_hash:
+        description: "Backend image tag using SHA (e.g., stg-abcdef1)"
+        value: ${{ jobs.collect-outputs.outputs.backend_image_tag_hash }}
+      backend_image_tag_semver:
+        description: "Backend image tag using SemVer (e.g., stg-0.1.2 or 0.1.2)"
+        value: ${{ jobs.collect-outputs.outputs.backend_image_tag_semver }}
+      backend_image_tag_latest:
+        description: "Backend image tag using 'latest' (prod only)"
+        value: ${{ jobs.collect-outputs.outputs.backend_image_tag_latest }}
+      frontend_image_tag_hash:
+        description: "Frontend image tag using SHA (e.g., stg-abcdef1)"
+        value: ${{ jobs.collect-outputs.outputs.frontend_image_tag_hash }}
+      frontend_image_tag_semver:
+        description: "Frontend image tag using SemVer (e.g., stg-0.1.2 or 0.1.2)"
+        value: ${{ jobs.collect-outputs.outputs.frontend_image_tag_semver }}
+      frontend_image_tag_latest:
+        description: "Frontend image tag using 'latest' (prod only)"
+        value: ${{ jobs.collect-outputs.outputs.frontend_image_tag_latest }}
 permissions:
   contents: write
   packages: write

@@ -233,7 +233,6 @@ jobs:
             ${{ steps.changelog.outputs.changelog }}
           draft: false
           prerelease: false
-          generate_release_notes: true
 
   trigger-release:
     needs: [get-version, retag-images]
