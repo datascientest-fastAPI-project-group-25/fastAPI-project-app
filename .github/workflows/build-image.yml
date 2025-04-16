@@ -89,7 +89,9 @@ jobs:
           echo "Short SHA: $SHORT_SHA"
 
           # Set base image name
-          BASE_IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-$COMPONENT"
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          BASE_IMAGE_NAME="ghcr.io/${REPO_OWNER}/${REPO_NAME}-$COMPONENT"
           echo "Base image name: $BASE_IMAGE_NAME"
 
           # Set SHA-based tag (always created)
@@ -172,20 +174,26 @@ jobs:
         id: collect-outputs
         run: |
           echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
-          echo "backend_image_tag_hash=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}${{ inputs.environment == 'prod' && '' || format('{0}-', inputs.environment) }}$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "frontend_image_tag_hash=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}${{ inputs.environment == 'prod' && '' || format('{0}-', inputs.environment) }}$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          PREFIX="${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}"
+          ENV_PREFIX="${{ inputs.environment == 'prod' && '' || format('{0}-', inputs.environment) }}"
+          SHORT_SHA=$(git rev-parse --short HEAD)
+
+          echo "backend_image_tag_hash=ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}${ENV_PREFIX}${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "frontend_image_tag_hash=ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}${ENV_PREFIX}${SHORT_SHA}" >> $GITHUB_OUTPUT
 
           if [ -n "${{ inputs.semantic_version }}" ]; then
-            echo "backend_image_tag_semver=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}${{ inputs.environment == 'prod' && '' || format('{0}-', inputs.environment) }}${{ inputs.semantic_version }}" >> $GITHUB_OUTPUT
-            echo "frontend_image_tag_semver=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}${{ inputs.environment == 'prod' && '' || format('{0}-', inputs.environment) }}${{ inputs.semantic_version }}" >> $GITHUB_OUTPUT
+            echo "backend_image_tag_semver=ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}${ENV_PREFIX}${{ inputs.semantic_version }}" >> $GITHUB_OUTPUT
+            echo "frontend_image_tag_semver=ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}${ENV_PREFIX}${{ inputs.semantic_version }}" >> $GITHUB_OUTPUT
           else
             echo "backend_image_tag_semver=" >> $GITHUB_OUTPUT
             echo "frontend_image_tag_semver=" >> $GITHUB_OUTPUT
           fi
 
           if [ "${{ inputs.environment }}" = "prod" ]; then
-            echo "backend_image_tag_latest=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}latest" >> $GITHUB_OUTPUT
-            echo "frontend_image_tag_latest=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ inputs.image_tag_prefix != '' && format('{0}-', inputs.image_tag_prefix) || '' }}latest" >> $GITHUB_OUTPUT
+            echo "backend_image_tag_latest=ghcr.io/${REPO_OWNER}/${REPO_NAME}-backend:${PREFIX}latest" >> $GITHUB_OUTPUT
+            echo "frontend_image_tag_latest=ghcr.io/${REPO_OWNER}/${REPO_NAME}-frontend:${PREFIX}latest" >> $GITHUB_OUTPUT
           else
             echo "backend_image_tag_latest=" >> $GITHUB_OUTPUT
             echo "frontend_image_tag_latest=" >> $GITHUB_OUTPUT
@@ -207,13 +215,13 @@ jobs:
             const sha = context.sha;
             const shortSha = sha.substring(0, 7);
             const env = '${{ needs.collect-outputs.outputs.environment }}';
-            const prefix = '${{ inputs.image_tag_prefix }}' ? '${{ inputs.image_tag_prefix }}: ' : '';
+            const prefix = '${{ inputs.image_tag_prefix }}' ? '${{ inputs.image_tag_prefix }}-' : '';
 
             let envName = env === 'stg' ? 'Staging' : 'Production';
             let imageTagsMessage = '';
 
-            const repoOwner = context.repo.owner.toLowerCase();
-            const repoName = context.repo.repo.toLowerCase();
+            const repoOwner = context.repo.owner.toLowerCase(); // Already lowercase
+            const repoName = context.repo.repo.toLowerCase(); // Already lowercase
 
             if (env === 'stg') {
               imageTagsMessage = 'Images are available at:\n' +
