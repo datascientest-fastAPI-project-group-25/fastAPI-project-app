@@ -17,10 +17,6 @@ on:
         type: string
         default: ""
         description: "Optional prefix for image tags"
-    secrets:
-      GITHUB_TOKEN:
-        required: false
-        description: "Token for pushing images"
     outputs:
       environment:
         description: "The environment the image was built for"
