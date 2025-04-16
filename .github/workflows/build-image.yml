@@ -136,6 +136,12 @@ jobs:
         with:
           context: ./${{ matrix.app_component }}
           push: true
+          build-args: |
+            APP_VERSION=${{ inputs.semantic_version != '' && inputs.semantic_version || 'unknown' }}
+          labels: |
+            org.opencontainers.image.version=${{ inputs.semantic_version != '' && inputs.semantic_version || 'unknown' }}
+            org.opencontainers.image.created=${{ github.event.repository.updated_at }}
+            org.opencontainers.image.revision=${{ github.sha }}
           tags: |
             ${{ steps.set-tags.outputs.base_image_name }}:${{ steps.set-tags.outputs.image_tag_hash }}
             ${{ steps.set-tags.outputs.base_image_name }}:${{ steps.set-tags.outputs.image_tag_semver != '' && steps.set-tags.outputs.image_tag_semver || steps.set-tags.outputs.image_tag_hash }}

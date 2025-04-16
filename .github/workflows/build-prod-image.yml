@@ -102,17 +102,20 @@ jobs:
           PROD_VERSION="${{ needs.get-version.outputs.version }}"
 
           # Pull the staging image to inspect it
-          STAGING_IMAGE="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:stg-${SHORT_SHA}"
+          STAGING_IMAGE="ghcr.io/datascientest-fastapi-project-group-25/${REPO_NAME}-${COMPONENT}:stg-${SHORT_SHA}"
           echo "Pulling staging image: $STAGING_IMAGE"
           docker pull $STAGING_IMAGE
 
           # Extract the version from the image label
-          STG_VERSION=$(docker inspect $STAGING_IMAGE | jq -r '.[0].Config.Labels."org.opencontainers.image.version"')
+          STG_VERSION=$(docker inspect $STAGING_IMAGE | jq -r '.[0].Config.Labels."org.opencontainers.image.version"' || echo "unknown")
           echo "Staging image version: $STG_VERSION"
           echo "Production version: $PROD_VERSION"
 
           # Compare versions
-          if [ "$STG_VERSION" != "$PROD_VERSION" ]; then
+          if [ "$STG_VERSION" = "null" ] || [ "$STG_VERSION" = "" ] || [ "$STG_VERSION" = "unknown" ]; then
+            echo "::warning::Staging image does not have a version label. This is expected for older images."
+            echo "After this PR is merged, future builds will include proper version labels."
+          elif [ "$STG_VERSION" != "$PROD_VERSION" ]; then
             echo "::warning::Version mismatch between staging ($STG_VERSION) and production ($PROD_VERSION)"
             echo "This could indicate that the VERSION file was modified after the staging image was built."
             echo "Proceeding with caution, but this should be investigated."
@@ -125,7 +128,6 @@ jobs:
       - name: Retag staging image to production
         id: retag
         run: |
-          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
           COMPONENT="${{ matrix.app_component }}"
           SHORT_SHA="${{ steps.get-sha.outputs.short_sha }}"
@@ -133,11 +135,11 @@ jobs:
           STG_VERSION="${{ steps.verify-version.outputs.stg_version }}"
 
           # Source image (staging)
-          SOURCE_IMAGE="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:stg-${SHORT_SHA}"
+          SOURCE_IMAGE="ghcr.io/datascientest-fastapi-project-group-25/${REPO_NAME}-${COMPONENT}:stg-${SHORT_SHA}"
 
           # Target image (production)
-          TARGET_IMAGE="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${VERSION}"
-          LATEST_IMAGE="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:latest"
+          TARGET_IMAGE="ghcr.io/datascientest-fastapi-project-group-25/${REPO_NAME}-${COMPONENT}:${VERSION}"
+          LATEST_IMAGE="ghcr.io/datascientest-fastapi-project-group-25/${REPO_NAME}-${COMPONENT}:latest"
 
           echo "Retagging $SOURCE_IMAGE to $TARGET_IMAGE and $LATEST_IMAGE"
           echo "Version information:"
