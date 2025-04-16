@@ -218,7 +218,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { context } = require('@actions/github');
             const sha = context.sha;
             const shortSha = sha.substring(0, 7);
             const env = '${{ needs.collect-outputs.outputs.environment }}';
@@ -230,19 +229,26 @@ jobs:
             const repoOwner = context.repo.owner.toLowerCase(); // Already lowercase
             const repoName = context.repo.repo.toLowerCase(); // Already lowercase
 
+            // Use the outputs from the collect-outputs job for consistency
+            const backendHashTag = '${{ needs.collect-outputs.outputs.backend_image_tag_hash }}';
+            const backendSemverTag = '${{ needs.collect-outputs.outputs.backend_image_tag_semver }}';
+            const frontendHashTag = '${{ needs.collect-outputs.outputs.frontend_image_tag_hash }}';
+            const frontendSemverTag = '${{ needs.collect-outputs.outputs.frontend_image_tag_semver }}';
+            const backendLatestTag = '${{ needs.collect-outputs.outputs.backend_image_tag_latest }}';
+            const frontendLatestTag = '${{ needs.collect-outputs.outputs.frontend_image_tag_latest }}';
+
             if (env === 'stg') {
               imageTagsMessage = 'Images are available at:\n' +
                 '- Backend:\n' +
-                '  - `ghcr.io/' + repoOwner + '/' + repoName + '-backend:' + prefix + 'stg-' + shortSha + '` (SHA tag)\n' +
-                '  - `ghcr.io/' + repoOwner + '/' + repoName + '-backend:' + prefix + 'stg-' + '${{ inputs.semantic_version }}' + '` (SemVer tag)\n' +
+                `  - \`${backendHashTag}\` (SHA tag)\n` +
+                `  - \`${backendSemverTag}\` (SemVer tag)\n` +
                 '- Frontend:\n' +
-                '  - `ghcr.io/' + repoOwner + '/' + repoName + '-frontend:' + prefix + 'stg-' + shortSha + '` (SHA tag)\n' +
-                '  - `ghcr.io/' + repoOwner + '/' + repoName + '-frontend:' + prefix + 'stg-' + '${{ inputs.semantic_version }}' + '` (SemVer tag)';
-            } else {
-              // For production: both use version
+                `  - \`${frontendHashTag}\` (SHA tag)\n` +
+                `  - \`${frontendSemverTag}\` (SemVer tag)`;
+            } else { // Assuming 'prod'
               imageTagsMessage = 'Images are available at:\n' +
-                '- Backend: `ghcr.io/' + repoOwner + '/' + repoName + '-backend:' + prefix + '${{ inputs.semantic_version }}' + '`\n' +
-                '- Frontend: `ghcr.io/' + repoOwner + '/' + repoName + '-frontend:' + prefix + '${{ inputs.semantic_version }}' + '`';
+                `- Backend: \`${backendSemverTag}\` (also tagged as \`${backendLatestTag}\`)\n` +
+                `- Frontend: \`${frontendSemverTag}\` (also tagged as \`${frontendLatestTag}\`)`;
             }
 
             github.rest.repos.createCommitComment({
