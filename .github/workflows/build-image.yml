@@ -143,25 +143,38 @@ jobs:
       - name: Set image tags
         id: set-tags
         run: |
+          # Environment (stg or prod)
           ENV="${{ inputs.environment }}"
+          # Semantic version from version.py (e.g., 0.1.6)
           VERSION="${{ needs.bump-version.outputs.new_version }}"
+          # Optional prefix for image tags
           PREFIX="${{ inputs.image_tag_prefix }}"
+          # First 7 characters of the git commit SHA
           SHORT_SHA="$(echo ${{ github.sha }} | cut -c1-7)"
+          # Current component (backend or frontend)
           COMPONENT="${{ matrix.app_component }}"
 
+          # Add hyphen to prefix if it exists
           if [ -n "$PREFIX" ]; then
             PREFIX="${PREFIX}-"
           fi
 
+          # Convert repository owner and name to lowercase for Docker image naming
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
 
+          # Set image tags based on environment
           if [ "$ENV" == "stg" ]; then
-            # Staging: use stg-SHA
+            # Staging: use stg-SHA format
+            # IMPORTANT: This format must be maintained exactly as "stg-{hash}" with no other prefix/suffix
+            # The release repository expects this exact format for staging images
             IMAGE_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${SHORT_SHA}"
+            echo "Creating staging image tag: ${PREFIX}stg-${SHORT_SHA}"
           else
-            # Production: Use version and latest
+            # Production: Use semantic version and latest tag
+            # For production, we use the semantic version directly with no prefix/suffix
             IMAGE_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}${VERSION},ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:latest"
+            echo "Creating production image tags: ${PREFIX}${VERSION} and latest"
           fi
 
           echo "image_tags=$IMAGE_TAGS" >> $GITHUB_OUTPUT

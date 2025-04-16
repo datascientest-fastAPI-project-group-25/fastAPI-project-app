@@ -114,8 +114,11 @@ jobs:
       - name: Prepare payload for release repository
         id: prepare_payload
         run: |
+          # The version after healing/validation
           VERSION="${{ steps.heal_version.outputs.version }}"
+          # Environment (stg or prod)
           ENVIRONMENT="${{ inputs.environment }}"
+          # Regular expression for semantic versioning (X.Y.Z)
           SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+$'
 
           echo "\n📦 Preparing payload for release repository"
@@ -123,8 +126,10 @@ jobs:
           echo "- Environment: $ENVIRONMENT"
           echo "- Input semantic_version: ${{ inputs.semantic_version }}"
 
-          # First, determine the semantic version
-          # Check if inputs.semantic_version is provided and valid
+          # STEP 1: Determine the semantic version (X.Y.Z format without environment suffix)
+          # This is critical for proper versioning in Helm charts
+
+          # First check if inputs.semantic_version is provided and valid
           if [[ -n "${{ inputs.semantic_version }}" && "${{ inputs.semantic_version }}" =~ $SEMVER_REGEX ]]; then
             SEMVER="${{ inputs.semantic_version }}"
             echo "✅ Using provided semantic version: $SEMVER"
@@ -166,7 +171,9 @@ jobs:
             fi
           fi
 
-          # Now handle the version output based on environment
+          # STEP 2: Process the version based on environment
+          # For staging: Use stg-HASH format for Docker image tags
+          # For production: Use semantic version directly
           if [[ "$ENVIRONMENT" == "stg" ]]; then
             # Extract git hash from the version (assuming format stg-HASH)
             GIT_HASH=$(echo "${{ inputs.version }}" | grep -o '[a-f0-9]\{7,40\}' || echo '')
@@ -175,24 +182,33 @@ jobs:
               # Use first 7 characters of git hash
               SHORT_HASH="${GIT_HASH:0:7}"
               # Create a version that includes just the hash for the image tag
+              # IMPORTANT: This format must be maintained exactly as "stg-{hash}"
+              # The release repository expects this exact format for staging images
               MODIFIED_VERSION="stg-$SHORT_HASH"
-              echo "Modified version for staging image tag: $MODIFIED_VERSION"
+              echo "✅ Modified version for staging image tag: $MODIFIED_VERSION"
               echo "version=$MODIFIED_VERSION" >> $GITHUB_OUTPUT
 
               # For semantic version, append -stg to the semver
+              # This is used for Helm chart versioning in staging
               SEMVER="${SEMVER}-stg"
-              echo "Modified semantic version for staging: $SEMVER"
+              echo "✅ Modified semantic version for staging: $SEMVER"
             else
-              echo "Using original version: $VERSION"
+              echo "⚠️ No git hash found in version, using original version: $VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT
             fi
           else
-            echo "Using original version: $VERSION"
+            # For production, use the semantic version directly
+            echo "✅ Using original version for production: $VERSION"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           fi
 
-          # Output the semantic version
+          # Output the semantic version for use in the release repository
           echo "semantic_version=$SEMVER" >> $GITHUB_OUTPUT
+
+          echo "\n✅ Final payload values:"
+          echo "- version: $VERSION"
+          echo "- environment: $ENVIRONMENT"
+          echo "- semantic_version: $SEMVER"
 
       - name: Trigger Release Repository Workflow
         uses: peter-evans/repository-dispatch@v2
