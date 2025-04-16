@@ -2,7 +2,7 @@ name: Bump Version on PR Creation
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened]
     branches:
       - stg
 
@@ -14,7 +14,10 @@ jobs:
   bump-version:
     runs-on: ubuntu-latest
     # Only run on PRs from feature branches, not on PRs from forks
-    if: github.event.pull_request.head.repo.full_name == github.repository && (startsWith(github.head_ref, 'feat/') || startsWith(github.head_ref, 'fix/'))
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (startsWith(github.head_ref, 'feat/') || startsWith(github.head_ref, 'fix/')) &&
+      !contains(github.event.pull_request.title, 'promote-to-stg')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -83,8 +86,8 @@ jobs:
           echo "New version would be: $NEW_VERSION"
 
           # Check if we already bumped the version in this PR
-          if [[ "$PR_TITLE" == *"v$NEW_VERSION"* ]]; then
-            echo "Version $NEW_VERSION already in PR title, skipping bump"
+          if [[ "$PR_TITLE" =~ \(v[0-9]+\.[0-9]+\.[0-9]+\) ]]; then
+            echo "PR title already contains a version tag, skipping bump"
             echo "bumped=false" >> $GITHUB_OUTPUT
             echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
             exit 0
@@ -118,18 +121,17 @@ jobs:
             const prNumber = context.issue.number;
             const prTitle = context.payload.pull_request.title;
 
-            // Only add version if not already in title
-            if (!prTitle.includes(`v${newVersion}`)) {
-              const newTitle = `${prTitle} (v${newVersion})`;
+            // Remove any existing version tags from the title
+            let cleanTitle = prTitle.replace(/\s*\(v\d+\.\d+\.\d+\)/g, '');
 
-              await github.rest.pulls.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: prNumber,
-                title: newTitle
-              });
+            // Add the new version tag
+            const newTitle = `${cleanTitle} (v${newVersion})`;
 
-              console.log(`Updated PR title to: ${newTitle}`);
-            } else {
-              console.log(`PR title already contains version v${newVersion}`);
-            }
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              title: newTitle
+            });
+
+            console.log(`Updated PR title to: ${newTitle}`);
