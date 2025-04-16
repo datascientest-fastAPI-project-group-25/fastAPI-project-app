@@ -40,8 +40,9 @@ jobs:
             echo "VERSION file exists with content: $VERSION"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
-            echo "VERSION file does not exist"
-            echo "version=0.1.0" >> $GITHUB_OUTPUT
+            echo "::error::VERSION file not found. This file is required for production releases."
+            echo "::error::Please ensure the VERSION file exists and contains a valid semantic version (e.g., 0.1.0)."
+            exit 1
           fi
 
   trigger-release:

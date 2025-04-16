@@ -118,15 +118,20 @@ jobs:
           ENVIRONMENT="${{ inputs.environment }}"
           SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+$'
 
+          echo "\n📦 Preparing payload for release repository"
+          echo "- Healed version: $VERSION"
+          echo "- Environment: $ENVIRONMENT"
+          echo "- Input semantic_version: ${{ inputs.semantic_version }}"
+
           # First, determine the semantic version
           # Check if inputs.semantic_version is provided and valid
           if [[ -n "${{ inputs.semantic_version }}" && "${{ inputs.semantic_version }}" =~ $SEMVER_REGEX ]]; then
             SEMVER="${{ inputs.semantic_version }}"
-            echo "Using provided semantic version: $SEMVER"
+            echo "✅ Using provided semantic version: $SEMVER"
           # Try to extract from VERSION if it contains a semantic version
           elif [[ "$VERSION" =~ $SEMVER_REGEX ]]; then
             SEMVER="${BASH_REMATCH[0]}"
-            echo "Extracted semantic version from VERSION: $SEMVER"
+            echo "✅ Extracted semantic version from VERSION: $SEMVER"
           # For staging, try to read from VERSION file
           elif [[ "$ENVIRONMENT" == "stg" ]]; then
             # Try to read from VERSION file
@@ -134,24 +139,30 @@ jobs:
               VERSION_FILE=$(cat VERSION | grep -Eo "$SEMVER_REGEX" | head -n1)
               if [[ "$VERSION_FILE" =~ $SEMVER_REGEX ]]; then
                 SEMVER="$VERSION_FILE"
-                echo "Using version from VERSION file for staging: $SEMVER"
+                echo "✅ Using version from VERSION file for staging: $SEMVER"
               else
-                SEMVER="0.1.0"
-                echo "Invalid version in VERSION file, using default: $SEMVER"
+                echo "::error::Invalid version format in VERSION file. Expected format: X.Y.Z"
+                echo "::error::Content of VERSION file: $(cat VERSION)"
+                echo "::error::Please ensure the VERSION file contains a valid semantic version."
+                exit 1
               fi
             else
-              SEMVER="0.1.0"
-              echo "No VERSION file found, using default semantic version for staging: $SEMVER"
+              echo "::error::VERSION file not found. This file is required for determining the semantic version."
+              echo "::error::Please create a VERSION file with a valid semantic version (e.g., 0.1.0)."
+              exit 1
             fi
           # For production, we should already have a valid semver from heal_version
           else
             SEMVER="$VERSION"
-            echo "Using VERSION as semantic version: $SEMVER"
+            echo "✅ Using VERSION as semantic version: $SEMVER"
 
             # Final check to ensure it's valid
             if [[ ! "$SEMVER" =~ $SEMVER_REGEX ]]; then
-              echo "::warning::No valid semantic version found, using default 0.1.0"
-              SEMVER="0.1.0"
+              echo "::error::No valid semantic version found for production release."
+              echo "::error::Received version: '$VERSION'"
+              echo "::error::Received semantic_version: '${{ inputs.semantic_version }}'"
+              echo "::error::Please ensure a valid semantic version is provided."
+              exit 1
             fi
           fi
 
