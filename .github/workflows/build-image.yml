@@ -150,12 +150,12 @@ jobs:
     outputs:
       version: ${{ needs.bump-version.outputs.new_version }}
       environment: ${{ inputs.environment }}
-      backend_image_tag_hash: ${{ steps.workflow_outputs_backend.outputs.image_tag_hash }}
-      backend_image_tag_semver: ${{ steps.workflow_outputs_backend.outputs.image_tag_semver }}
-      backend_image_tag_latest: ${{ steps.workflow_outputs_backend.outputs.image_tag_latest }}
-      frontend_image_tag_hash: ${{ steps.workflow_outputs_frontend.outputs.image_tag_hash }}
-      frontend_image_tag_semver: ${{ steps.workflow_outputs_frontend.outputs.image_tag_semver }}
-      frontend_image_tag_latest: ${{ steps.workflow_outputs_frontend.outputs.image_tag_latest }}
+      backend_image_tag_hash: ${{ steps.workflow_outputs.outputs.backend_image_tag_hash }}
+      backend_image_tag_semver: ${{ steps.workflow_outputs.outputs.backend_image_tag_semver }}
+      backend_image_tag_latest: ${{ steps.workflow_outputs.outputs.backend_image_tag_latest }}
+      frontend_image_tag_hash: ${{ steps.workflow_outputs.outputs.frontend_image_tag_hash }}
+      frontend_image_tag_semver: ${{ steps.workflow_outputs.outputs.frontend_image_tag_semver }}
+      frontend_image_tag_latest: ${{ steps.workflow_outputs.outputs.frontend_image_tag_latest }}
     strategy:
       matrix:
         app_component: [backend, frontend]
@@ -255,11 +255,14 @@ jobs:
           exit 1
 
       - name: Expose component-specific outputs
-        id: workflow_outputs_${{ matrix.app_component }}
+        id: workflow_outputs
         run: |
-          echo "image_tag_hash=${{ steps.set-tags.outputs.image_tag_hash }}" >> $GITHUB_OUTPUT
-          echo "image_tag_semver=${{ steps.set-tags.outputs.image_tag_semver }}" >> $GITHUB_OUTPUT
-          echo "image_tag_latest=${{ steps.set-tags.outputs.image_tag_latest }}" >> $GITHUB_OUTPUT
+          # Store the component name for reference in the outputs
+          COMPONENT="${{ matrix.app_component }}"
+          echo "component=$COMPONENT" >> $GITHUB_OUTPUT
+          echo "${COMPONENT}_image_tag_hash=${{ steps.set-tags.outputs.image_tag_hash }}" >> $GITHUB_OUTPUT
+          echo "${COMPONENT}_image_tag_semver=${{ steps.set-tags.outputs.image_tag_semver }}" >> $GITHUB_OUTPUT
+          echo "${COMPONENT}_image_tag_latest=${{ steps.set-tags.outputs.image_tag_latest }}" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -268,7 +271,7 @@ jobs:
         with:
           image-ref: ${{ steps.set-tags.outputs.image_tags }}
           format: 'sarif'
-          output: 'trivy-${{ matrix.app_component }}-results.sarif'
+          output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
           exit-code: '0'  # Don't fail the build, just report
           ignore-unfixed: true
@@ -278,7 +281,7 @@ jobs:
         if: always() && steps.build-image.outcome == 'success'
         continue-on-error: true
         with:
-          sarif_file: 'trivy-${{ matrix.app_component }}-results.sarif'
+          sarif_file: 'trivy-results.sarif'
           category: '${{ matrix.app_component }}-image'
 
   collect-outputs:
@@ -295,7 +298,12 @@ jobs:
       frontend_image_tag_latest: ${{ needs.build-and-push.outputs.frontend_image_tag_latest }}
     steps:
       - name: Consolidate outputs
-        run: echo "Outputs collected from matrix jobs"
+        run: |
+          echo "Outputs collected from matrix jobs"
+          echo "Backend image tag hash: ${{ needs.build-and-push.outputs.backend_image_tag_hash }}"
+          echo "Backend image tag semver: ${{ needs.build-and-push.outputs.backend_image_tag_semver }}"
+          echo "Frontend image tag hash: ${{ needs.build-and-push.outputs.frontend_image_tag_hash }}"
+          echo "Frontend image tag semver: ${{ needs.build-and-push.outputs.frontend_image_tag_semver }}"
 
   # Comment on commit
   comment-on-commit:
