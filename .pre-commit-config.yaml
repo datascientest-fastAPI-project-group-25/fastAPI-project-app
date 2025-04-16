@@ -23,6 +23,13 @@ repos:
       - id: detect-private-key
         stages: [pre-commit]
 
+  # GitHub Actions workflow linting
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.6.26
+    hooks:
+      - id: actionlint
+        stages: [pre-commit]
+
   - repo: local
     hooks:
       - id: biome
