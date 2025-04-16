@@ -11,50 +11,37 @@ permissions:
   security-events: write
 
 jobs:
-  determine-bump-type:
+  get-version:
     runs-on: ubuntu-latest
     outputs:
-      bump_type: ${{ steps.determine-bump-type.outputs.bump_type }}
+      version: ${{ steps.get-version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Determine bump type from commit message
-        id: determine-bump-type
+      - name: Get version from VERSION file
+        id: get-version
         run: |
-          # Get the merge commit message
-          COMMIT_MSG=$(git log -1 --pretty=%B)
-          echo "Commit message: $COMMIT_MSG"
-
-          if [[ "$COMMIT_MSG" == *"Merge pull request"* ]]; then
-            PR_BRANCH=$(echo "$COMMIT_MSG" | grep -o "from [^ ]* " | sed 's/from //' | sed 's/ //')
-            echo "PR branch: $PR_BRANCH"
-
-            if [[ "$PR_BRANCH" == feat/* ]]; then
-              echo "bump_type=minor" >> $GITHUB_OUTPUT
-              echo "PR is a feature branch, will bump minor version"
-            elif [[ "$PR_BRANCH" == fix/* ]]; then
-              echo "bump_type=patch" >> $GITHUB_OUTPUT
-              echo "PR is a fix branch, will bump patch version"
-            else
-              echo "bump_type=patch" >> $GITHUB_OUTPUT
-              echo "PR branch type not recognized, defaulting to patch version bump"
-            fi
+          # Read the current version from VERSION file
+          if [ -f "VERSION" ]; then
+            VERSION=$(cat VERSION)
+            echo "Current version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
-            echo "bump_type=patch" >> $GITHUB_OUTPUT
-            echo "Not a merge commit, defaulting to patch version bump"
+            echo "::error::VERSION file not found"
+            exit 1
           fi
 
   build-stg-images:
-    needs: determine-bump-type
+    needs: get-version
     uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/build-image.yml@stg
     with:
       environment: stg
-      version_bump_type: ${{ needs.determine-bump-type.outputs.bump_type }}
+      semantic_version: ${{ needs.get-version.outputs.version }}
 
   trigger-release:
-    needs: [determine-bump-type, build-stg-images]
+    needs: [get-version, build-stg-images]
     if: success()
     uses: datascientest-fastAPI-project-group-25/fastAPI-project-app/.github/workflows/trigger-helm-release.yml@stg
     with:
@@ -62,12 +49,12 @@ jobs:
       environment: stg
       backend_image: ${{ needs.build-stg-images.outputs.backend_image_tag_hash }} # Pass backend SHA tag
       frontend_image: ${{ needs.build-stg-images.outputs.frontend_image_tag_hash }} # Pass frontend SHA tag
-      semantic_version: ${{ needs.build-stg-images.outputs.version }} # Pass the actual SemVer
+      semantic_version: ${{ needs.get-version.outputs.version }} # Pass the actual SemVer
     secrets:
       MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
 
   create-stg-prerelease:
-    needs: [determine-bump-type, build-stg-images]
+    needs: [get-version, build-stg-images]
     runs-on: ubuntu-latest
     permissions:
       contents: write # Required for softprops/action-gh-release
@@ -109,10 +96,10 @@ jobs:
       - name: Create Staging Pre-release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.build-stg-images.outputs.version }}-stg
-          name: Pre-release v${{ needs.build-stg-images.outputs.version }}-stg
+          tag_name: v${{ needs.get-version.outputs.version }}-stg
+          name: Pre-release v${{ needs.get-version.outputs.version }}-stg
           body: |
-            ## Staging Pre-release v${{ needs.build-stg-images.outputs.version }}-stg
+            ## Staging Pre-release v${{ needs.get-version.outputs.version }}-stg
 
             This pre-release contains changes merged into the `stg` branch.
 
