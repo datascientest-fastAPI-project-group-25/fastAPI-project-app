@@ -19,7 +19,7 @@ on:
         description: "Optional prefix for image tags"
     secrets:
       GITHUB_TOKEN:
-        required: true
+        required: false
         description: "Token for pushing images"
     outputs:
       environment:
