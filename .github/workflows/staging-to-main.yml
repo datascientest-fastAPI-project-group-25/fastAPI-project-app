@@ -71,6 +71,7 @@ jobs:
       source_branch: stg
       target_branch: main
       pr_title: "${{ needs.extract-info.outputs.pr_title }}"
+      pr_label: "promote-to-main"
       pr_body: |
         # Promote Staging to Main
 
