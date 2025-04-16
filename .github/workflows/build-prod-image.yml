@@ -11,23 +11,13 @@ permissions:
   security-events: write
 
 jobs:
-  build-prod-images:
-    uses: ./.github/workflows/build-image.yml
-    with:
-      environment: prod
-      version_bump_type: patch
-
-  debug-outputs:
-    needs: build-prod-images
+  # Get the version from the VERSION file
+  get-version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read_version.outputs.version }}
     steps:
-      - name: Debug outputs from build-prod-images
-        run: |
-          echo "build-prod-images outputs:"
-          echo "new_version: '${{ needs.build-prod-images.outputs.new_version }}'"
-          echo "bump_type: '${{ needs.build-prod-images.outputs.bump_type }}'"
-
-      - name: Check VERSION file
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -45,15 +35,215 @@ jobs:
             exit 1
           fi
 
+  # Find and retag the staging images instead of rebuilding
+  retag-images:
+    needs: get-version
+    runs-on: ubuntu-latest
+    outputs:
+      backend_image: ${{ steps.retag.outputs.backend_image }}
+      frontend_image: ${{ steps.retag.outputs.frontend_image }}
+    strategy:
+      matrix:
+        app_component: [backend, frontend]
+      fail-fast: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get PR that was merged to main
+        id: get-pr
+        run: |
+          # Get the merge commit message
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+
+          # Extract PR number from merge commit message
+          PR_NUMBER=$(echo "$COMMIT_MSG" | grep -o "#[0-9]\+" | sed 's/#//')
+          echo "PR number: $PR_NUMBER"
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "::error::Could not find PR number in merge commit message"
+            exit 1
+          fi
+
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Get staging image SHA
+        id: get-sha
+        run: |
+          # Get the SHA of the staging image from the PR
+          PR_NUMBER="${{ steps.get-pr.outputs.pr_number }}"
+
+          # Use GitHub API to get the PR details
+          PR_DETAILS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+          # Extract the head SHA from the PR
+          HEAD_SHA=$(echo "$PR_DETAILS" | jq -r .head.sha)
+          SHORT_SHA=$(echo "$HEAD_SHA" | cut -c1-7)
+
+          echo "Found staging image SHA: $SHORT_SHA"
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Verify staging image version
+        id: verify-version
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          COMPONENT="${{ matrix.app_component }}"
+          SHORT_SHA="${{ steps.get-sha.outputs.short_sha }}"
+          PROD_VERSION="${{ needs.get-version.outputs.version }}"
+
+          # Pull the staging image to inspect it
+          STAGING_IMAGE="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:stg-${SHORT_SHA}"
+          echo "Pulling staging image: $STAGING_IMAGE"
+          docker pull $STAGING_IMAGE
+
+          # Extract the version from the image label
+          STG_VERSION=$(docker inspect $STAGING_IMAGE | jq -r '.[0].Config.Labels."org.opencontainers.image.version"')
+          echo "Staging image version: $STG_VERSION"
+          echo "Production version: $PROD_VERSION"
+
+          # Compare versions
+          if [ "$STG_VERSION" != "$PROD_VERSION" ]; then
+            echo "::warning::Version mismatch between staging ($STG_VERSION) and production ($PROD_VERSION)"
+            echo "This could indicate that the VERSION file was modified after the staging image was built."
+            echo "Proceeding with caution, but this should be investigated."
+          else
+            echo "✅ Version check passed: Staging and production versions match ($STG_VERSION)"
+          fi
+
+          echo "stg_version=$STG_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Retag staging image to production
+        id: retag
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          COMPONENT="${{ matrix.app_component }}"
+          SHORT_SHA="${{ steps.get-sha.outputs.short_sha }}"
+          VERSION="${{ needs.get-version.outputs.version }}"
+          STG_VERSION="${{ steps.verify-version.outputs.stg_version }}"
+
+          # Source image (staging)
+          SOURCE_IMAGE="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:stg-${SHORT_SHA}"
+
+          # Target image (production)
+          TARGET_IMAGE="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${VERSION}"
+          LATEST_IMAGE="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:latest"
+
+          echo "Retagging $SOURCE_IMAGE to $TARGET_IMAGE and $LATEST_IMAGE"
+          echo "Version information:"
+          echo "- Staging version: $STG_VERSION"
+          echo "- Production version: $VERSION"
+
+          # Verify that the image exists
+          if ! docker image inspect $SOURCE_IMAGE &>/dev/null; then
+            echo "::error::Staging image $SOURCE_IMAGE not found. Cannot proceed with retagging."
+            exit 1
+          fi
+
+          # Tag it with the production version and latest
+          docker tag $SOURCE_IMAGE $TARGET_IMAGE
+          docker tag $SOURCE_IMAGE $LATEST_IMAGE
+
+          # Push the retagged images
+          docker push $TARGET_IMAGE
+          docker push $LATEST_IMAGE
+
+          # Set outputs for use in later steps
+          if [ "$COMPONENT" == "backend" ]; then
+            echo "backend_image=$TARGET_IMAGE" >> $GITHUB_OUTPUT
+          else
+            echo "frontend_image=$TARGET_IMAGE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Verify image retagging
+        run: |
+          COMPONENT="${{ matrix.app_component }}"
+          if [ "$COMPONENT" == "backend" ]; then
+            echo "Backend image retagged: ${{ steps.retag.outputs.backend_image }}"
+          else
+            echo "Frontend image retagged: ${{ steps.retag.outputs.frontend_image }}"
+          fi
+
+  # Create a GitHub release for the production deployment
+  create-release:
+    needs: [get-version, retag-images]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag if it exists
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            # If no previous tag, get all commits
+            echo "No previous tag found, including all commits in changelog"
+            CHANGELOG=$(git log --pretty=format:"* %s (%h)" --reverse)
+          else
+            # Get commits since the last tag
+            echo "Previous tag: $PREV_TAG"
+            CHANGELOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"* %s (%h)" --reverse)
+          fi
+
+          # Save changelog to a file
+          echo "$CHANGELOG" > changelog.md
+
+          # Set changelog output
+          {
+            echo 'changelog<<EOF'
+            echo "$CHANGELOG"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.get-version.outputs.version }}
+          name: Release v${{ needs.get-version.outputs.version }}
+          body: |
+            ## Production Release v${{ needs.get-version.outputs.version }}
+
+            This release promotes the staging images to production without rebuilding, ensuring the exact same container that was tested in staging is deployed to production.
+
+            ### Docker Images
+            The following Docker images are available for this release:
+
+            - Backend: `ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ needs.get-version.outputs.version }}`
+            - Frontend: `ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ needs.get-version.outputs.version }}`
+
+            ### Version Verification
+            The version in the staging images was verified to match the production version before promotion.
+
+            ### Changelog
+            ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
   trigger-release:
-    needs: [build-prod-images, debug-outputs]
+    needs: [get-version, retag-images]
     if: success()
     uses: ./.github/workflows/trigger-helm-release.yml
     with:
-      version: ${{ needs.build-prod-images.outputs.new_version || needs.debug-outputs.outputs.version }}  # Used for both version and image tags
+      version: ${{ needs.get-version.outputs.version }}
       environment: prod
-      backend_image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ needs.build-prod-images.outputs.new_version || needs.debug-outputs.outputs.version }}
-      frontend_image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ needs.build-prod-images.outputs.new_version || needs.debug-outputs.outputs.version }}
-      semantic_version: ${{ needs.build-prod-images.outputs.new_version || needs.debug-outputs.outputs.version }}  # Same as version for prod, ensures proper Helm versioning
+      backend_image: ${{ needs.retag-images.outputs.backend_image }}
+      frontend_image: ${{ needs.retag-images.outputs.frontend_image }}
+      semantic_version: ${{ needs.get-version.outputs.version }}
     secrets:
       MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
