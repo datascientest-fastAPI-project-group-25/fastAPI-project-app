@@ -18,9 +18,33 @@ on:
         default: ""
         description: "Optional prefix for image tags"
     outputs:
+      version:
+        description: "The new version after bumping"
+        value: ${{ jobs.collect-outputs.outputs.version }}
       new_version:
         description: "The new version after bumping"
-        value: ${{ jobs.bump-version.outputs.new_version }}
+        value: ${{ jobs.collect-outputs.outputs.version }}
+      environment:
+        description: "The environment the image was built for"
+        value: ${{ jobs.collect-outputs.outputs.environment }}
+      backend_image_tag_hash:
+        description: "Backend image tag using SHA (e.g., stg-abcdef1)"
+        value: ${{ jobs.collect-outputs.outputs.backend_image_tag_hash }}
+      backend_image_tag_semver:
+        description: "Backend image tag using SemVer (e.g., stg-0.1.2 or 0.1.2)"
+        value: ${{ jobs.collect-outputs.outputs.backend_image_tag_semver }}
+      backend_image_tag_latest:
+        description: "Backend image tag using 'latest' (prod only)"
+        value: ${{ jobs.collect-outputs.outputs.backend_image_tag_latest }}
+      frontend_image_tag_hash:
+        description: "Frontend image tag using SHA (e.g., stg-abcdef1)"
+        value: ${{ jobs.collect-outputs.outputs.frontend_image_tag_hash }}
+      frontend_image_tag_semver:
+        description: "Frontend image tag using SemVer (e.g., stg-0.1.2 or 0.1.2)"
+        value: ${{ jobs.collect-outputs.outputs.frontend_image_tag_semver }}
+      frontend_image_tag_latest:
+        description: "Frontend image tag using 'latest' (prod only)"
+        value: ${{ jobs.collect-outputs.outputs.frontend_image_tag_latest }}
 permissions:
   contents: write
   packages: write
@@ -101,33 +125,18 @@ jobs:
             git add VERSION
             echo "has_changes=true" >> $GITHUB_OUTPUT
           elif ! git diff --quiet VERSION; then
-            echo "Changes detected in VERSION file, committing"
+            echo "Changes detected in VERSION file, committing directly"
             git add VERSION
 
-            # Create a new branch for the version bump
-            TIMESTAMP=$(date +%Y%m%d%H%M%S)
-            BRANCH_NAME="version-bump-${{ steps.bump-version.outputs.new_version }}-${TIMESTAMP}"
-            echo "Creating new branch: $BRANCH_NAME"
-            git checkout -b "$BRANCH_NAME"
-
-            # Commit the changes
+            # Commit directly to the current branch
             git commit -m "chore: bump version to ${{ steps.bump-version.outputs.new_version }} [skip ci]"
 
-            # Push the branch
-            if git push origin "$BRANCH_NAME"; then
-              echo "Successfully pushed version bump to branch $BRANCH_NAME"
+            # Push the changes back to the same branch
+            if git push origin HEAD; then
+              echo "Successfully pushed version bump to current branch"
               echo "has_changes=true" >> $GITHUB_OUTPUT
-              echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-
-              # Determine the target branch
-              if [[ "${{ inputs.environment }}" == "stg" ]]; then
-                TARGET_BRANCH="stg"
-              else
-                TARGET_BRANCH="main"
-              fi
-              echo "target_branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
             else
-              echo "::error::Failed to push version bump branch"
+              echo "::error::Failed to push version bump"
               exit 1
             fi
           else
@@ -135,39 +144,18 @@ jobs:
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create Pull Request for Version Bump
-        if: steps.commit-version.outputs.has_changes == 'true' && steps.commit-version.outputs.branch_name != ''
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ github.token }}
-          commit-message: "chore: bump version to ${{ steps.bump-version.outputs.new_version }}"
-          branch: ${{ steps.commit-version.outputs.branch_name }}
-          base: ${{ steps.commit-version.outputs.target_branch }}
-          title: "Bump version to ${{ steps.bump-version.outputs.new_version }}"
-          body: |
-            ## Version Bump
-
-            This PR updates the VERSION file to ${{ steps.bump-version.outputs.new_version }}.
-
-            ### Details
-            - Environment: ${{ inputs.environment }}
-            - Bump Type: ${{ inputs.version_bump_type }}
-            - Previous Version: $(cat VERSION)
-            - New Version: ${{ steps.bump-version.outputs.new_version }}
-
-            This PR was automatically created by the build-image workflow.
-          labels: |
-            automated-pr
-            version-bump
-            env/${{ inputs.environment }}
-          delete-branch: true
-
   build-and-push:
     needs: bump-version
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.workflow_outputs.outputs.version }}
-      environment: ${{ steps.workflow_outputs.outputs.environment }}
+      version: ${{ needs.bump-version.outputs.new_version }}
+      environment: ${{ inputs.environment }}
+      backend_image_tag_hash: ${{ steps.workflow_outputs_backend.outputs.image_tag_hash }}
+      backend_image_tag_semver: ${{ steps.workflow_outputs_backend.outputs.image_tag_semver }}
+      backend_image_tag_latest: ${{ steps.workflow_outputs_backend.outputs.image_tag_latest }}
+      frontend_image_tag_hash: ${{ steps.workflow_outputs_frontend.outputs.image_tag_hash }}
+      frontend_image_tag_semver: ${{ steps.workflow_outputs_frontend.outputs.image_tag_semver }}
+      frontend_image_tag_latest: ${{ steps.workflow_outputs_frontend.outputs.image_tag_latest }}
     strategy:
       matrix:
         app_component: [backend, frontend]
@@ -212,16 +200,25 @@ jobs:
 
           # Set image tags based on environment
           if [ "$ENV" == "stg" ]; then
-            # Staging: use stg-SHA format
-            # IMPORTANT: This format must be maintained exactly as "stg-{hash}" with no other prefix/suffix
+            # Staging: use both stg-SHA and stg-SemVer formats
+            # IMPORTANT: The stg-SHA format must be maintained exactly as "stg-{hash}" with no other prefix/suffix
             # The release repository expects this exact format for staging images
-            IMAGE_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${SHORT_SHA}"
-            echo "Creating staging image tag: ${PREFIX}stg-${SHORT_SHA}"
+            # We also add a semver tag for better traceability
+            IMAGE_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${SHORT_SHA},ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${VERSION}"
+            echo "Creating staging image tags: ${PREFIX}stg-${SHORT_SHA} and ${PREFIX}stg-${VERSION}"
+
+            # Store both tags separately for later use
+            echo "image_tag_hash=ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${SHORT_SHA}" >> $GITHUB_OUTPUT
+            echo "image_tag_semver=ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}stg-${VERSION}" >> $GITHUB_OUTPUT
           else
             # Production: Use semantic version and latest tag
             # For production, we use the semantic version directly with no prefix/suffix
             IMAGE_TAGS="ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}${VERSION},ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:latest"
             echo "Creating production image tags: ${PREFIX}${VERSION} and latest"
+
+            # Store tags separately for later use
+            echo "image_tag_semver=ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:${PREFIX}${VERSION}" >> $GITHUB_OUTPUT
+            echo "image_tag_latest=ghcr.io/${REPO_OWNER}/${REPO_NAME}-${COMPONENT}:latest" >> $GITHUB_OUTPUT
           fi
 
           echo "image_tags=$IMAGE_TAGS" >> $GITHUB_OUTPUT
@@ -257,18 +254,19 @@ jobs:
           echo "::error::${{ matrix.app_component }} image build failed"
           exit 1
 
-      - name: Extract image tag
-        id: extract-image-tag
+      - name: Expose component-specific outputs
+        id: workflow_outputs_${{ matrix.app_component }}
         run: |
-          IMAGE_TAG="${{ steps.set-tags.outputs.image_tags }}"
-          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image_tag_hash=${{ steps.set-tags.outputs.image_tag_hash }}" >> $GITHUB_OUTPUT
+          echo "image_tag_semver=${{ steps.set-tags.outputs.image_tag_semver }}" >> $GITHUB_OUTPUT
+          echo "image_tag_latest=${{ steps.set-tags.outputs.image_tag_latest }}" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
-        if: steps.extract-image-tag.outcome == 'success'
+        if: steps.build-image.outcome == 'success'
         continue-on-error: true
         with:
-          image-ref: ${{ steps.extract-image-tag.outputs.image_tag }}
+          image-ref: ${{ steps.set-tags.outputs.image_tags }}
           format: 'sarif'
           output: 'trivy-${{ matrix.app_component }}-results.sarif'
           severity: 'CRITICAL,HIGH'
@@ -277,28 +275,43 @@ jobs:
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && steps.extract-image-tag.outcome == 'success'
+        if: always() && steps.build-image.outcome == 'success'
         continue-on-error: true
         with:
           sarif_file: 'trivy-${{ matrix.app_component }}-results.sarif'
           category: '${{ matrix.app_component }}-image'
 
-      - name: Set workflow outputs
-        id: workflow_outputs
-        run: |
-          echo "version=${{ needs.bump-version.outputs.new_version }}" >> $GITHUB_OUTPUT
-          echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+  collect-outputs:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ needs.build-and-push.outputs.version }}
+      environment: ${{ needs.build-and-push.outputs.environment }}
+      backend_image_tag_hash: ${{ needs.build-and-push.outputs.backend_image_tag_hash }}
+      backend_image_tag_semver: ${{ needs.build-and-push.outputs.backend_image_tag_semver }}
+      backend_image_tag_latest: ${{ needs.build-and-push.outputs.backend_image_tag_latest }}
+      frontend_image_tag_hash: ${{ needs.build-and-push.outputs.frontend_image_tag_hash }}
+      frontend_image_tag_semver: ${{ needs.build-and-push.outputs.frontend_image_tag_semver }}
+      frontend_image_tag_latest: ${{ needs.build-and-push.outputs.frontend_image_tag_latest }}
+    steps:
+      - name: Consolidate outputs
+        run: echo "Outputs collected from matrix jobs"
 
-      - name: Comment on commit
-        uses: actions/github-script@v7
+  # Comment on commit
+  comment-on-commit:
+    needs: [bump-version, collect-outputs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const { context } = require('@actions/github');
             const sha = context.sha;
             const shortSha = sha.substring(0, 7);
-            const version = '${{ needs.bump-version.outputs.new_version }}';
+            const version = '${{ needs.collect-outputs.outputs.version }}';
             const bumpType = '${{ needs.bump-version.outputs.bump_type }}';
-            const env = '${{ inputs.environment }}';
+            const env = '${{ needs.collect-outputs.outputs.environment }}';
             const prefix = '${{ inputs.image_tag_prefix }}' ? '${{ inputs.image_tag_prefix }}-' : '';
 
             let bumpMessage = '';
@@ -317,18 +330,27 @@ jobs:
             const repoName = context.repo.repo.toLowerCase();
 
             if (env === 'stg') {
-              // For staging: both use stg-SHA
-              // Using single quotes to avoid JSON escaping issues with backticks
-              imageTagsMessage = 'Images are available at:\n- `ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}stg-${shortSha}`\n- `ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}stg-${shortSha}`';
+              // For staging: include both stg-SHA and stg-SemVer formats
+              // IMPORTANT: The stg-SHA format must be maintained exactly as "stg-{hash}" with no other prefix/suffix
+              // The release repository expects this exact format for staging images
+              // We also add a semver tag for better traceability
+              imageTagsMessage = 'Images are available at:\n' +
+                '- Backend:\n' +
+                '  - `ghcr.io/' + repoOwner + '/' + repoName + '-backend:' + prefix + 'stg-' + shortSha + '` (SHA tag)\n' +
+                '  - `ghcr.io/' + repoOwner + '/' + repoName + '-backend:' + prefix + 'stg-' + version + '` (SemVer tag)\n' +
+                '- Frontend:\n' +
+                '  - `ghcr.io/' + repoOwner + '/' + repoName + '-frontend:' + prefix + 'stg-' + shortSha + '` (SHA tag)\n' +
+                '  - `ghcr.io/' + repoOwner + '/' + repoName + '-frontend:' + prefix + 'stg-' + version + '` (SemVer tag)';
             } else {
               // For production: both use version
-              // Using single quotes to avoid JSON escaping issues with backticks
-              imageTagsMessage = 'Images are available at:\n- `ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-backend:${prefix}${version}`\n- `ghcr.io/${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}-frontend:${prefix}${version}`';
+              imageTagsMessage = 'Images are available at:\n' +
+                '- Backend: `ghcr.io/' + repoOwner + '/' + repoName + '-backend:' + prefix + version + '`\n' +
+                '- Frontend: `ghcr.io/' + repoOwner + '/' + repoName + '-frontend:' + prefix + version + '`';
             }
 
             github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: sha,
-              body: `## ${envName} Images Built and Pushed\n\n${bumpMessage}: **${version}**\n\n${imageTagsMessage}\n\n### Security Scanning\nVulnerability scanning was performed on both images. Check the GitHub Security tab for detailed results.\n\n### Image Labels\nImages include standard OCI labels for better traceability and management.`
+              body: '## ' + envName + ' Images Built and Pushed\n\n' + bumpMessage + ': **' + version + '**\n\n' + imageTagsMessage + '\n\n### Security Scanning\nVulnerability scanning was performed on both images. Check the GitHub Security tab for detailed results.\n\n### Image Labels\nImages include standard OCI labels for better traceability and management.'
             });
