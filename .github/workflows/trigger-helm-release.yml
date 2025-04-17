@@ -235,5 +235,6 @@ jobs:
               "backend_image": "${{ inputs.backend_image }}",
               "frontend_image": "${{ inputs.frontend_image }}",
               "semantic_version": "${{ steps.prepare_payload.outputs.semantic_version }}",
-              "clean_semver": "${{ steps.prepare_payload.outputs.clean_semver }}"
+              "clean_semver": "${{ steps.prepare_payload.outputs.clean_semver }}",
+              "sha": "${{ github.sha }}"
             }
