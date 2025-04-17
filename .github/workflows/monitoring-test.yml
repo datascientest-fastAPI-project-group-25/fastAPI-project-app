@@ -1,0 +1,42 @@
+name: Monitoring Services Test
+
+on:
+  push:
+    branches: [ feature/monitoring-test ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  test-monitoring:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pytest
+      
+      - name: Start monitoring stack
+        run: |
+          docker-compose -f docker-compose.monitoring-only.yml up -d
+          # Wait for services to start
+          sleep 30
+      
+      - name: Check Docker containers
+        run: docker ps
+      
+      - name: Run monitoring tests
+        run: |
+          # Run the tests
+          python -m pytest tests/monitoring/test_monitoring_services.py -v
+      
+      - name: Stop monitoring stack
+        run: docker-compose -f docker-compose.monitoring-only.yml down
+        if: always()  # Run even if previous steps failed
