@@ -583,3 +583,4 @@ The application uses a subdomain-based routing approach for different services:
 <!-- Triggering helm update fix test 3 -->
 <!-- Triggering helm update fix test 4 -->
 <!-- Triggering helm update fix test 5 -->
+<!-- Triggering helm update fix test 6 -->
