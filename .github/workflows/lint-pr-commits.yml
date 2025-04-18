@@ -2,10 +2,7 @@ name: Lint PR Commits
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
-    branches:
-      - main
-      - stg
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
   commitlint:
@@ -20,34 +17,20 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: 'frontend/.nvmrc' # Or specify a version like '20'
-          cache: 'npm'
+          node-version-file: 'fastAPI-project-app/frontend/.nvmrc' # Or specify a version like '20'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10 # Specify pnpm version from package.json
-          run_install: false # We'll run install separately
 
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install Dependencies (Root)
+        # Need to cd into the app directory first if the workflow runs from the root
+        run: cd fastAPI-project-app && pnpm install -w --frozen-lockfile
 
       - name: Validate PR commits with commitlint
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: pnpm commitlint --from $BASE_SHA --to $HEAD_SHA --verbose
+        # Need to cd into the app directory first if the workflow runs from the root
+        run: cd fastAPI-project-app && pnpm commitlint --from $BASE_SHA --to $HEAD_SHA --verbose
