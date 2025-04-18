@@ -17,24 +17,24 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 
 class RequestLoggingMiddleware:
-    """Middleware for logging request details."""
-    
+    """Middleware for logging request details. Updated for CI/CD workflow testing."""
+
     async def __call__(self, request: Request, call_next):
         # Record request start time
         start_time = time.time()
-        
+
         # Get request details
         method = request.method
         url = request.url.path
         query_params = str(request.query_params)
         client_host = request.client.host if request.client else "unknown"
-        
+
         # Process the request
         response = await call_next(request)
-        
+
         # Calculate processing time
         process_time = time.time() - start_time
-        
+
         # Log request details
         log_msg = (
             f"Request: {method} {url} | "
@@ -43,7 +43,7 @@ class RequestLoggingMiddleware:
             f"Status: {response.status_code} | "
             f"Time: {process_time:.3f}s"
         )
-        
+
         # Log based on status code
         if response.status_code >= 500:
             # Server errors
@@ -54,7 +54,7 @@ class RequestLoggingMiddleware:
         else:
             # Success responses
             print(f"INFO: {log_msg}")
-        
+
         return response
 
 
@@ -106,7 +106,7 @@ async def health_check():
             "environment": settings.ENVIRONMENT,
             "git_hash": os.environ.get("GIT_HASH", "unknown"),
         }
-        
+
         # Try to get system metrics if psutil is available
         try:
             import psutil
@@ -152,14 +152,15 @@ async def health_check():
 @app.get("/health/readiness", tags=["Health"], status_code=status.HTTP_200_OK)
 async def readiness_check():
     """Readiness check for orchestration systems like Kubernetes.
-    
+
     Verifies if the application is ready to handle traffic.
     """
     try:
         # Check database connectivity
-        from app.db.session import engine
         from sqlalchemy import text as sql_text
-        
+
+        from app.db.session import engine
+
         db_status = "error"
         with engine.connect() as connection:
             result = connection.execute(sql_text("SELECT 1"))
@@ -193,7 +194,7 @@ async def readiness_check():
 @app.get("/health/liveness", tags=["Health"], status_code=status.HTTP_200_OK)
 async def liveness_check():
     """Liveness check for orchestration systems like Kubernetes.
-    
+
     Verifies if the application is running and not deadlocked.
     """
     try:
@@ -202,7 +203,7 @@ async def liveness_check():
             "timestamp": datetime.now().isoformat(),
             "process_id": os.getpid(),
         }
-        
+
         # Try to get uptime if psutil is available
         try:
             import psutil
@@ -210,7 +211,7 @@ async def liveness_check():
             liveness_data["uptime_seconds"] = uptime_seconds
         except ImportError:
             liveness_data["uptime"] = "unknown (psutil not installed)"
-        
+
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content=liveness_data,
