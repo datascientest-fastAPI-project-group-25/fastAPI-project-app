@@ -1,0 +1,36 @@
+name: Lint PR Commits
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  commitlint:
+    name: Validate Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for commitlint
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'fastAPI-project-app/frontend/.nvmrc' # Or specify a version like '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10 # Specify pnpm version from package.json
+
+      - name: Install Dependencies (Root)
+        # Need to cd into the app directory first if the workflow runs from the root
+        run: cd fastAPI-project-app && pnpm install -w --frozen-lockfile
+
+      - name: Validate PR commits with commitlint
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        # Need to cd into the app directory first if the workflow runs from the root
+        run: cd fastAPI-project-app && pnpm commitlint --from $BASE_SHA --to $HEAD_SHA --verbose
