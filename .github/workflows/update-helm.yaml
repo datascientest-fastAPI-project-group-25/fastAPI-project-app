@@ -36,7 +36,9 @@ jobs:
           ./scripts/get_release_vars.sh "${{ github.event.release.tag_name }}" "${{ github.event.release.prerelease }}"
 
       - name: Install yq
-        uses: mikefarah/yq@master
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
 
       - name: Check current values (Staging)
         if: steps.vars.outputs.env == 'stg'
