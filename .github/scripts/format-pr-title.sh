@@ -43,21 +43,28 @@ else
   BRANCH_TYPE="chore"
 fi
 
+# Get current version from VERSION file if it exists
+VERSION=""
+if [ -f "VERSION" ]; then
+  VERSION=$(cat VERSION)
+else
+  VERSION="0.1.0"  # Default version if VERSION file doesn't exist
+fi
+
 # Format PR title based on target branch
 if [ "$TARGET_BRANCH" == "main" ]; then
-  # For PRs to main, use "Release" format
+  # For PRs to main, use semantic version format
   if [ "$BRANCH_NAME" == "stg" ]; then
-    # Special case for staging to main
-    echo "Release: Production deployment"
+    # Special case for staging to main - use semantic version
+    echo "release(prod): v${VERSION}"
   else
     # For other branches to main
-    echo "Release: $BRANCH_NAME"
+    echo "release(prod): $BRANCH_NAME"
   fi
 elif [ "$TARGET_BRANCH" == "stg" ]; then
-  # For PRs to staging, use "[branch-type]: [branch-name]" format
-  # Remove the branch type prefix if it exists in the branch name
+  # For PRs to staging, include both type and staging indicator
   BRANCH_SUFFIX=$(echo "$BRANCH_NAME" | sed -E 's/^(feat|feature|fix|hotfix|docs|style|refactor|perf|test|build|ci|chore|revert)\///')
-  echo "$BRANCH_TYPE: $BRANCH_SUFFIX"
+  echo "$BRANCH_TYPE(staging): $BRANCH_SUFFIX"
 else
   # Default format for other target branches
   echo "$BRANCH_NAME → $TARGET_BRANCH"
