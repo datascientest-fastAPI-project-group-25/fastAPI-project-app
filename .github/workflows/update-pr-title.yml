@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened, edited]
     branches:
       - main # Or your primary integration branches like 'stg', 'develop' etc.
-      # Add other target branches if needed, e.g., - stg
+      - stg  # Add staging branch
 
 permissions:
   pull-requests: write # Needed to update the PR title
@@ -13,33 +13,45 @@ permissions:
 jobs:
   update-title:
     runs-on: ubuntu-latest
-    # Only run on PRs from feat/* or fix/* branches within the same repo
+    # Only run on PRs from conventional commit type branches within the same repo
     if: |
       github.event.pull_request.head.repo.full_name == github.repository &&
-      (startsWith(github.head_ref, 'feat/') || startsWith(github.head_ref, 'fix/'))
+      (startsWith(github.head_ref, 'feat/') ||
+       startsWith(github.head_ref, 'fix/') ||
+       startsWith(github.head_ref, 'docs/') ||
+       startsWith(github.head_ref, 'style/') ||
+       startsWith(github.head_ref, 'refactor/') ||
+       startsWith(github.head_ref, 'perf/') ||
+       startsWith(github.head_ref, 'test/') ||
+       startsWith(github.head_ref, 'build/') ||
+       startsWith(github.head_ref, 'ci/') ||
+       startsWith(github.head_ref, 'chore/') ||
+       startsWith(github.head_ref, 'revert/'))
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Determine Type Prefix
         id: determine-prefix
         env:
           BRANCH_NAME: ${{ github.head_ref }}
+          TARGET_BRANCH: ${{ github.base_ref }}
         run: |
-          if [[ "$BRANCH_NAME" == feat/* ]]; then
-            echo "prefix=feat:" >> $GITHUB_OUTPUT
-          elif [[ "$BRANCH_NAME" == fix/* ]]; then
-            echo "prefix=fix:" >> $GITHUB_OUTPUT
-          else
-            # Optional: default or error if needed, but 'if' condition should prevent this
-            echo "prefix=chore:" >> $GITHUB_OUTPUT
-          fi
+          chmod +x .github/scripts/format-pr-title.sh
+          PREFIX=$(.github/scripts/format-pr-title.sh "$BRANCH_NAME" "$TARGET_BRANCH" | cut -d' ' -f1)
+          echo "prefix=$PREFIX:" >> $GITHUB_OUTPUT
+          echo "Determined prefix: $PREFIX:"
 
       - name: Update PR Title
         uses: actions/github-script@v7
+        env:
+          PREFIX: ${{ steps.determine-prefix.outputs.prefix }}
         with:
           # Using the default GITHUB_TOKEN which usually has pull-requests: write permission
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const prefix = '${{ steps.determine-prefix.outputs.prefix }}';
+            const prefix = process.env.PREFIX;
             const prNumber = context.issue.number;
             const prTitle = context.payload.pull_request.title;
 
