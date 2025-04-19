@@ -1,4 +1,4 @@
-<!-- trivial change for workflow test -->
+<!-- workflow test: improved documentation -->
 
 # 🚀 DevOps Demo Application
 
@@ -14,7 +14,7 @@ This repository contains a modern full-stack application with a FastAPI backend 
 - [Docker-based Development](#-docker-based-development)
 - [Local Development](#-local-development)
 - [Development Workflow](#-development-workflow)
-- [CI/CD Pipeline](#-cicd-pipeline)
+- [CI/CD Pipeline](#-cicd-pipeline) (Automated release process)
 - [Documentation](#-documentation)
 - [Environment Configuration](#-environment-configuration)
 - [Testing](#-testing)
