@@ -1,0 +1,228 @@
+name: Update Helm Image Tag (Improved)
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-helm:
+    runs-on: ubuntu-latest
+    env:
+      GIT_AUTHOR_NAME: github-actions
+      GIT_AUTHOR_EMAIL: github-actions@github.com
+      GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MACHINE_USER_TOKEN }}
+          fetch-depth: 0
+
+      - name: Make scripts executable
+        run: chmod +x ./scripts/get_release_vars.sh ./scripts/generate_pr_body.sh ./scripts/merge_pr.sh ./scripts/check_existing_prs.sh
+
+      - name: Debug Event Information
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Event action: ${{ github.event.action }}"
+          echo "Release tag: ${{ github.event.release.tag_name }}"
+          echo "Release name: ${{ github.event.release.name }}"
+          echo "Release draft: ${{ github.event.release.draft }}"
+          echo "Release prerelease: ${{ github.event.release.prerelease }}"
+
+      - name: Determine tag and environment from Release
+        id: vars
+        run: |
+          ./scripts/get_release_vars.sh "${{ github.event.release.tag_name }}" "${{ github.event.release.prerelease }}"
+
+      - name: Install yq
+        uses: mikefarah/yq@master
+
+      - name: Check current values (Staging)
+        if: steps.vars.outputs.env == 'stg'
+        id: check_stg
+        run: |
+          CURRENT_BACKEND_TAG=$(yq '.backend.tag' fastAPI-project-release/config/helm/values-stg.yaml)
+          CURRENT_FRONTEND_TAG=$(yq '.frontend.tag' fastAPI-project-release/config/helm/values-stg.yaml)
+          echo "Current backend tag: $CURRENT_BACKEND_TAG"
+          echo "Current frontend tag: $CURRENT_FRONTEND_TAG"
+          echo "Target tag: ${{ steps.vars.outputs.deploy_tag }}"
+
+          if [[ "$CURRENT_BACKEND_TAG" != "${{ steps.vars.outputs.deploy_tag }}" || "$CURRENT_FRONTEND_TAG" != "${{ steps.vars.outputs.deploy_tag }}" ]]; then
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+            echo "old_backend_tag=$CURRENT_BACKEND_TAG" >> $GITHUB_OUTPUT
+            echo "old_frontend_tag=$CURRENT_FRONTEND_TAG" >> $GITHUB_OUTPUT
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check current values (Production)
+        if: steps.vars.outputs.env == 'prod'
+        id: check_prod
+        run: |
+          CURRENT_BACKEND_TAG=$(yq '.backend.tag' fastAPI-project-release/config/helm/values-prod.yaml)
+          CURRENT_FRONTEND_TAG=$(yq '.frontend.tag' fastAPI-project-release/config/helm/values-prod.yaml)
+          CURRENT_CHART_VERSION=$(yq '.version' fastAPI-project-release/charts/fastapi/Chart.yaml)
+          CURRENT_APP_VERSION=$(yq '.appVersion' fastAPI-project-release/charts/fastapi/Chart.yaml)
+
+          echo "Current backend tag: $CURRENT_BACKEND_TAG"
+          echo "Current frontend tag: $CURRENT_FRONTEND_TAG"
+          echo "Current Chart version: $CURRENT_CHART_VERSION"
+          echo "Current App version: $CURRENT_APP_VERSION"
+          echo "Target tag: ${{ steps.vars.outputs.deploy_tag }}"
+          echo "Target version: ${{ steps.vars.outputs.semantic_version }}"
+
+          if [[ "$CURRENT_BACKEND_TAG" != "${{ steps.vars.outputs.deploy_tag }}" ||
+                "$CURRENT_FRONTEND_TAG" != "${{ steps.vars.outputs.deploy_tag }}" ||
+                "$CURRENT_CHART_VERSION" != "${{ steps.vars.outputs.semantic_version }}" ||
+                "$CURRENT_APP_VERSION" != "${{ steps.vars.outputs.semantic_version }}" ]]; then
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+            echo "old_backend_tag=$CURRENT_BACKEND_TAG" >> $GITHUB_OUTPUT
+            echo "old_frontend_tag=$CURRENT_FRONTEND_TAG" >> $GITHUB_OUTPUT
+            echo "old_chart_version=$CURRENT_CHART_VERSION" >> $GITHUB_OUTPUT
+            echo "old_app_version=$CURRENT_APP_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Staging values
+        if: steps.vars.outputs.env == 'stg' && steps.check_stg.outputs.needs_update == 'true'
+        run: |
+          echo "Updating values-stg.yaml with tag ${{ steps.vars.outputs.deploy_tag }}"
+          yq -i '.backend.tag = "${{ steps.vars.outputs.deploy_tag }}"' fastAPI-project-release/config/helm/values-stg.yaml
+          yq -i '.frontend.tag = "${{ steps.vars.outputs.deploy_tag }}"' fastAPI-project-release/config/helm/values-stg.yaml
+
+          # Verify changes
+          NEW_BACKEND_TAG=$(yq '.backend.tag' fastAPI-project-release/config/helm/values-stg.yaml)
+          NEW_FRONTEND_TAG=$(yq '.frontend.tag' fastAPI-project-release/config/helm/values-stg.yaml)
+          echo "Updated backend tag: $NEW_BACKEND_TAG"
+          echo "Updated frontend tag: $NEW_FRONTEND_TAG"
+
+          if [[ "$NEW_BACKEND_TAG" != "${{ steps.vars.outputs.deploy_tag }}" || "$NEW_FRONTEND_TAG" != "${{ steps.vars.outputs.deploy_tag }}" ]]; then
+            echo "::error::Failed to update tags in values-stg.yaml"
+            exit 1
+          fi
+
+      - name: Update Production values
+        if: steps.vars.outputs.env == 'prod' && steps.check_prod.outputs.needs_update == 'true'
+        run: |
+          echo "Updating values-prod.yaml with tag ${{ steps.vars.outputs.deploy_tag }}"
+          yq -i '.backend.tag = "${{ steps.vars.outputs.deploy_tag }}"' fastAPI-project-release/config/helm/values-prod.yaml
+          yq -i '.frontend.tag = "${{ steps.vars.outputs.deploy_tag }}"' fastAPI-project-release/config/helm/values-prod.yaml
+
+          echo "Updating Chart.yaml with version ${{ steps.vars.outputs.semantic_version }}"
+          yq -i '.version = "${{ steps.vars.outputs.semantic_version }}"' fastAPI-project-release/charts/fastapi/Chart.yaml
+          yq -i '.appVersion = "${{ steps.vars.outputs.semantic_version }}"' fastAPI-project-release/charts/fastapi/Chart.yaml
+
+          # Verify changes
+          NEW_BACKEND_TAG=$(yq '.backend.tag' fastAPI-project-release/config/helm/values-prod.yaml)
+          NEW_FRONTEND_TAG=$(yq '.frontend.tag' fastAPI-project-release/config/helm/values-prod.yaml)
+          NEW_CHART_VERSION=$(yq '.version' fastAPI-project-release/charts/fastapi/Chart.yaml)
+          NEW_APP_VERSION=$(yq '.appVersion' fastAPI-project-release/charts/fastapi/Chart.yaml)
+
+          echo "Updated backend tag: $NEW_BACKEND_TAG"
+          echo "Updated frontend tag: $NEW_FRONTEND_TAG"
+          echo "Updated Chart version: $NEW_CHART_VERSION"
+          echo "Updated App version: $NEW_APP_VERSION"
+
+          if [[ "$NEW_BACKEND_TAG" != "${{ steps.vars.outputs.deploy_tag }}" ||
+                "$NEW_FRONTEND_TAG" != "${{ steps.vars.outputs.deploy_tag }}" ||
+                "$NEW_CHART_VERSION" != "${{ steps.vars.outputs.semantic_version }}" ||
+                "$NEW_APP_VERSION" != "${{ steps.vars.outputs.semantic_version }}" ]]; then
+            echo "::error::Failed to update values in production files"
+            exit 1
+          fi
+
+      - name: Check for existing Staging PRs
+        if: steps.vars.outputs.env == 'stg' && steps.check_stg.outputs.needs_update == 'true'
+        id: check_existing_stg_prs
+        run: ./scripts/check_existing_prs.sh stg
+        env:
+          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+
+      - name: Generate PR body for Staging
+        if: steps.vars.outputs.env == 'stg' && steps.check_stg.outputs.needs_update == 'true'
+        id: pr_body_stg
+        run: |
+          cat > pr_body.md << EOF
+          Automated update of Helm values for the **staging** environment triggered by release **${{ github.event.release.tag_name }}**.
+
+          **Changes:**
+          - **Target Tag:** \`${{ steps.vars.outputs.deploy_tag }}\`
+          - **Previous Backend Tag:** \`${{ steps.check_stg.outputs.old_backend_tag }}\`
+          - **Previous Frontend Tag:** \`${{ steps.check_stg.outputs.old_frontend_tag }}\`
+          EOF
+
+          PR_BODY=$(cat pr_body.md)
+          echo "pr_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$PR_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check for existing Production PRs
+        if: steps.vars.outputs.env == 'prod' && steps.check_prod.outputs.needs_update == 'true'
+        id: check_existing_prod_prs
+        run: ./scripts/check_existing_prs.sh prod
+        env:
+          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+
+      - name: Generate PR body for Production
+        if: steps.vars.outputs.env == 'prod' && steps.check_prod.outputs.needs_update == 'true'
+        id: pr_body_prod
+        run: |
+          cat > pr_body.md << EOF
+          Automated update of Helm values for the **production** environment triggered by release **${{ github.event.release.tag_name }}**.
+
+          **Changes:**
+          - **Target Tag:** \`${{ steps.vars.outputs.deploy_tag }}\`
+          - **Previous Backend Tag:** \`${{ steps.check_prod.outputs.old_backend_tag }}\`
+          - **Previous Frontend Tag:** \`${{ steps.check_prod.outputs.old_frontend_tag }}\`
+          - **Chart Version:** \`${{ steps.vars.outputs.semantic_version }}\` (was \`${{ steps.check_prod.outputs.old_chart_version }}\`)
+          - **App Version:** \`${{ steps.vars.outputs.semantic_version }}\` (was \`${{ steps.check_prod.outputs.old_app_version }}\`)
+          EOF
+
+          PR_BODY=$(cat pr_body.md)
+          echo "pr_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$PR_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request (Staging)
+        if: steps.vars.outputs.env == 'stg' && steps.check_stg.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@v5
+        id: cpr_stg
+        with:
+          token: ${{ secrets.MACHINE_USER_TOKEN }}
+          commit-message: "chore(helm): update image tags for staging to ${{ steps.vars.outputs.deploy_tag }}"
+          branch: helm-update-stg-${{ github.run_id }}
+          delete-branch: true
+          title: "chore(helm): update image tags for staging to ${{ steps.vars.outputs.deploy_tag }}"
+          body: ${{ steps.pr_body_stg.outputs.pr_body }}
+          base: main
+          path: fastAPI-project-release
+
+      - name: Create Pull Request (Production)
+        if: steps.vars.outputs.env == 'prod' && steps.check_prod.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@v5
+        id: cpr_prod
+        with:
+          token: ${{ secrets.MACHINE_USER_TOKEN }}
+          commit-message: "chore(helm): update image tags for production to ${{ steps.vars.outputs.deploy_tag }}"
+          branch: helm-update-prod-${{ github.run_id }}
+          delete-branch: true
+          title: "chore(helm): update image tags for production to ${{ steps.vars.outputs.deploy_tag }}"
+          body: ${{ steps.pr_body_prod.outputs.pr_body }}
+          base: main
+          path: fastAPI-project-release
+
+      - name: Merge PR (Staging)
+        if: steps.vars.outputs.env == 'stg' && steps.check_stg.outputs.needs_update == 'true' && steps.cpr_stg.outputs.pull-request-number
+        continue-on-error: true
+        run: ./scripts/merge_pr.sh ${{ steps.cpr_stg.outputs.pull-request-number }}
+        env:
+          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+
+      - name: Merge PR (Production)
+        if: steps.vars.outputs.env == 'prod' && steps.check_prod.outputs.needs_update == 'true' && steps.cpr_prod.outputs.pull-request-number
+        continue-on-error: true
+        run: ./scripts/merge_pr.sh ${{ steps.cpr_prod.outputs.pull-request-number }}
+        env:
+          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
