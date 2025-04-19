@@ -1,0 +1,69 @@
+name: Update PR Title with Type
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    branches:
+      - main # Or your primary integration branches like 'stg', 'develop' etc.
+      # Add other target branches if needed, e.g., - stg
+
+permissions:
+  pull-requests: write # Needed to update the PR title
+
+jobs:
+  update-title:
+    runs-on: ubuntu-latest
+    # Only run on PRs from feat/* or fix/* branches within the same repo
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (startsWith(github.head_ref, 'feat/') || startsWith(github.head_ref, 'fix/'))
+
+    steps:
+      - name: Determine Type Prefix
+        id: determine-prefix
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
+        run: |
+          if [[ "$BRANCH_NAME" == feat/* ]]; then
+            echo "prefix=feat:" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH_NAME" == fix/* ]]; then
+            echo "prefix=fix:" >> $GITHUB_OUTPUT
+          else
+            # Optional: default or error if needed, but 'if' condition should prevent this
+            echo "prefix=chore:" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update PR Title
+        uses: actions/github-script@v7
+        with:
+          # Using the default GITHUB_TOKEN which usually has pull-requests: write permission
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prefix = '${{ steps.determine-prefix.outputs.prefix }}';
+            const prNumber = context.issue.number;
+            const prTitle = context.payload.pull_request.title;
+
+            // Check if title already starts with a conventional commit type (e.g., feat:, fix:, chore:, etc.)
+            const ccRegex = /^(feat|fix|build|chore|ci|docs|perf|refactor|revert|style|test)(\(.*\))?!?:/;
+            if (ccRegex.test(prTitle)) {
+              console.log('PR title already has a conventional commit type prefix. Skipping update.');
+              return;
+            }
+
+            // Check if title already starts with the determined prefix (idempotency)
+            if (prTitle.startsWith(prefix)) {
+              console.log(`PR title already starts with '${prefix}'. Skipping update.`);
+              return;
+            }
+
+            // Prepend the prefix
+            const newTitle = `${prefix} ${prTitle}`;
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              title: newTitle
+            });
+
+            console.log(`Updated PR title to: ${newTitle}`);
