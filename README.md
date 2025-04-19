@@ -578,3 +578,5 @@ The application uses a subdomain-based routing approach for different services:
 3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feat/amazing-feature`)
 5. Open a Pull Request to the `dev` branch
+
+--- # TRIGGER HELM RELEASE
