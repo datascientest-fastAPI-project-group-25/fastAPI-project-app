@@ -1,12 +1,12 @@
 <!-- workflow test: improved documentation -->
 
-# 🚀 DevOps Demo Application
+# DevOps Demo Application
 
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![GitHub Packages](https://img.shields.io/badge/GitHub_Packages-181717?style=for-the-badge&logo=github&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white) ![Pre-commit](https://img.shields.io/badge/Pre--commit-FAB040?style=for-the-badge&logo=pre-commit&logoColor=black)
 
 This repository contains a modern full-stack application with a FastAPI backend and React frontend, featuring a comprehensive CI/CD pipeline for AWS deployment.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Architecture Overview](#-architecture-overview)
 - [Development Environment Setup](#-development-environment-setup)
@@ -20,7 +20,7 @@ This repository contains a modern full-stack application with a FastAPI backend 
 - [Testing](#-testing)
 - [Troubleshooting](#-troubleshooting)
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ```mermaid
 graph TD
@@ -38,7 +38,7 @@ graph TD
 - **CI/CD**: GitHub Actions
 - **Build Tools**: pnpm, Biome, UV (Python package manager)
 
-## 🛠️ Development Environment Setup
+## Development Environment Setup
 
 ### Prerequisites
 
@@ -82,7 +82,7 @@ pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre
 
 This will set up git hooks to automatically format code, run linting checks, and ensure code quality on commit.
 
-## 🔧 Makefile - The Central Interface for All Project Tasks
+## Makefile - The Central Interface for All Project Tasks
 
 **The Makefile is the primary and recommended way to interact with this project throughout its entire lifecycle.** From initial setup and development to testing, deployment, and maintenance, all operations should be performed using the Makefile commands for consistency and efficiency.
 
@@ -120,7 +120,7 @@ make fix name=branch-name
 make fix-automerge name=branch-name
 ```
 
-## 🗄️ Database Initialization
+## Database Initialization
 
 The application automatically initializes the database when the backend container starts, creating all necessary tables and the first superuser account. This process is handled by the prestart script that runs before the FastAPI application starts.
 
@@ -138,7 +138,7 @@ After initialization, you can log in with:
 - **Email**: admin@example.com
 - **Password**: The value of `FIRST_SUPERUSER_PASSWORD` in your `.env` file
 
-## 🚀 Fast Build System (pnpm + Traefik + UV)
+## Fast Build System (pnpm + Traefik + UV)
 
 This project uses a modern, high-performance build system:
 
@@ -148,7 +148,7 @@ This project uses a modern, high-performance build system:
 
 All build operations are handled through Docker and the Makefile for consistency.
 
-## 🐳 Docker-based Development
+## Docker-based Development
 
 The easiest way to get started is using our optimized Docker Compose setup, which configures all services including the frontend, backend, and database.
 
@@ -198,11 +198,11 @@ docker compose up -d --build
 make restart
 ```
 
-## 💻 Development Workflow
+## Development Workflow
 
 **All development must be done using the Makefile commands** for consistency across environments. The Makefile abstracts away the complexity of individual tools and provides a standardized interface for all development tasks, ensuring that everyone follows the same processes regardless of their local setup.
 
-### 🌿 Branching Strategy
+### Branching Strategy
 
 This project follows a structured branching strategy to ensure code quality and streamline the development process:
 
@@ -271,11 +271,11 @@ make check-login  # Verify API login works correctly
 
 pnpm uses a content-addressable store for packages, making installations faster and more efficient. The node_modules are linked rather than copied, saving significant disk space. UV provides similar benefits for Python packages with its efficient dependency resolution and caching.
 
-## 🔄 Development Workflow
+## Development Workflow
 
 ### Branch Strategy
 
-1. **🌱 Feature Branches (`feat/* || fix/*`)**
+1. **Feature Branches (`feat/* || fix/*`)**
 
    - Create for new features or bug fixes
    - Must pass pre-commit hooks before pushing
@@ -286,7 +286,7 @@ pnpm uses a content-addressable store for packages, making installations faster 
      - Unit tests
    - Requires PR review to merge to `dev`
 
-2. **🔨 Development Branch (`dev`)**
+2. **Development Branch (`dev`)**
 
    - Integration branch for feature development
    - On push triggers:
@@ -299,7 +299,7 @@ pnpm uses a content-addressable store for packages, making installations faster 
      - Documentation updates
      - Changelog generation
 
-3. **🚀 Main Branch (`main`)**
+3. **Main Branch (`main`)**
    - Production-ready code
    - Protected branch requiring PR approval
    - On push/PR merge:
@@ -315,7 +315,7 @@ git checkout dev
 git pull
 git checkout -b feat/your-feature-name
 # Make changes
-git commit -m "feat: your feature description"
+git commit -m "feat: add amazing feature"
 # Create PR to dev branch
 ```
 
@@ -341,7 +341,7 @@ Before running workflow tests, you need to build the custom Docker image used fo
 docker build -t local/workflow-test:latest -f .github/utils/Dockerfile.workflow-test .
 ```
 
-## 🔄 CI/CD Pipeline
+## CI/CD Pipeline
 
 Our CI/CD pipeline uses GitHub Actions for automation and GitHub Container Registry for image management. The actual deployment is handled by a separate infrastructure repository:
 
@@ -395,7 +395,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
 docker pull ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
 ```
 
-## 📚 Documentation
+## Documentation
 
 All project documentation is organized in the `docs/` directory for better maintainability:
 
@@ -425,7 +425,7 @@ For a complete overview of all documentation, see the [Documentation Index](./do
    - Deployment to target environments
    - Docker image management in GitHub Container Registry (GHCR)
 
-## 🔐 Environment Configuration
+## Environment Configuration
 
 The application uses environment variables for configuration. A sample `.env.example` file is provided as a template.
 
@@ -456,7 +456,7 @@ To enable this on your local machine, add these entries to your hosts file:
 127.0.0.1 adminer.localhost
 ```
 
-## 🧪 Testing
+## Testing
 
 **All testing should be performed using the Makefile commands** to ensure consistent test environments and configurations. The Makefile provides a unified interface for running all types of tests, from unit tests to GitHub Actions workflow tests.
 
@@ -501,7 +501,7 @@ cd frontend
 npm run test:e2e
 ```
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
