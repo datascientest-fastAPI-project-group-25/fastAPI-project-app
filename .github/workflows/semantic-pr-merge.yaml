@@ -8,7 +8,8 @@ on:
 
 jobs:
   semantic-release:
-    if: github.event.pull_request.merged == true
+    # Only run if the PR is merged and not from stg to main (those are handled by create-app-release.yml)
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref != 'stg'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
