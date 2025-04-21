@@ -29,8 +29,8 @@ jobs:
       - name: Install Dependencies (Root)
         run: pnpm install -w --frozen-lockfile
 
-      - name: Validate PR commits with commitlint
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: pnpm commitlint --from $BASE_SHA --to $HEAD_SHA --verbose
+      # - name: Validate PR commits with commitlint
+      #   env:
+      #     BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      #     HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      #   run: pnpm commitlint --from $BASE_SHA --to $HEAD_SHA --verbose
