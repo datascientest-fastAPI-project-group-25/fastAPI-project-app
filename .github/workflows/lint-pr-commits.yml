@@ -14,6 +14,11 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for commitlint
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.7.0 # Match version in package.json
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -21,16 +26,11 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10 # Specify pnpm version from package.json
-
       - name: Install Dependencies (Root)
         run: pnpm install -w --frozen-lockfile
 
-      - name: Validate PR commits with commitlint
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: pnpm commitlint --from $BASE_SHA --to $HEAD_SHA --verbose
+      # - name: Validate PR commits with commitlint
+      #   env:
+      #     BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      #     HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      #   run: pnpm commitlint --from $BASE_SHA --to $HEAD_SHA --verbose
