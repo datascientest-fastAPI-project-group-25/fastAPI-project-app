@@ -14,17 +14,17 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for commitlint
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10 # Specify pnpm version from package.json
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: 'frontend/.nvmrc' # Or specify a version like '20'
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10 # Specify pnpm version from package.json
 
       - name: Install Dependencies (Root)
         run: pnpm install -w --frozen-lockfile
