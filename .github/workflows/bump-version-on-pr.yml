@@ -56,6 +56,11 @@ jobs:
             echo "created=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
       - name: Bump version
         id: bump-version
         env:
@@ -98,6 +103,13 @@ jobs:
           echo "bumped=true" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Sync version to package.json
+        if: steps.bump-version.outputs.bumped == 'true'
+        run: |
+          echo "Syncing version to package.json..."
+          node scripts/version-management/sync-versions.js to-package
+          echo "✅ Version synchronized between VERSION file and package.json"
+
       - name: Configure Git
         if: steps.bump-version.outputs.bumped == 'true' || steps.check-version.outputs.created == 'true'
         run: |
@@ -107,7 +119,7 @@ jobs:
       - name: Commit version bump
         if: steps.bump-version.outputs.bumped == 'true' || steps.check-version.outputs.created == 'true'
         run: |
-          git add VERSION
+          git add VERSION package.json
           git commit -m "chore(version): Bump version to ${{ steps.bump-version.outputs.new_version }}"
           git push
 
