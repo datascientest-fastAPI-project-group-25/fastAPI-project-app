@@ -1,0 +1,28 @@
+name: Check if Workflows are Disabled
+
+on:
+  workflow_call:
+    outputs:
+      should_skip:
+        description: "Whether the workflow should be skipped"
+        value: ${{ jobs.check.outputs.should_skip }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check-disabled.outputs.should_skip }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if workflows are disabled
+        id: check-disabled
+        run: |
+          if [ -f ".github/workflows/disabled" ]; then
+            echo "Workflows are disabled. Skipping..."
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Workflows are enabled. Continuing..."
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+          fi
