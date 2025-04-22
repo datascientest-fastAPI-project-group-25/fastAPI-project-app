@@ -41,6 +41,12 @@ jobs:
           token: ${{ secrets.MACHINE_USER_TOKEN }}
           fetch-depth: 0
 
+      - name: Set up git merge drivers
+        run: |
+          chmod +x ./scripts/setup-git-hooks.sh
+          ./scripts/setup-git-hooks.sh
+          echo "Git merge drivers set up successfully"
+
       - name: Skip on Merge Commits
         run: |
           commit_message=$(git log -1 --pretty=%B)
