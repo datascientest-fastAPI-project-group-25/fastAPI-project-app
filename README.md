@@ -350,18 +350,19 @@ Our CI/CD pipeline uses GitHub Actions for automation and GitHub Container Regis
 graph LR
     A[Push to feat/* or fix/*] --> B{Branch Checks}
     B -->|Pass| C{fix/*-automerge?}
-    C -->|No| D[Auto-Create PR]
+    C -->|No| D[Auto-Create PR to stg]
     C -->|Yes| E[Auto-Merge to stg]
     D --> F{PR Checks}
     F -->|Pass| E
-    E --> G{Staging Branch Checks}
-    G -->|Pass| H[Create Release]
-    H --> I[Parallel Image Builds]
-    I --> J[Push to GHCR]
-    J --> K[Trigger Helm Release]
-    K --> L[ArgoCD Sync]
-    style J fill:#2496ED,stroke:#fff,stroke-width:2px
-    style L fill:#EF7B4D,stroke:#fff,stroke-width:2px
+    E --> G[Auto-Create PR to main]
+    G --> H{Main PR Checks}
+    H -->|Pass| I[Create Release]
+    I --> J[Parallel Image Builds]
+    J --> K[Push to GHCR]
+    K --> L[Trigger Helm Release]
+    L --> M[ArgoCD Sync]
+    style K fill:#2496ED,stroke:#fff,stroke-width:2px
+    style M fill:#EF7B4D,stroke:#fff,stroke-width:2px
 ```
 
 ### Optimized Build Pipeline
@@ -372,6 +373,7 @@ Our build pipeline features several optimizations for faster builds and deployme
 - **Component-Specific Caching**: Each component has dedicated cache scopes for faster builds
 - **Semantic Versioning**: Robust version handling across environments
 - **Automated Security Scanning**: All images are scanned for vulnerabilities before deployment
+- **Image Verification**: All built images are verified before deployment to ensure they exist and have the required labels
 
 ### GitHub Container Registry (GHCR) Configuration
 
@@ -381,6 +383,7 @@ We use GitHub Container Registry to store and manage our Docker images:
 - **Tagging Strategy**:
   - Feature branches: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:feat-branch-name`
   - Fix branches: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:fix-branch-name`
+  - Staging branch: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:stg-{hash}`
   - Main branch: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest`
   - Versioned releases: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:v1.2.3`
 
