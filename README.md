@@ -1,4 +1,3 @@
-<!-- workflow test: improved documentation -->
 
 # DevOps Demo Application
 
