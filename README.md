@@ -19,6 +19,7 @@ This repository contains a modern full-stack application with a FastAPI backend 
 - [Environment Configuration](#-environment-configuration)
 - [Testing](#-testing)
 - [Troubleshooting](#-troubleshooting)
+- [Version Management](#-version-management)
 
 ## Architecture Overview
 
@@ -209,10 +210,10 @@ This project follows a structured branching strategy to ensure code quality and 
 1. **Main Branch (`main`)**
    - Production-ready code only
    - Protected from direct pushes
-   - Changes only accepted through PRs from the `dev` branch
+   - Changes only accepted through PRs from the `stg` branch
    - Triggers production builds and deployments
 
-2. **Development Branch (`dev`)**
+2. **Staging Branch (`stg`)**
    - Integration branch for features and fixes
    - Protected from direct pushes
    - Changes only accepted through PRs from feature/fix branches
@@ -220,18 +221,18 @@ This project follows a structured branching strategy to ensure code quality and 
 
 3. **Feature Branches (`feat/*`)**
    - Created for new features or enhancements
-   - Branched from `dev`
-   - First push automatically opens a PR to `dev`
+   - Branched from `stg`
+   - First push automatically opens a PR to `stg`
    - Requires passing all tests and code reviews
 
 4. **Fix Branches (`fix/*`)**
    - Created for bug fixes
-   - Branched from `dev`
-   - First push automatically opens a PR to `dev`
+   - Branched from `stg`
+   - First push automatically opens a PR to `stg`
    - Can be marked for auto-merge by adding `automerge` suffix
 
 5. **Workflow Automation**
-   - When a PR to `dev` is merged, a new PR to `main` is automatically created
+   - When a PR to `stg` is merged, a new PR to `main` is automatically created
    - All branches are automatically deleted after successful merge
 
 **Creating Branches:**
@@ -284,9 +285,9 @@ pnpm uses a content-addressable store for packages, making installations faster 
      - Security checks (bandit, npm audit)
      - Linting & formatting
      - Unit tests
-   - Requires PR review to merge to `dev`
+   - Requires PR review to merge to `stg`
 
-2. **Development Branch (`dev`)**
+2. **Staging Branch (`stg`)**
 
    - Integration branch for feature development
    - On push triggers:
@@ -311,12 +312,12 @@ pnpm uses a content-addressable store for packages, making installations faster 
 ### Creating a Feature
 
 ```bash
-git checkout dev
+git checkout stg
 git pull
 git checkout -b feat/your-feature-name
 # Make changes
 git commit -m "feat: add amazing feature"
-# Create PR to dev branch
+# Create PR to stg branch
 ```
 
 ### Testing Workflows Locally
@@ -349,18 +350,19 @@ Our CI/CD pipeline uses GitHub Actions for automation and GitHub Container Regis
 graph LR
     A[Push to feat/* or fix/*] --> B{Branch Checks}
     B -->|Pass| C{fix/*-automerge?}
-    C -->|No| D[Auto-Create PR]
-    C -->|Yes| E[Auto-Merge to main]
+    C -->|No| D[Auto-Create PR to stg]
+    C -->|Yes| E[Auto-Merge to stg]
     D --> F{PR Checks}
     F -->|Pass| E
-    E --> G{Main Branch Checks}
-    G -->|Pass| H[Create Release]
-    H --> I[Parallel Image Builds]
-    I --> J[Push to GHCR]
-    J --> K[Trigger Helm Release]
-    K --> L[ArgoCD Sync]
-    style J fill:#2496ED,stroke:#fff,stroke-width:2px
-    style L fill:#EF7B4D,stroke:#fff,stroke-width:2px
+    E --> G[Auto-Create PR to main]
+    G --> H{Main PR Checks}
+    H -->|Pass| I[Create Release]
+    I --> J[Parallel Image Builds]
+    J --> K[Push to GHCR]
+    K --> L[Trigger Helm Release]
+    L --> M[ArgoCD Sync]
+    style K fill:#2496ED,stroke:#fff,stroke-width:2px
+    style M fill:#EF7B4D,stroke:#fff,stroke-width:2px
 ```
 
 ### Optimized Build Pipeline
@@ -371,6 +373,7 @@ Our build pipeline features several optimizations for faster builds and deployme
 - **Component-Specific Caching**: Each component has dedicated cache scopes for faster builds
 - **Semantic Versioning**: Robust version handling across environments
 - **Automated Security Scanning**: All images are scanned for vulnerabilities before deployment
+- **Image Verification**: All built images are verified before deployment to ensure they exist and have the required labels
 
 ### GitHub Container Registry (GHCR) Configuration
 
@@ -380,6 +383,7 @@ We use GitHub Container Registry to store and manage our Docker images:
 - **Tagging Strategy**:
   - Feature branches: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:feat-branch-name`
   - Fix branches: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:fix-branch-name`
+  - Staging branch: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:stg-{hash}`
   - Main branch: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest`
   - Versioned releases: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:v1.2.3`
 
@@ -404,6 +408,7 @@ All project documentation is organized in the `docs/` directory for better maint
 - **[GitHub Actions Workflows](./docs/workflows/github-actions.md)** - Overview and best practices for CI/CD workflows
 - **[Git Hooks](./docs/git-hooks.md)** - Documentation for the pre-commit git hooks setup
 - **[Release Notes](./docs/release-notes.md)** - Comprehensive changelog of all project changes
+- **[Version Management](./docs/VERSION-MANAGEMENT.md)** - How version management works and how to avoid merge conflicts
 
 Component-specific documentation can be found in the respective directories:
 
@@ -411,19 +416,6 @@ Component-specific documentation can be found in the respective directories:
 - **[Frontend Documentation](./frontend/README.md)**
 
 For a complete overview of all documentation, see the [Documentation Index](./docs/README.md).
-
-1. **Continuous Integration**
-
-   - Automated testing
-   - Code quality checks
-   - Security scanning
-   - Performance testing
-
-2. **Continuous Deployment**
-   - Staging environment (dev branch)
-   - Production environment (main branch releases)
-   - Deployment to target environments
-   - Docker image management in GitHub Container Registry (GHCR)
 
 ## Environment Configuration
 
@@ -571,15 +563,46 @@ The application uses a subdomain-based routing approach for different services:
    127.0.0.1 api.localhost dashboard.localhost db.localhost
    ```
 
+## Version Management
+
+This repository uses semantic versioning (SemVer) for managing versions. The version is stored in two places:
+
+1. **VERSION file**: Used for Docker image tagging and Helm chart versioning
+2. **package.json**: Used for npm package versioning and semantic-release
+
+The version is automatically bumped based on the type of changes being made:
+
+- **Major version** (X.0.0): Breaking changes (branches with "breaking" or "!" in the name)
+- **Minor version** (0.X.0): New features (branches starting with "feat/")
+- **Patch version** (0.0.X): Bug fixes and other changes (branches starting with "fix/")
+
+### Automatic Version Bumping
+
+Version bumping happens automatically at two points in the workflow:
+
+1. **When opening a PR to the `stg` branch**:
+   - The VERSION file is bumped based on the branch name
+   - package.json is synchronized with the VERSION file
+   - The PR title is updated to include the new version
+
+2. **When merging a PR to the `main` branch** (except for stg → main PRs):
+   - package.json is bumped based on the branch name
+   - VERSION file is synchronized with package.json
+   - A GitHub Release is created with the new version
+
+### Automatic Conflict Resolution
+
+To avoid merge conflicts in the VERSION file, we've implemented a custom Git merge driver that automatically resolves conflicts by keeping the higher version number.
+
+For more detailed information about version management, see the [Version Management Documentation](./docs/VERSION-MANAGEMENT.md).
+
 ## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feat/amazing-feature`)
 3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feat/amazing-feature`)
-5. Open a Pull Request to the `dev` branch
-
-[//]: # (trigger-update-test)
+5. Open a Pull Request to the `stg` branch
 
 ## Project Structure
-# Trigger build Sat Apr 19 17:42:07 CEST 2025
+# Trigger build Sat Apr 21 21:30:00 CEST 2024
