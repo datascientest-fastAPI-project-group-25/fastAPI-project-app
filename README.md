@@ -20,7 +20,24 @@ This repository contains a modern full-stack application with a FastAPI backend 
 - [Testing](#-testing)
 - [Troubleshooting](#-troubleshooting)
 
+## Development Environment Setup
+
+After cloning the repository, run the following command to set up git hooks and merge drivers:
+
+```bash
+./scripts/setup-git-hooks.sh
+```
+
+This ensures that version files are merged correctly during git operations and prevents merge conflicts.
+
 ## Architecture Overview
+
+```mermaid
+graph TD
+    A[Frontend - React/TypeScript] --> G[Traefik Reverse Proxy]
+    G --> B[Backend - FastAPI]
+    B --> C[(PostgreSQL Database)]
+    D[CI/CD - GitHub Actions] --> E[GitHub Container Registry]
 
 ```mermaid
 graph TD
