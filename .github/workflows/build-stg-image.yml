@@ -40,21 +40,16 @@ jobs:
       environment: stg
       semantic_version: ${{ needs.get-version.outputs.version }}
 
-  trigger-release:
-    needs: [get-version, build-stg-images]
-    if: success()
-    uses: ./.github/workflows/trigger-helm-release.yml
+  verify-images:
+    needs: build-stg-images
+    uses: ./.github/workflows/verify-images.yml
     with:
-      version: stg-${{ github.sha }} # Keep using SHA for the release name consistency in ArgoCD/Helm repo
-      environment: stg
-      backend_image: ${{ needs.build-stg-images.outputs.backend_image_tag_hash }} # Pass backend SHA tag
-      frontend_image: ${{ needs.build-stg-images.outputs.frontend_image_tag_hash }} # Pass frontend SHA tag
-      semantic_version: ${{ needs.get-version.outputs.version }} # Pass the actual SemVer for Helm charts
-    secrets:
-      MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+      backend_image: ${{ needs.build-stg-images.outputs.backend_image_tag_hash }}
+      frontend_image: ${{ needs.build-stg-images.outputs.frontend_image_tag_hash }}
 
   create-stg-prerelease:
-    needs: [get-version, build-stg-images]
+    needs: [get-version, build-stg-images, verify-images]
+    if: needs.verify-images.outputs.backend_verified == 'true' && needs.verify-images.outputs.frontend_verified == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write # Required for softprops/action-gh-release
@@ -109,5 +104,22 @@ jobs:
             ### Docker Images
             - Backend: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app-backend:stg-${{ needs.get-version.outputs.version }}`
             - Frontend: `ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app-frontend:stg-${{ needs.get-version.outputs.version }}`
+
+            ### Verification Status
+            - Backend: ✅ Verified
+            - Frontend: ✅ Verified
           prerelease: true
           generate_release_notes: false
+
+  trigger-release:
+    needs: [get-version, build-stg-images, verify-images]
+    if: needs.verify-images.outputs.backend_verified == 'true' && needs.verify-images.outputs.frontend_verified == 'true'
+    uses: ./.github/workflows/trigger-helm-release.yml
+    with:
+      version: stg-${{ github.sha }} # Keep using SHA for the release name consistency in ArgoCD/Helm repo
+      environment: stg
+      backend_image: ${{ needs.build-stg-images.outputs.backend_image_tag_hash }} # Pass backend SHA tag
+      frontend_image: ${{ needs.build-stg-images.outputs.frontend_image_tag_hash }} # Pass frontend SHA tag
+      semantic_version: ${{ needs.get-version.outputs.version }} # Pass the actual SemVer for Helm charts
+    secrets:
+      MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
