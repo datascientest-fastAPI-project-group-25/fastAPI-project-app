@@ -1,26 +1,11 @@
-<!-- workflow test: improved documentation -->
-
-# DevOps Demo Application
-
-![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![GitHub Packages](https://img.shields.io/badge/GitHub_Packages-181717?style=for-the-badge&logo=github&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white) ![Pre-commit](https://img.shields.io/badge/Pre--commit-FAB040?style=for-the-badge&logo=pre-commit&logoColor=black)
-
-This repository contains a modern full-stack application with a FastAPI backend and React frontend, featuring a comprehensive CI/CD pipeline for AWS deployment.
-
-## Table of Contents
-
-- [Architecture Overview](#-architecture-overview)
-- [Development Environment Setup](#-development-environment-setup)
-- [Makefile for Local Setup](#-makefile-for-local-setup)
-- [Docker-based Development](#-docker-based-development)
-- [Local Development](#-local-development)
-- [Development Workflow](#-development-workflow)
-- [CI/CD Pipeline](#-cicd-pipeline) (Automated release process)
-- [Documentation](#-documentation)
-- [Environment Configuration](#-environment-configuration)
-- [Testing](#-testing)
-- [Troubleshooting](#-troubleshooting)
-
 ## Architecture Overview
+
+```mermaid
+graph TD
+    A[Frontend - React/TypeScript] --> G[Traefik Reverse Proxy]
+    G --> B[Backend - FastAPI]
+    B --> C[(PostgreSQL Database)]
+    D[CI/CD - GitHub Actions] --> E[GitHub Container Registry]
 
 ```mermaid
 graph TD

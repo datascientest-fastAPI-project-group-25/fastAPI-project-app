@@ -6,81 +6,49 @@ on:
     branches:
       - stg
 
-  # Remove push trigger to prevent duplicate runs
-  # push:
-  #   branches:
-  #     - stg
-
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  extract-info:
-    # Only run on PR merge, not on direct push
-    if: |
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.merged == true
+  create-pr-to-main:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    outputs:
-      pr_title: ${{ steps.format.outputs.pr_title }}
-      pr_body: ${{ steps.extract.outputs.pr_body }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MACHINE_USER_TOKEN }}
+          fetch-depth: 0
 
-      - name: Extract PR info
-        id: extract
+      - name: Set up git merge drivers
         run: |
-          # Extract PR body
-          {
-            echo 'pr_body<<EOF'
-            echo "${{ github.event.pull_request.body }}"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+          chmod +x ./scripts/setup-git-hooks.sh
+          ./scripts/setup-git-hooks.sh
+          echo "Git merge drivers set up successfully"
 
-          # Extract original branch name from PR title if possible
-          ORIGINAL_TITLE="${{ github.event.pull_request.title }}"
-          echo "Original PR title: $ORIGINAL_TITLE"
-
-          # Try to extract branch name from PR title
-          if [[ "$ORIGINAL_TITLE" == *":"* ]]; then
-            # If title has a colon, extract the part after it (usually the branch name)
-            BRANCH_PART=$(echo "$ORIGINAL_TITLE" | cut -d':' -f2- | xargs)
-            echo "Extracted branch part: $BRANCH_PART"
-          else
-            # Otherwise use the whole title
-            BRANCH_PART="$ORIGINAL_TITLE"
-          fi
-
-          # Store for use in the next step
-          echo "branch_part=$BRANCH_PART" >> $GITHUB_OUTPUT
-
-      - name: Format PR title
-        id: format
+      - name: Get version
+        id: get-version
         run: |
-          chmod +x .github/scripts/format-pr-title.sh
-          PR_TITLE=$(.github/scripts/format-pr-title.sh "stg" "main")
-          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
-          echo "Formatted PR title: $PR_TITLE"
+          VERSION=$(cat VERSION)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
 
-  promote-stg-to-main:
-    needs: extract-info
-    uses: ./.github/workflows/pr-creation.yml
-    with:
-      source_branch: stg
-      target_branch: main
-      pr_title: "${{ needs.extract-info.outputs.pr_title }}"
-      pr_label: "promote-to-main"
-      pr_body: |
-        # Promote Staging to Main
+      - name: Create PR to main
+        uses: ./.github/actions/create-pr
+        with:
+          source_branch: stg
+          target_branch: main
+          pr_title: "release(prod): v${{ steps.get-version.outputs.version }}"
+          pr_body: |
+            # Promote Staging to Main
 
-        This PR promotes changes from **staging** to **main**.
+            This PR promotes changes from staging to main.
 
-        ## Original Changes
+            ## Original Changes
 
-        Original PR:
+            Original PR:
 
-        ${{ needs.extract-info.outputs.pr_body }}
-    secrets:
-      MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+            ${{ github.event.pull_request.body }}
+          pr_label: promote-to-main
+          github_token: ${{ secrets.MACHINE_USER_TOKEN }}
