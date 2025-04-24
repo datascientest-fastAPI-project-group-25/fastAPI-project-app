@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 15s # Default scrape interval
+
+scrape_configs:
+  - job_name: 'prometheus' # Job to scrape Prometheus itself
+    static_configs:
+      - targets: ['localhost:9090'] # Prometheus service name/port
+
+  - job_name: 'fastapi_backend'
+    static_configs:
+      - targets: ['backend:8000'] # FastAPI service name/port
+    metrics_path: /metrics
+
+  # Add more jobs here for other services (e.g., node-exporter if added)
+  # - job_name: 'node_exporter'
+  #   docker_sd_configs:
+  #     - host: unix:///var/run/docker.sock
+  #       refresh_interval: 30s
+  #       filters:
+  #         - name: label
+  #           values: ["metrics=node-exporter"] # Assuming node-exporter has this label
+  #   relabel_configs:
+  #     - source_labels: [__meta_docker_container_label_prometheus_port]
+  #       action: replace
+  #       target_label: __address__
+  #       regex: (.+)
+  #       replacement: $1
+  #     - source_labels: [__meta_docker_container_name]
+  #       regex: '/(.*)'
+  #       target_label: container
+  #     - source_labels: [__meta_docker_container_label_service_name]
+  #       target_label: service

@@ -1,0 +1,57 @@
+# Simplified platform-independent Promtail configuration
+# Works on Windows, macOS, and Linux
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0 # Disable gRPC listener, not needed for basic setup
+
+# Stores the read position of log files so Promtail can resume after restarts
+positions:
+  filename: /tmp/positions.yaml # Path inside the Promtail container
+
+# Defines where Promtail sends the logs
+clients:
+  - url: http://loki:3100/loki/api/v1/push # Address of the Loki service
+
+# Scrape configuration for Docker logs
+scrape_configs:
+  # Docker logs configuration
+  - job_name: docker_logs
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: name
+            values: ["fastapi-project-app-backend-1"]
+
+    relabel_configs:
+      # Extract container name into 'container' label
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      # Keep the original log stream label (stdout/stderr)
+      - source_labels: ['__meta_docker_container_log_stream']
+        target_label: 'logstream'
+
+    # JSON parsing for structured logs
+    pipeline_stages:
+      - match:
+          selector: '{container=~".*backend.*"}'  # Match backend container logs
+          stages:
+            - regex:
+                expression: '(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) - (?P<logger>\S+) - (?P<level>\S+) - (?P<message>.*)'
+            - labels:
+                timestamp:
+                logger:
+                level:
+                message:
+      - match:
+          selector: '{container=~".*backend.*", message=~".*Request processed.*"}'  # Match request logs
+          stages:
+            - regex:
+                expression: '.*method":"(?P<method>\S+)",.*path":"(?P<path>\S+)",.*duration":(?P<duration>\S+),.*status_code":(?P<status_code>\d+).*'
+            - labels:
+                method:
+                path:
+                duration:
+                status_code:
