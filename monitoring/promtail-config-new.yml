@@ -1,0 +1,44 @@
+# Simplified platform-independent Promtail configuration
+# Works on Windows, macOS, and Linux
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0 # Disable gRPC listener, not needed for basic setup
+
+# Stores the read position of log files so Promtail can resume after restarts
+positions:
+  filename: /tmp/positions.yaml # Path inside the Promtail container
+
+# Defines where Promtail sends the logs
+clients:
+  - url: http://loki:3100/loki/api/v1/push # Address of the Loki service
+
+# Simplified scrape configuration that doesn't rely on Docker socket
+scrape_configs:
+  # Static configuration for system logs
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/*.log
+
+  # Static configuration for Docker logs via Docker's log driver
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker
+          __path__: /var/lib/docker/containers/*/*.log
+
+    # Extract Docker metadata from filenames
+    pipeline_stages:
+      - json:
+          expressions:
+            log: log
+            stream: stream
+            time: time
+      - labels:
+          stream:

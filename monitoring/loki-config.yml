@@ -1,0 +1,44 @@
+auth_enabled: false # Disable auth for local setup
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki # Store data inside the container's /loki directory
+  storage:
+    filesystem: # Use local filesystem for storage
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1 # Standalone mode
+  ring:
+    kvstore:
+      store: inmemory # Use in-memory ring for standalone mode
+
+# Optional: Configures how queries are handled over time ranges
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+# Defines the schema for storing logs and indexes
+schema_config:
+  configs:
+    - from: 2020-10-24 # Use schema version v11 from this date onwards
+      store: boltdb-shipper # Recommended index store type
+      object_store: filesystem # Store index chunks on the filesystem
+      schema: v11
+      index:
+        prefix: index_ # Prefix for index files
+        period: 24h # Create a new index file daily
+
+# Disable structured metadata to fix the error
+limits_config:
+  allow_structured_metadata: false
+
+# Optional: Configuration for Loki's Ruler component (for alerts based on logs)
+# ruler:
+#   alertmanager_url: http://alertmanager:9093 # URL of Alertmanager if used
