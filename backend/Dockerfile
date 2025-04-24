@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Base Stage --- #
-FROM python:3.11-slim-bookworm as base
+FROM python:3.11-slim-bookworm AS base
 
 # Accept build arguments for versioning
 ARG GIT_HASH="unknown"
@@ -21,7 +21,7 @@ RUN groupadd --system --gid 1001 appuser && \
     useradd --system --uid 1001 --gid appuser --home-dir $APP_HOME --no-create-home appuser
 
 # --- Builder Stage --- #
-FROM base as builder
+FROM base AS builder
 
 # Install system build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -52,7 +52,7 @@ RUN chmod +x ./scripts/*.sh
 RUN chown -R appuser:appuser $APP_HOME
 
 # --- Final Stage --- #
-FROM base as final
+FROM base AS final
 
 # Install runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -1,6 +1,11 @@
+import os
+import time
+from datetime import datetime
+
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 
 from app.api.main import api_router
@@ -9,6 +14,48 @@ from app.core.config import settings
 
 def custom_generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
+
+
+class RequestLoggingMiddleware:
+    """Middleware for logging request details. Updated for CI/CD workflow testing."""
+
+    async def __call__(self, request: Request, call_next):
+        # Record request start time
+        start_time = time.time()
+
+        # Get request details
+        method = request.method
+        url = request.url.path
+        query_params = str(request.query_params)
+        client_host = request.client.host if request.client else "unknown"
+
+        # Process the request
+        response = await call_next(request)
+
+        # Calculate processing time
+        process_time = time.time() - start_time
+
+        # Log request details
+        log_msg = (
+            f"Request: {method} {url} | "
+            f"Query: {query_params} | "
+            f"Client: {client_host} | "
+            f"Status: {response.status_code} | "
+            f"Time: {process_time:.3f}s"
+        )
+
+        # Log based on status code
+        if response.status_code >= 500:
+            # Server errors
+            print(f"ERROR: {log_msg}")
+        elif response.status_code >= 400:
+            # Client errors
+            print(f"WARNING: {log_msg}")
+        else:
+            # Success responses
+            print(f"INFO: {log_msg}")
+
+        return response
 
 
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
@@ -42,5 +89,141 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# Add request logging middleware
+app.add_middleware(RequestLoggingMiddleware)
+
+# Add health check endpoints directly to the main app (no authentication required)
+@app.get("/health", tags=["Health"], status_code=status.HTTP_200_OK)
+async def health_check():
+    """Basic health check endpoint for monitoring and orchestration systems."""
+    try:
+        # Basic health check information
+        health_data = {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": os.environ.get("APP_VERSION", "unknown"),
+            "environment": settings.ENVIRONMENT,
+            "git_hash": os.environ.get("GIT_HASH", "unknown"),
+        }
+
+        # Try to get system metrics if psutil is available
+        try:
+            import psutil
+            memory_usage = psutil.virtual_memory().percent
+            cpu_usage = psutil.cpu_percent(interval=0.1)
+            # Use a fixed, safe path for disk usage check
+            safe_path = os.path.abspath(os.sep)
+            disk_usage = psutil.disk_usage(safe_path).percent
+
+            # Check if resource usage is within acceptable limits
+            resource_status = "healthy"
+            if memory_usage > 90 or cpu_usage > 90 or disk_usage > 90:
+                resource_status = "degraded"
+
+            # Add system metrics to the response
+            health_data["system"] = {
+                "status": resource_status,
+                "memory_usage_percent": memory_usage,
+                "cpu_usage_percent": cpu_usage,
+                "disk_usage_percent": disk_usage,
+            }
+        except ImportError:
+            # If psutil is not available, just provide basic health check
+            health_data["system"] = {
+                "status": "unknown",
+                "message": "Detailed system metrics not available (psutil not installed)",
+            }
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=health_data,
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "unhealthy",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+            },
+        )
+
+@app.get("/health/readiness", tags=["Health"], status_code=status.HTTP_200_OK)
+async def readiness_check():
+    """Readiness check for orchestration systems like Kubernetes.
+
+    Verifies if the application is ready to handle traffic.
+    """
+    try:
+        # Check database connectivity
+        from sqlalchemy import text as sql_text
+
+        from app.db.session import engine
+
+        db_status = "error"
+        with engine.connect() as connection:
+            result = connection.execute(sql_text("SELECT 1"))
+            if result.scalar() == 1:
+                db_status = "connected"
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "ready",
+                "timestamp": datetime.now().isoformat(),
+                "database": db_status,
+                "dependencies": {
+                    "database": db_status == "connected"
+                }
+            },
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "not ready",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+                "dependencies": {
+                    "database": False
+                }
+            },
+        )
+
+@app.get("/health/liveness", tags=["Health"], status_code=status.HTTP_200_OK)
+async def liveness_check():
+    """Liveness check for orchestration systems like Kubernetes.
+
+    Verifies if the application is running and not deadlocked.
+    """
+    try:
+        liveness_data = {
+            "status": "alive",
+            "timestamp": datetime.now().isoformat(),
+            "process_id": os.getpid(),
+        }
+
+        # Try to get uptime if psutil is available
+        try:
+            import psutil
+            uptime_seconds = int(time.time() - psutil.boot_time())
+            liveness_data["uptime_seconds"] = uptime_seconds
+        except ImportError:
+            liveness_data["uptime"] = "unknown (psutil not installed)"
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=liveness_data,
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "not alive",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+            },
+        )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)

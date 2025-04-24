@@ -1,4 +1,4 @@
-name: Feature/Fix to Staging PR Creation
+name: CI - Auto-PR Feature to Staging Branch
 
 on:
   push:
@@ -13,15 +13,33 @@ permissions:
   pull-requests: write
 
 jobs:
+  format-pr-title:
+    runs-on: ubuntu-latest
+    outputs:
+      pr_title: ${{ steps.format.outputs.pr_title }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Format PR title
+        id: format
+        run: |
+          chmod +x .github/scripts/format-pr-title.sh
+          PR_TITLE=$(.github/scripts/format-pr-title.sh "${{ github.ref_name }}" "stg")
+          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+          echo "Formatted PR title: $PR_TITLE"
+
   call-reusable-pr:
+    needs: format-pr-title
     uses: ./.github/workflows/pr-creation.yml
     with:
       source_branch: ${{ github.ref_name }}
       target_branch: stg
-      pr_title: "${{ github.ref_name }}: Promote to stg"
+      pr_title: "Promote ${{ github.ref_name }} to stg"
       pr_body: |
-        This PR promotes branch **${{ github.ref_name }}** to **stg**.
+        This PR promotes branch **${{ github.ref_name }}** into **stg**.
 
         _Automated PR created by workflow._
+      pr_label: promote-to-stg
     secrets:
       MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}

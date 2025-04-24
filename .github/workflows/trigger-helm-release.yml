@@ -19,6 +19,10 @@ on:
         required: true
         type: string
         description: "Full frontend image reference including registry and tag"
+      semantic_version:
+        required: false
+        type: string
+        description: "Semantic version (without environment suffix) for use in Helm charts"
     secrets:
       MACHINE_USER_TOKEN:
         required: true
@@ -31,6 +35,89 @@ jobs:
   trigger-release:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Debug inputs
+        run: |
+          echo "Input version: '${{ inputs.version }}'"
+          echo "Input environment: '${{ inputs.environment }}'"
+          echo "Input semantic_version: '${{ inputs.semantic_version }}'"
+          echo "Input backend_image: '${{ inputs.backend_image }}'"
+          echo "Input frontend_image: '${{ inputs.frontend_image }}'"
+
+      - name: Prepare payload for release repository
+        id: prepare_payload
+        run: |
+          set -e # Exit immediately if a command exits with a non-zero status.
+
+          ENVIRONMENT="${{ inputs.environment }}"
+          SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+$'
+          SHORT_SHA="${GITHUB_SHA::7}" # Use first 7 chars of the commit SHA
+
+          echo "::group::Preparing Payload"
+          echo "Input environment: $ENVIRONMENT"
+          echo "Input version: ${{ inputs.version }}"
+          echo "Input semantic_version: ${{ inputs.semantic_version }}" # Note: This input is now ignored, we rely on VERSION file
+          echo "Commit SHA: $GITHUB_SHA"
+          echo "Short SHA: $SHORT_SHA"
+
+          # --- 1. Determine Clean Semantic Version (Source of Truth: VERSION file) ---
+          echo "Attempting to read base semantic version from VERSION file..."
+          if [[ ! -f VERSION ]]; then
+            echo "::error::VERSION file not found. This file is required to determine the base semantic version."
+            exit 1
+          fi
+
+          CLEAN_SEMVER=$(cat VERSION | tr -d '[:space:]') # Read and remove whitespace
+          echo "Read from VERSION file: '$CLEAN_SEMVER'"
+
+          if [[ ! "$CLEAN_SEMVER" =~ $SEMVER_REGEX ]]; then
+            echo "::error::Invalid version format in VERSION file: '$CLEAN_SEMVER'. Expected clean X.Y.Z format."
+            exit 1
+          fi
+          echo "Validated Clean Semantic Version: $CLEAN_SEMVER"
+
+          # --- 2. Determine Payload Version (for 'version' field in payload) ---
+          # This is primarily for informational purposes or potential use in release name
+          if [[ "$ENVIRONMENT" == "stg" ]]; then
+            # For staging, use stg-<short-sha> format
+            PAYLOAD_VERSION="stg-$SHORT_SHA"
+            echo "Payload Version (for stg): $PAYLOAD_VERSION"
+          else
+            # For production, use the clean semantic version
+            PAYLOAD_VERSION="$CLEAN_SEMVER"
+            echo "Payload Version (for prod): $PAYLOAD_VERSION"
+          fi
+
+          # --- 3. Determine Helm Chart Version (for 'semantic_version' field in payload) ---
+          # This is used by the release repo for Helm chart versioning
+          if [[ "$ENVIRONMENT" == "stg" ]]; then
+            # For staging, append -stg suffix
+            HELM_CHART_VERSION="${CLEAN_SEMVER}-stg"
+            echo "Helm Chart Version (for stg): $HELM_CHART_VERSION"
+          else
+            # For production, use the clean semantic version
+            HELM_CHART_VERSION="$CLEAN_SEMVER"
+            echo "Helm Chart Version (for prod): $HELM_CHART_VERSION"
+          fi
+
+          # --- 4. Set Outputs ---
+          echo "Setting outputs..."
+          echo "version=$PAYLOAD_VERSION" >> $GITHUB_OUTPUT
+          echo "semantic_version=$HELM_CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "clean_semver=$CLEAN_SEMVER" >> $GITHUB_OUTPUT
+
+          echo "\nFinal payload values to be sent:"
+          echo "- version: $PAYLOAD_VERSION"
+          echo "- environment: $ENVIRONMENT"
+          echo "- semantic_version: $HELM_CHART_VERSION"
+          echo "- clean_semver: $CLEAN_SEMVER"
+          echo "- sha: $GITHUB_SHA"
+          echo "::endgroup::"
+
       - name: Trigger Release Repository Workflow
         uses: peter-evans/repository-dispatch@v2
         env:
@@ -41,8 +128,11 @@ jobs:
           event-type: app-release
           client-payload: |
             {
-              "version": "${{ inputs.version }}",
+              "version": "${{ steps.prepare_payload.outputs.version }}",
               "environment": "${{ inputs.environment }}",
               "backend_image": "${{ inputs.backend_image }}",
-              "frontend_image": "${{ inputs.frontend_image }}"
+              "frontend_image": "${{ inputs.frontend_image }}",
+              "semantic_version": "${{ steps.prepare_payload.outputs.semantic_version }}",
+              "clean_semver": "${{ steps.prepare_payload.outputs.clean_semver }}",
+              "sha": "${{ github.sha }}"
             }

@@ -1,0 +1,36 @@
+name: Lint PR Commits
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  commitlint:
+    name: Validate Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for commitlint
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.7.0 # Match version in package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'frontend/.nvmrc' # Or specify a version like '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install Dependencies (Root)
+        run: pnpm install -w --frozen-lockfile
+
+      # - name: Validate PR commits with commitlint
+      #   env:
+      #     BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      #     HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      #   run: pnpm commitlint --from $BASE_SHA --to $HEAD_SHA --verbose

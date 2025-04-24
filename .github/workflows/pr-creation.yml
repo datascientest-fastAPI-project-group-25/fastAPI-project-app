@@ -1,4 +1,4 @@
-name: Reusable PR Creation
+name: Reusable - Pull Request Creation Workflow
 
 on:
   workflow_call:
@@ -14,6 +14,9 @@ on:
         type: string
       pr_body:
         required: true
+        type: string
+      pr_label:
+        required: false
         type: string
     secrets:
       MACHINE_USER_TOKEN:
@@ -35,12 +38,52 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.MACHINE_USER_TOKEN }}
           fetch-depth: 0
 
-      - name: Create or Update Pull Request
+      - name: Set up git merge drivers
+        run: |
+          chmod +x ./scripts/setup-git-hooks.sh
+          ./scripts/setup-git-hooks.sh
+          echo "Git merge drivers set up successfully"
+
+      - name: Skip on Merge Commits
+        run: |
+          commit_message=$(git log -1 --pretty=%B)
+          echo "Latest commit message: $commit_message"
+          if [[ "$commit_message" == Merge* ]]; then
+            echo "Merge commit detected, skipping PR creation."
+            exit 0
+          fi
+
+      - name: Ensure labels exist
         env:
           GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
         run: |
+          LABEL="promote-to-${{ inputs.target_branch }}"
+          echo "Ensuring label '$LABEL' exists..."
+
+          # Choose color based on target branch
+          if [[ "${{ inputs.target_branch }}" == "main" ]]; then
+            # Orange color for staging to main (more cautionary)
+            LABEL_COLOR="D93F0B"
+          else
+            # Green color for feature to staging
+            LABEL_COLOR="0E8A16"
+          fi
+
+          # Try to create the label, ignore error if it already exists
+          gh label create "$LABEL" \
+            --color "$LABEL_COLOR" \
+            --description "PR to promote changes to ${{ inputs.target_branch }} branch" \
+            || true
+
+      - name: Create or Update Pull Request
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+        run: |
+          echo "Promoting '${{ inputs.source_branch }}' into '${{ inputs.target_branch }}'"
           echo "Source branch: ${{ inputs.source_branch }}"
           echo "Target branch: ${{ inputs.target_branch }}"
 
@@ -52,21 +95,27 @@ jobs:
             pr_number=$(basename "$pr_url" | cut -d'/' -f1)
             echo "pull-request-url=$pr_url" >> $GITHUB_OUTPUT
             echo "pull-request-number=$pr_number" >> $GITHUB_OUTPUT
-            exit 0
+          else
+            pr_url=$(gh pr create \
+              --base "${{ inputs.target_branch }}" \
+              --head "${{ inputs.source_branch }}" \
+              --title "${{ inputs.pr_title }}" \
+              --body "${{ inputs.pr_body }}")
+            echo "PR URL: $pr_url"
+            pr_number=$(basename "$pr_url" | cut -d'/' -f1)
+            echo "pull-request-url=$pr_url" >> $GITHUB_OUTPUT
+            echo "pull-request-number=$pr_number" >> $GITHUB_OUTPUT
           fi
 
-          pr_url=$(gh pr create \
-            --base "${{ inputs.target_branch }}" \
-            --head "${{ inputs.source_branch }}" \
-            --title "${{ inputs.pr_title }}" \
-            --body "${{ inputs.pr_body }}")
+          echo "pr_number=$pr_number" >> $GITHUB_ENV
 
-          echo "PR URL: $pr_url"
-
-          pr_number=$(basename "$pr_url" | cut -d'/' -f1)
-
-          echo "pull-request-url=$pr_url" >> $GITHUB_OUTPUT
-          echo "pull-request-number=$pr_number" >> $GITHUB_OUTPUT
+      - name: Add PR Label
+        if: ${{ inputs.pr_label != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
+        run: |
+          echo "Adding label '${{ inputs.pr_label }}' to PR #${{ env.pr_number }}"
+          gh pr edit ${{ env.pr_number }} --add-label "${{ inputs.pr_label }}"
 
       - name: PR Details
         if: success()

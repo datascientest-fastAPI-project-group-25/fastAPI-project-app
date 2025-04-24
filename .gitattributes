@@ -1,2 +1,2 @@
-* text=auto
-*.sh text eol=lf
+# Set merge strategy for VERSION file to use the higher version number
+VERSION merge=version-merge

@@ -1,0 +1,138 @@
+name: Semantic PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  semantic-release:
+    # Only run if the PR is merged and not from stg to main (those are handled by create-app-release.yml)
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref != 'stg'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Make scripts executable
+        run: |
+          chmod +x ./scripts/extract_commit_type.sh
+          chmod +x ./scripts/version-management/sync-versions.js
+
+      - name: Extract commit type from branch name
+        id: extract_type
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: ./scripts/extract_commit_type.sh "$PR_HEAD_REF"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate semantic version
+        id: semantic_version
+        run: |
+          # Get the current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Split the version into major, minor, patch
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # Increment based on the version bump type
+          case "${{ steps.extract_type.outputs.version_bump }}" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          # Create the new version
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Update package.json version
+        run: |
+          # Update package.json with the new version
+          npm version ${{ steps.semantic_version.outputs.new_version }} --no-git-tag-version
+
+          # Show the updated package.json
+          cat package.json | grep version
+
+      - name: Sync version to VERSION file
+        run: |
+          echo "Syncing version to VERSION file..."
+          node scripts/version-management/sync-versions.js to-version
+          echo "✅ Version synchronized between package.json and VERSION file"
+
+      - name: Create commit with conventional commit message
+        env:
+          COMMIT_TYPE: ${{ steps.extract_type.outputs.commit_type }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          NEW_VERSION: ${{ steps.semantic_version.outputs.new_version }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # Create a commit message based on the PR title and commit type
+          # If PR title already has a conventional commit prefix, use it as is
+          if [[ "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.*\))?!?:\ .* ]]; then
+            COMMIT_MSG="$PR_TITLE"
+          else
+            # Otherwise, add the prefix from the branch name
+            COMMIT_MSG="$COMMIT_TYPE: $PR_TITLE"
+          fi
+
+          # Add version bump to commit message
+          COMMIT_MSG="$COMMIT_MSG [v$NEW_VERSION]"
+
+          git add package.json VERSION
+          git commit -m "$COMMIT_MSG"
+
+      - name: Push changes
+        run: git push
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          COMMIT_TYPE: ${{ steps.extract_type.outputs.commit_type }}
+          VERSION_BUMP: ${{ steps.extract_type.outputs.version_bump }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        with:
+          tag_name: v${{ steps.semantic_version.outputs.new_version }}
+          name: Release v${{ steps.semantic_version.outputs.new_version }}
+          body: |
+            ## Release v${{ steps.semantic_version.outputs.new_version }}
+
+            This release was automatically generated from PR #${{ env.PR_NUMBER }}: ${{ env.PR_TITLE }}
+
+            **Commit Type:** ${{ env.COMMIT_TYPE }} (${{ env.VERSION_BUMP }} bump)
+            **Branch:** ${{ env.PR_HEAD_REF }}
+
+            ${{ env.PR_BODY }}
+          draft: false
+          prerelease: false

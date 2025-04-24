@@ -1,0 +1,131 @@
+name: Verify Docker Images
+
+on:
+  workflow_call:
+    inputs:
+      backend_image:
+        required: true
+        type: string
+        description: "Full backend image reference to verify"
+      frontend_image:
+        required: true
+        type: string
+        description: "Full frontend image reference to verify"
+    outputs:
+      backend_verified:
+        description: "Whether the backend image was verified successfully"
+        value: ${{ jobs.verify-images.outputs.backend_verified }}
+      frontend_verified:
+        description: "Whether the frontend image was verified successfully"
+        value: ${{ jobs.verify-images.outputs.frontend_verified }}
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  verify-images:
+    runs-on: ubuntu-latest
+    outputs:
+      backend_verified: ${{ steps.verify-backend.outputs.verified }}
+      frontend_verified: ${{ steps.verify-frontend.outputs.verified }}
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify backend image
+        id: verify-backend
+        run: |
+          echo "Verifying backend image: ${{ inputs.backend_image }}"
+
+          # Pull the image
+          if docker pull ${{ inputs.backend_image }}; then
+            echo "✅ Successfully pulled backend image"
+          else
+            echo "❌ Failed to pull backend image"
+            echo "verified=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Verify image exists and has expected labels
+          if docker inspect ${{ inputs.backend_image }} > /dev/null; then
+            echo "✅ Backend image exists and can be inspected"
+
+            # Check for required labels
+            REVISION=$(docker inspect --format='{{index .Config.Labels "org.opencontainers.image.revision"}}' ${{ inputs.backend_image }})
+            VERSION=$(docker inspect --format='{{index .Config.Labels "org.opencontainers.image.version"}}' ${{ inputs.backend_image }})
+
+            if [ -n "$REVISION" ] && [ -n "$VERSION" ]; then
+              echo "✅ Backend image has required labels:"
+              echo "  - Revision: $REVISION"
+              echo "  - Version: $VERSION"
+              echo "verified=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Backend image is missing required labels"
+              echo "verified=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          else
+            echo "❌ Failed to inspect backend image"
+            echo "verified=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Verify frontend image
+        id: verify-frontend
+        run: |
+          echo "Verifying frontend image: ${{ inputs.frontend_image }}"
+
+          # Pull the image
+          if docker pull ${{ inputs.frontend_image }}; then
+            echo "✅ Successfully pulled frontend image"
+          else
+            echo "❌ Failed to pull frontend image"
+            echo "verified=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Verify image exists and has expected labels
+          if docker inspect ${{ inputs.frontend_image }} > /dev/null; then
+            echo "✅ Frontend image exists and can be inspected"
+
+            # Check for required labels
+            REVISION=$(docker inspect --format='{{index .Config.Labels "org.opencontainers.image.revision"}}' ${{ inputs.frontend_image }})
+            VERSION=$(docker inspect --format='{{index .Config.Labels "org.opencontainers.image.version"}}' ${{ inputs.frontend_image }})
+
+            if [ -n "$REVISION" ] && [ -n "$VERSION" ]; then
+              echo "✅ Frontend image has required labels:"
+              echo "  - Revision: $REVISION"
+              echo "  - Version: $VERSION"
+              echo "verified=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Frontend image is missing required labels"
+              echo "verified=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          else
+            echo "❌ Failed to inspect frontend image"
+            echo "verified=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Summarize verification results
+        run: |
+          echo "## Image Verification Results"
+          echo ""
+          echo "| Image | Status |"
+          echo "| ----- | ------ |"
+          echo "| Backend | ${{ steps.verify-backend.outputs.verified == 'true' && '✅ Verified' || '❌ Failed' }} |"
+          echo "| Frontend | ${{ steps.verify-frontend.outputs.verified == 'true' && '✅ Verified' || '❌ Failed' }} |"
+          echo ""
+
+          if [ "${{ steps.verify-backend.outputs.verified }}" = "true" ] && [ "${{ steps.verify-frontend.outputs.verified }}" = "true" ]; then
+            echo "✅ All images verified successfully"
+          else
+            echo "❌ Image verification failed"
+            exit 1
+          fi
