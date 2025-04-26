@@ -1,0 +1,72 @@
+version: '3'
+
+services:
+  # Database
+  db:
+    image: postgres:12
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=app
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - app-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+      - monitoring-network
+
+  # Backend with simplified build
+  backend:
+    image: python:3.11-slim
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_SERVER=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=app
+      - ENVIRONMENT=local
+      - PROJECT_NAME=FastAPI Project App
+      - SECRET_KEY=changethis
+      - FIRST_SUPERUSER=admin@example.com
+      - FIRST_SUPERUSER_PASSWORD=adminadmin
+      - PYTHONPATH=/app:/app/backend
+      - LOG_LEVEL=INFO
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+    command: >
+      bash -c "cd /app/backend &&
+               pip install -e . &&
+               pip install prometheus-fastapi-instrumentator psycopg2-binary python-jose &&
+               python -m app.backend_pre_start &&
+               alembic upgrade head &&
+               python -m app.initial_data &&
+               uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    networks:
+      - app-network
+      - monitoring-network
+    labels:
+      - "logging=promtail"
+      - "metrics=prometheus"
+      - "prometheus_port=backend:8000"
+      - "service_name=backend"
+
+networks:
+  app-network:
+  monitoring-network:
+    external: true
+    name: monitoring-network
+
+volumes:
+  app-db-data:

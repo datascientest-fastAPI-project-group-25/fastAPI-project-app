@@ -116,9 +116,15 @@ services:
       - "host.docker.internal:host-gateway"
       - "ghcr.io:140.82.121.33"
     labels:
+      # Traefik labels
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.localhost`)"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      # Monitoring labels
+      - "logging=promtail" # Enable log scraping by Promtail
+      - "metrics=prometheus" # Enable metrics scraping by Prometheus
+      - "prometheus_port=backend:8000" # Define metrics endpoint address for Prometheus
+      - "service_name=backend" # Define service name for logs/metrics
 
   # Database
   db:

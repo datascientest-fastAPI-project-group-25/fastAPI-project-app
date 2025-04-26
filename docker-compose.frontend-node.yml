@@ -1,0 +1,18 @@
+services:
+  frontend:
+    image: node:18-alpine
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./:/app
+    environment:
+      - VITE_API_URL=http://api.localhost
+      - NODE_ENV=development
+    command: >
+      sh -c "
+        npm install -g pnpm &&
+        cd frontend &&
+        pnpm install &&
+        pnpm dev --host
+      "

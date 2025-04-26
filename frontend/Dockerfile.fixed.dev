@@ -1,11 +1,14 @@
 # Stage 0: Dependencies stage
 FROM --platform=linux/amd64 node:18-alpine AS deps
 
-# Install pnpm and TypeScript globally
+# Set shell environment variable
+ENV SHELL=/bin/sh
+
+# Install pnpm and TypeScript globally with proper setup
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
-RUN pnpm config set global-bin-dir /app/.pnpm-global/bin
-RUN pnpm config set prefix /app/.pnpm-global
-RUN mkdir -p /app/.pnpm-global/bin
+RUN mkdir -p /root/.local/share/pnpm
+ENV PNPM_HOME=/root/.local/share/pnpm
+ENV PATH=$PNPM_HOME:$PATH
 RUN pnpm setup
 RUN pnpm install -g typescript@latest
 
@@ -33,8 +36,15 @@ WORKDIR /app
 # Stage 1: Development stage
 FROM --platform=linux/amd64 node:18-alpine
 
-# Install pnpm and TypeScript globally
+# Set shell environment variable
+ENV SHELL=/bin/sh
+
+# Install pnpm and TypeScript globally with proper setup
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
+RUN mkdir -p /root/.local/share/pnpm
+ENV PNPM_HOME=/root/.local/share/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN pnpm setup
 RUN pnpm install -g typescript@latest
 
 # Set environment variables
@@ -56,4 +66,4 @@ RUN pnpm install --no-optional --force
 
 # Start the development server
 WORKDIR /app/frontend
-CMD ["pnpm", "dev"]
+CMD ["pnpm", "dev", "--host"]

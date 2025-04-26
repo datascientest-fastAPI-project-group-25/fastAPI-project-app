@@ -1,0 +1,25 @@
+FROM node:18-alpine
+
+# Set up environment
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml* ./
+COPY frontend/package.json ./frontend/
+
+# Install dependencies
+RUN pnpm install
+
+# Copy the rest of the application
+COPY . .
+
+# Set environment variables
+ENV VITE_API_URL=http://api.localhost
+ENV HOST=0.0.0.0
+
+# Start the development server
+WORKDIR /app/frontend
+CMD ["pnpm", "dev", "--host"]
