@@ -6,16 +6,26 @@
 
 This repository contains a modern full-stack application with a FastAPI backend and React frontend, featuring a comprehensive CI/CD pipeline for AWS deployment.
 
+## 📚 Documentation
+
+For comprehensive documentation of this project, please visit the centralized documentation repository:
+
+**[FastAPI Project Documentation](https://github.com/datascientest-fastAPI-project-group-25/fastAPI-project-docs)**
+
+The documentation repository contains synchronized README files from all project repositories and provides a GitBook-style navigation experience.
+
+App-specific documentation can be found at:
+**[App Documentation](https://github.com/datascientest-fastAPI-project-group-25/fastAPI-project-docs/tree/main/docs/app)**
+
 ## 📋 Table of Contents
 
+- [Documentation](#-documentation)
 - [Architecture Overview](#-architecture-overview)
 - [Development Environment Setup](#-development-environment-setup)
 - [Makefile for Local Setup](#-makefile-for-local-setup)
 - [Docker-based Development](#-docker-based-development)
-- [Local Development](#-local-development)
 - [Development Workflow](#-development-workflow)
 - [CI/CD Pipeline](#-cicd-pipeline)
-- [Documentation](#-documentation)
 - [Environment Configuration](#-environment-configuration)
 - [Testing](#-testing)
 - [Troubleshooting](#-troubleshooting)
@@ -381,23 +391,6 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
 # Pull an image
 docker pull ghcr.io/datascientest-fastapi-project-group-25/fastapi-project-app:latest
 ```
-
-## 📚 Documentation
-
-All project documentation is organized in the `docs/` directory for better maintainability:
-
-- **[Development Guide](./docs/development/guide.md)** - Setting up and running the application locally
-- **[Deployment Guide](./docs/deployment/guide.md)** - Deploying using GitHub Actions and GitHub Container Registry
-- **[GitHub Actions Workflows](./docs/workflows/github-actions.md)** - Overview and best practices for CI/CD workflows
-- **[Git Hooks](./docs/git-hooks.md)** - Documentation for the pre-commit git hooks setup
-- **[Release Notes](./docs/release-notes.md)** - Comprehensive changelog of all project changes
-
-Component-specific documentation can be found in the respective directories:
-
-- **[Backend Documentation](./backend/README.md)**
-- **[Frontend Documentation](./frontend/README.md)**
-
-For a complete overview of all documentation, see the [Documentation Index](./docs/README.md).
 
 1. **Continuous Integration**
 
