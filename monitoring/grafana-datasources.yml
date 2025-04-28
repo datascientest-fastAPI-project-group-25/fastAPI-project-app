@@ -1,0 +1,31 @@
+# config file version
+apiVersion: 1
+
+# list of datasources to insert/update depending
+# on what's available in the database
+datasources:
+  # Prometheus Datasource
+  - name: Prometheus
+    type: prometheus
+    access: proxy # Access Grafana via its backend proxy
+    url: http://prometheus:9090 # Address of the Prometheus service
+    isDefault: true # Make this the default datasource for new panels
+    jsonData:
+      timeInterval: "15s" # Default scrape interval hint
+    editable: true # Allow editing in Grafana UI
+
+  # Loki Datasource
+  - name: Loki
+    type: loki
+    access: proxy # Access Grafana via its backend proxy
+    url: http://loki:3100 # Address of the Loki service
+    jsonData:
+      # Derive fields from labels for easier filtering/querying
+      derivedFields:
+        # Example: Extract 'traceID' from log lines if present
+        # - datasourceUid: Loki # Use this datasource's UID (Grafana generates this)
+        #   matcherRegex: "traceID=(\\w+)"
+        #   name: TraceID
+        #   url: '$${__value.raw}' # Link to trace in Tempo (if configured)
+      maxLines: 1000 # Default max lines to show in Explore view
+    editable: true # Allow editing in Grafana UI
