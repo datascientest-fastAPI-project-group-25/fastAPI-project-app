@@ -19,7 +19,7 @@ jobs:
       pr_title: ${{ steps.format.outputs.pr_title }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Format PR title
         id: format

@@ -20,7 +20,7 @@ jobs:
       !contains(github.event.pull_request.title, 'promote-to-stg')
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref }} # Checkout the PR branch
           fetch-depth: 0 # Full history for version tools

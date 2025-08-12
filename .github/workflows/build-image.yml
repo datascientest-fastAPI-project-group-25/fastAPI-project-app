@@ -53,7 +53,7 @@ jobs:
         app_component: [backend, frontend]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Required for git describe
 
@@ -176,7 +176,7 @@ jobs:
       frontend_image_tag_latest: ${{ steps.collect-outputs.outputs.frontend_image_tag_latest }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Required for git commands
 
@@ -213,7 +213,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository for comment
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Required for git commands
 
