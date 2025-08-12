@@ -27,7 +27,7 @@ jobs:
       pr_body: ${{ steps.extract.outputs.pr_body }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up git merge drivers
         run: |
