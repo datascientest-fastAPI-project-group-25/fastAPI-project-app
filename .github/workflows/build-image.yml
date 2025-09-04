@@ -218,7 +218,7 @@ jobs:
           fetch-depth: 0 # Required for git commands
 
       - name: Add comment with image tags
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
