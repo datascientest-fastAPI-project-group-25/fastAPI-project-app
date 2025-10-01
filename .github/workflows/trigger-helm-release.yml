@@ -119,7 +119,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Trigger Release Repository Workflow
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v4
         env:
           GH_TOKEN: ${{ secrets.MACHINE_USER_TOKEN }}
         with:
